@@ -1,0 +1,11 @@
+<hr />
+
+<p>Created by David Forrester, borrowing heavily from the work of kiwidude.</p>
+
+<p>
+Calibre officially distributes plugins from the mobileread.com forum site.
+The official distro channel for this plugin is there: <a href="http://www.mobileread.com/forums/showthread.php?t=215339">Kobo Utilities</a>
+</p>
+
+
+The source for this plugin is available from the author

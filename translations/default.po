@@ -1,0 +1,2629 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2021-06-01 17:59+1000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: action.py:196 action.py:805 action.py:868 action.py:894 action.py:940
+#: action.py:963 action.py:987 action.py:1163 action.py:1336 action.py:1365
+#: action.py:1439 action.py:1508 action.py:1542 action.py:1595 action.py:1623
+#: action.py:1655 action.py:1723 action.py:1764 action.py:1768 action.py:1789
+#: action.py:1877 action.py:1934 action.py:1968 action.py:2031 action.py:2371
+#: action.py:2375 action.py:2414 action.py:2468 action.py:2517 action.py:2563
+#: action.py:2872 action.py:4580
+msgid "Kobo Utilities"
+msgstr ""
+
+#: action.py:276
+msgid "Connected Device: "
+msgstr ""
+
+#: action.py:279
+msgid "Firmware version: "
+msgstr ""
+
+#: action.py:282
+msgid "Driver: "
+msgstr ""
+
+#: action.py:359
+msgid "&Set Reader Font for Selected Books"
+msgstr ""
+
+#: action.py:361
+msgid "Set Reader Font for Selected Books"
+msgstr ""
+
+#: action.py:367
+msgid "&Remove Reader Font for Selected Books"
+msgstr ""
+
+#: action.py:369
+msgid "Remove Reader Font for Selected Books"
+msgstr ""
+
+#: action.py:376
+msgid "&Dismiss tiles from home screen"
+msgstr ""
+
+#: action.py:378
+msgid "Dismiss tiles from home screen"
+msgstr ""
+
+#: action.py:383
+msgid "Display &Extras tiles on home screen"
+msgstr ""
+
+#: action.py:385
+msgid "Display Extras tiles on home screen"
+msgstr ""
+
+#: action.py:393
+msgid "Update &metadata in device library"
+msgstr ""
+
+#: action.py:395
+msgid "Update metadata in device library"
+msgstr ""
+
+#: action.py:400
+msgid "&Change Reading Status in device library"
+msgstr ""
+
+#: action.py:402
+msgid "Change Reading Status in device library"
+msgstr ""
+
+#: action.py:415
+msgid "&Manage Series Information in device library"
+msgstr ""
+
+#: action.py:417
+msgid "Manage Series Information in device library"
+msgstr ""
+
+#: action.py:422
+msgid "&Store/Restore current bookmark"
+msgstr ""
+
+#: action.py:424
+msgid "Store/Restore current bookmark"
+msgstr ""
+
+#: action.py:430
+msgid "&Update ToC for Selected Books"
+msgstr ""
+
+#: action.py:433
+msgid "Update ToC for Selected Books"
+msgstr ""
+
+#: action.py:441
+msgid "&Upload covers for Selected Books"
+msgstr ""
+
+#: action.py:443
+msgid "Upload covers for Selected Books"
+msgstr ""
+
+#: action.py:448
+msgid "&Remove covers for Selected Books"
+msgstr ""
+
+#: action.py:450
+msgid "Remove covers for Selected Books"
+msgstr ""
+
+#: action.py:456
+msgid "&Clean images directory of extra cover images"
+msgstr ""
+
+#: action.py:458
+msgid "Clean images directory of extra cover images"
+msgstr ""
+
+#: action.py:463
+msgid "&Open cover image directory"
+msgstr ""
+
+#: action.py:465
+msgid "Open cover image directory"
+msgstr ""
+
+#: action.py:480 action.py:482 action.py:1623 action.py:3363 dialogs.py:3149
+#: dialogs.py:3152
+msgid "Order Series Shelves"
+msgstr ""
+
+#: action.py:488 action.py:490
+msgid "Get Shelves From Device"
+msgstr ""
+
+#: action.py:496 action.py:498 action.py:1655 action.py:3518 dialogs.py:3367
+msgid "Set Related Books"
+msgstr ""
+
+#: action.py:504 action.py:506
+msgid "Copy annotation for Selected Book"
+msgstr ""
+
+#: action.py:510 action.py:512
+msgid "Backup Annotation File"
+msgstr ""
+
+#: action.py:516 action.py:518
+msgid "Remove Annotation Files"
+msgstr ""
+
+#: action.py:526 action.py:528
+msgid "Show books not in the device database"
+msgstr ""
+
+#: action.py:533 action.py:535
+msgid "Refresh the list of books on the device"
+msgstr ""
+
+#: action.py:540
+msgid "Database"
+msgstr ""
+
+#: action.py:542 action.py:544 action.py:1764 action.py:1768
+msgid "Block Analytics Events"
+msgstr ""
+
+#: action.py:550 action.py:552
+msgid "Fix Duplicate Shelves"
+msgstr ""
+
+#: action.py:557 action.py:559
+msgid "Check the device database"
+msgstr ""
+
+#: action.py:564 action.py:566
+msgid "Compress the device database"
+msgstr ""
+
+#: action.py:571 action.py:573
+msgid "Backup device database"
+msgstr ""
+
+#: action.py:587 action.py:589
+msgid "Check for Kobo Updates"
+msgstr ""
+
+#: action.py:594 action.py:596
+msgid "Set time on device"
+msgstr ""
+
+#: action.py:597
+msgid ""
+"Creates a file on the device which will be used to set the time when the "
+"device is disconnected."
+msgstr ""
+
+#: action.py:615
+msgid "Driver"
+msgstr ""
+
+#: action.py:616
+msgid "&Configure current Driver"
+msgstr ""
+
+#: action.py:618
+msgid "Configure Driver"
+msgstr ""
+
+#: action.py:625 action.py:627
+msgid "Switch between main and extended driver"
+msgstr ""
+
+#: action.py:636
+msgid "&Customize plugin"
+msgstr ""
+
+#: action.py:638
+msgid "Customize plugin"
+msgstr ""
+
+#: action.py:646
+msgid "&About Plugin"
+msgstr ""
+
+#: action.py:649
+msgid "About KoboUtilities"
+msgstr ""
+
+#: action.py:804
+msgid ""
+"The KoboTouchExtended driver is not installed. There is nothing to switch "
+"between, so no changes have been made."
+msgstr ""
+
+#: action.py:805
+msgid "Switch device drivers"
+msgstr ""
+
+#: action.py:816
+msgid ""
+"The KoboTouch driver has been disabled and the KoboTouchExtended driver has "
+"been enabled."
+msgstr ""
+
+#: action.py:820
+msgid ""
+"The KoboTouchExtended driver has been disabled and the KoboTouch driver has "
+"been enabled."
+msgstr ""
+
+#: action.py:821
+msgid "You will need to restart calibre for this change to be applied."
+msgstr ""
+
+#: action.py:838
+msgid "Cannot set reader font settings."
+msgstr ""
+
+#: action.py:839 action.py:879 action.py:905 action.py:950 action.py:974
+#: action.py:999 action.py:1306 action.py:1347 action.py:1383 action.py:1413
+#: action.py:1447 action.py:1479 action.py:1520 action.py:1553 action.py:1580
+#: action.py:1606 action.py:1633 action.py:1665 action.py:1733 action.py:1751
+#: action.py:1779 action.py:1815 action.py:1915 action.py:1945 action.py:1979
+#: action.py:2006 action.py:2042 action.py:2076 action.py:5278
+msgid "No device connected."
+msgstr ""
+
+#: action.py:867 action.py:893 action.py:1933 action.py:1967 action.py:2030
+msgid "Change summary:"
+msgstr ""
+
+#: action.py:867
+#, python-brace-format
+msgid ""
+"Font settings updated={0}\n"
+"\tFont settings added={1}\n"
+"\tTotal books={2}"
+msgstr ""
+
+#: action.py:868 action.py:894 action.py:940 action.py:1365 action.py:1508
+#: action.py:1542
+msgid "Device library updated"
+msgstr ""
+
+#: action.py:878
+msgid "Cannot remove reader font settings"
+msgstr ""
+
+#: action.py:888
+msgid "Remove Reader settings"
+msgstr ""
+
+#: action.py:888
+msgid "Do you want to remove the reader settings for the selected books?"
+msgstr ""
+
+#: action.py:893
+#, python-brace-format
+msgid "Font settings deleted={0}"
+msgstr ""
+
+#: action.py:904 action.py:1305
+msgid "Cannot update metadata in device library."
+msgstr ""
+
+#: action.py:909
+msgid "Getting book list"
+msgstr ""
+
+#: action.py:912 action.py:916
+#, python-brace-format
+msgid "Number of selected books {0}"
+msgstr ""
+
+#: action.py:934
+msgid "Updating metadata on device"
+msgstr ""
+
+#: action.py:937
+#, python-brace-format
+msgid "Number of books to update metadata for {0}"
+msgstr ""
+
+#: action.py:939 action.py:1335 action.py:1364 action.py:1507 action.py:1594
+#: action.py:1622 action.py:1653 action.py:1722 action.py:1874
+msgid "Update summary:"
+msgstr ""
+
+#: action.py:939 action.py:1507 action.py:1874
+#, python-brace-format
+msgid ""
+"Books updated={0}\n"
+"\tUnchanged books={1}\n"
+"\tBooks not on device={2}\n"
+"\tTotal books={3}"
+msgstr ""
+
+#: action.py:949
+msgid "Cannot mark tiles to be dismissed."
+msgstr ""
+
+#: action.py:962 action.py:986
+msgid "Update successful"
+msgstr ""
+
+#: action.py:962 action.py:986
+msgid "Update unsuccessful"
+msgstr ""
+
+#: action.py:963
+msgid "Dismiss Tiles from Home Screen"
+msgstr ""
+
+#: action.py:973
+msgid "Cannot add Extras tiles to the home screen."
+msgstr ""
+
+#: action.py:987
+msgid "Display Extras tiles on home hcreen"
+msgstr ""
+
+#: action.py:998
+msgid "Cannot store or restore current reading position."
+msgstr ""
+
+#: action.py:1057
+msgid "Queuing books for storing reading position"
+msgstr ""
+
+#: action.py:1059
+msgid "Getting list of books"
+msgstr ""
+
+#: action.py:1070
+msgid "Queuing books"
+msgstr ""
+
+#: action.py:1081 dialogs.py:258 dialogs.py:339
+msgid "Queueing "
+msgstr ""
+
+#: action.py:1147 action.py:1180 action.py:1198 action.py:1228 action.py:1234
+#: action.py:2425 action.py:2439 action.py:2441 action.py:2443
+msgid "Kobo Firmware Update"
+msgstr ""
+
+#: action.py:1147
+msgid ""
+"You last checked for a Kobo update less than a day ago. Do you want to check "
+"again now?"
+msgstr ""
+
+#: action.py:1163
+msgid "Time file created on device."
+msgstr ""
+
+#: action.py:1180
+msgid ""
+"The KoboRoot.tgz file is already in place for an upgrade. Do you want to "
+"check for updates anyway?"
+msgstr ""
+
+#: action.py:1198
+msgid ""
+"You appear to be a beta tester. Upgrade checking currently only works for "
+"official firmware releases. Do you wish to continue checking for official "
+"release firmware updates?"
+msgstr ""
+
+#: action.py:1228
+#, python-brace-format
+msgid ""
+"A Kobo firmware update to version {0} is available. Do you want to update? "
+"You have version {1}."
+msgstr ""
+
+#: action.py:1234
+msgid "Kobo firmware update check complete - no updates available"
+msgstr ""
+
+#: action.py:1335
+#, python-brace-format
+msgid ""
+"Reading locations updated={0}\n"
+"\tBooks with no reading location={1}\n"
+"\tTotal books checked={2}"
+msgstr ""
+
+#: action.py:1336
+msgid "Library updated"
+msgstr ""
+
+#: action.py:1346
+msgid "Cannot set bookmark in device library."
+msgstr ""
+
+#: action.py:1364
+#, python-brace-format
+msgid ""
+"Books updated={0}\n"
+"\tBooks not on device={1}\n"
+"\tTotal books={2}"
+msgstr ""
+
+#: action.py:1382
+msgid "Cannot backup the device database."
+msgstr ""
+
+#: action.py:1390 config.py:1111
+msgid "Choose Backup Destination"
+msgstr ""
+
+#: action.py:1391
+msgid "SQLite database"
+msgstr ""
+
+#: action.py:1412
+msgid "Cannot backup annotation files from device."
+msgstr ""
+
+#: action.py:1438
+#, python-brace-format
+msgid ""
+"Annotations backup summary:\n"
+"\tBooks with annotations={0}\n"
+"\tBooks without annotations={1}\n"
+"\tKobo epubs={2}\n"
+"\tTotal books={3}"
+msgstr ""
+
+#: action.py:1439
+msgid " - Annotations backup"
+msgstr ""
+
+#: action.py:1446
+msgid "Cannot remove files from device."
+msgstr ""
+
+#: action.py:1478 action.py:1519
+msgid "Cannot change reading status in device library."
+msgstr ""
+
+#: action.py:1504
+msgid "Changing reading status on device"
+msgstr ""
+
+#: action.py:1541
+#, python-brace-format
+msgid ""
+"Books marked as Not Interested:\n"
+"\tBooks updated={0}\n"
+"\tUnchanged books={1}\n"
+"\tTotal books={2}"
+msgstr ""
+
+#: action.py:1552
+msgid "Cannot list books not in device library."
+msgstr ""
+
+#: action.py:1579
+msgid "Cannot fix the duplicate shelves in the device library."
+msgstr ""
+
+#: action.py:1594
+#, python-brace-format
+msgid ""
+"Starting number of shelves={0}\n"
+"\tShelves removed={1}\n"
+"\tTotal shelves={2}"
+msgstr ""
+
+#: action.py:1595
+msgid "Duplicate Shelves Fixed"
+msgstr ""
+
+#: action.py:1605
+msgid "Cannot order the series shelves in the device library."
+msgstr ""
+
+#: action.py:1622
+#, python-brace-format
+msgid ""
+"Starting number of shelves={0}\n"
+"\tShelves reordered={1}"
+msgstr ""
+
+#: action.py:1632
+msgid "Cannot set the related books."
+msgstr ""
+
+#: action.py:1647
+msgid "Deleted all related books for sideloaded books."
+msgstr ""
+
+#: action.py:1653
+#, python-brace-format
+msgid ""
+"Number of series or authors={0}\n"
+"\tNumber of books={1}"
+msgstr ""
+
+#: action.py:1664
+msgid "Cannot get the shelves from device."
+msgstr ""
+
+#: action.py:1684
+#, python-brace-format
+msgid ""
+"The selected column is {0}.\n"
+"The driver shelf management columns are: {1}"
+msgstr ""
+
+#: action.py:1689 action.py:1699
+msgid "Getting shelves from device"
+msgstr ""
+
+#: action.py:1690
+msgid ""
+"The column selected is one of the columns used in the driver configuration "
+"for shelf management. Updating this column might affect the shelf management "
+"the next time you connect the device. \n"
+"\n"
+"Are you sure you want to do this?"
+msgstr ""
+
+#: action.py:1700
+msgid "Getting list of shelves"
+msgstr ""
+
+#: action.py:1712
+#, python-brace-format
+msgid "Number of books to get shelves for {0}"
+msgstr ""
+
+#: action.py:1722
+#, python-brace-format
+msgid ""
+"Books processed={0}\n"
+"\tBooks with Shelves={1}\n"
+"\tBooks without Shelves={2}"
+msgstr ""
+
+#: action.py:1723
+msgid "Get Shelves from Device"
+msgstr ""
+
+#: action.py:1732
+msgid "Cannot check Kobo device database."
+msgstr ""
+
+#: action.py:1739
+msgid ""
+"Result of running 'PRAGMA integrity_check' on database on the Kobo device:\n"
+"\n"
+msgstr ""
+
+#: action.py:1750
+msgid "Cannot block analytics events."
+msgstr ""
+
+#: action.py:1767
+msgid "Failed to block analytics events."
+msgstr ""
+
+#: action.py:1778
+msgid "Cannot compress Kobo device database."
+msgstr ""
+
+#: action.py:1788
+#, python-brace-format
+msgid ""
+"The database on the device has been compressed.\n"
+"\tOriginal size = {0}MB\n"
+"\tCompressed size = {1}MB"
+msgstr ""
+
+#: action.py:1789
+msgid "Compress Device Database"
+msgstr ""
+
+#: action.py:1794
+msgid ""
+"Result of running 'vacuum' on database on the Kobo device:\n"
+"\n"
+msgstr ""
+
+#: action.py:1814
+msgid "Cannot manage series in device library."
+msgstr ""
+
+#: action.py:1868
+msgid "Updating series information on device"
+msgstr ""
+
+#: action.py:1876
+msgid "No changes made to series information."
+msgstr ""
+
+#: action.py:1877
+msgid "Manage Series On Device"
+msgstr ""
+
+#: action.py:1914 action.py:2075
+msgid "Cannot upload covers."
+msgstr ""
+
+#: action.py:1933
+#, python-brace-format
+msgid ""
+"Covers uploaded={0}\n"
+"\tBooks not on device={1}\n"
+"\tTotal books={2}"
+msgstr ""
+
+#: action.py:1934
+msgid "Covers uploaded"
+msgstr ""
+
+#: action.py:1944 action.py:2005
+msgid "Cannot remove covers."
+msgstr ""
+
+#: action.py:1967 action.py:2030
+#, python-brace-format
+msgid ""
+"Covers removed={0}\n"
+"\tBooks not on device={1}\n"
+"\tTotal books={2}"
+msgstr ""
+
+#: action.py:1968 action.py:2031
+msgid "Covers removed"
+msgstr ""
+
+#: action.py:1978
+msgid "Cannot open cover directory"
+msgstr ""
+
+#: action.py:2041
+msgid "Cannot clean covers directory."
+msgstr ""
+
+#: action.py:2354
+#, python-brace-format
+msgid "Storing reading positions for {0} books"
+msgstr ""
+
+#: action.py:2362
+msgid "Failed to get reading positions"
+msgstr ""
+
+#: action.py:2369
+msgid "No reading positions were found that need to be updated"
+msgstr ""
+
+#: action.py:2375
+msgid "Storing reading positions completed - No changes found"
+msgstr ""
+
+#: action.py:2377
+#, python-brace-format
+msgid "Kobo Utilities stored reading locations for <b>{0} book(s)</b>"
+msgstr ""
+
+#: action.py:2411
+msgid "Downloading Kobo firmware update"
+msgstr ""
+
+#: action.py:2419
+msgid "Failed to update Kobo firmware"
+msgstr ""
+
+#: action.py:2425
+msgid "Keep Kobo firmware update files?"
+msgstr ""
+
+#: action.py:2439
+msgid "Eject and unplug your Kobo device to complete the update"
+msgstr ""
+
+#: action.py:2443
+msgid "Exception encountered updating Kobo firmware"
+msgstr ""
+
+#: action.py:2465
+msgid "Backing up Kobo device database"
+msgstr ""
+
+#: action.py:2473
+msgid "Failed to backup device database"
+msgstr ""
+
+#: action.py:2484 action.py:2489
+msgid "Cleaning images directory"
+msgstr ""
+
+#: action.py:2494 action.py:2539
+msgid "Failed to check cover directory on device"
+msgstr ""
+
+#: action.py:2498
+msgid "Checking cover directory completed"
+msgstr ""
+
+#: action.py:2502
+msgid "No extra files found"
+msgstr ""
+
+#: action.py:2504
+#, python-brace-format
+msgid "Kobo Utilities found <b>{0} extra cover(s)</b> in the cover directory."
+msgstr ""
+
+#: action.py:2506
+msgid "All files have been deleted."
+msgstr ""
+
+#: action.py:2508
+msgid "Extra files found in main memory images directory:"
+msgstr ""
+
+#: action.py:2513
+msgid "Extra files found in SD card images directory:"
+msgstr ""
+
+#: action.py:2517 action.py:2563 dialogs.py:1048 dialogs.py:3530
+msgid "Finished"
+msgstr ""
+
+#: action.py:2529 action.py:2534
+msgid "Removing annotations files"
+msgstr ""
+
+#: action.py:2544
+msgid "Cleaning annotations completed"
+msgstr ""
+
+#: action.py:2550
+#, python-brace-format
+msgid "Kobo Utilities removed <b>{0} annotation files(s)</b>."
+msgstr ""
+
+#: action.py:2576
+#, python-brace-format
+msgid "Profile \"{0}\" does not exist."
+msgstr ""
+
+#: action.py:2577 action.py:2604 action.py:2634
+msgid "Select another profile to proceed."
+msgstr ""
+
+#: action.py:2602 action.py:2632
+#, python-brace-format
+msgid "Profile \"{0}\" is invalid."
+msgstr ""
+
+#: action.py:2603
+msgid "It has no columns to store the reading status."
+msgstr ""
+
+#: action.py:2630
+#, python-brace-format
+msgid "The column {0} does not exist."
+msgstr ""
+
+#: action.py:2630
+#, python-brace-format
+msgid "The columns {0} do not exist."
+msgstr ""
+
+#: action.py:2672 action.py:4336
+msgid "Storing reading positions"
+msgstr ""
+
+#: action.py:2719 action.py:4252
+msgid "Unknown"
+msgstr ""
+
+#: action.py:2722
+msgid "Updating "
+msgstr ""
+
+#: action.py:2872 action.py:4580
+#, python-brace-format
+msgid "Storing reading positions completed - {0} changed."
+msgstr ""
+
+#: action.py:2919
+msgid "Use library only"
+msgstr ""
+
+#: action.py:2920
+msgid "User annotations generated from main library only"
+msgstr ""
+
+#: action.py:2927
+msgid "No books selected"
+msgstr ""
+
+#: action.py:2928
+msgid "No books selected to fetch annotations from"
+msgstr ""
+
+#: action.py:2936
+msgid "No books on device selected"
+msgstr ""
+
+#: action.py:2937
+msgid ""
+"None of the books selected were on the device. Annotations can only be "
+"copied for books on the device."
+msgstr ""
+
+#: action.py:3397
+#, python-brace-format
+msgid "Updating shelf: {0}"
+msgstr ""
+
+#: action.py:3551
+msgid "Setting related books for "
+msgstr ""
+
+#: action.py:3586 action.py:3599
+msgid "Delete Related Books"
+msgstr ""
+
+#: action.py:3618 dialogs.py:2986 dialogs.py:2989
+msgid "Duplicate Shelves in Device Database"
+msgstr ""
+
+#: action.py:3668
+msgid "Removing duplicates of shelf "
+msgstr ""
+
+#: action.py:3762 action.py:6080
+#, python-format
+msgid "Execution of '%s' failed"
+msgstr ""
+
+#: action.py:3880
+msgid "Updating metadata for "
+msgstr ""
+
+#: action.py:4268
+msgid "Published"
+msgstr ""
+
+#: action.py:4269 dialogs.py:3168 dialogs.py:3206 dialogs.py:3393
+msgid "Series"
+msgstr ""
+
+#: action.py:4270 dialogs.py:750
+msgid "Rating"
+msgstr ""
+
+#: action.py:4271
+msgid "Tags"
+msgstr ""
+
+#: action.py:4384
+msgid "Checkin "
+msgstr ""
+
+#: action.py:4865
+msgid "Getting shelves for "
+msgstr ""
+
+#: action.py:5269
+msgid "Device jobs are running or queued."
+msgstr ""
+
+#: action.py:5297
+msgid "Cannot update the ToC of books on the device"
+msgstr ""
+
+#: action.py:5332
+msgid "Getting ToC status for books"
+msgstr ""
+
+#: action.py:5333
+#, python-brace-format
+msgid "Number of books: {0}"
+msgstr ""
+
+#: action.py:5463
+msgid "eBook is not on Kobo eReader"
+msgstr ""
+
+#: action.py:5477
+msgid "eBook on Kobo eReader is not supported format"
+msgstr ""
+
+#: action.py:5491
+#, python-brace-format
+msgid "No suitable format in library for book. The format of the device is {0}"
+msgstr ""
+
+#: action.py:5501
+msgid "eBook in library has DRM"
+msgstr ""
+
+#: action.py:5510
+msgid "eBook on Kobo eReader has DRM"
+msgstr ""
+
+#: action.py:5563 action.py:5601
+msgid "Book needs to be updated on Kobo eReader"
+msgstr ""
+
+#: action.py:5775
+#, python-brace-format
+msgid "Updating ToC in device database for {0} books."
+msgstr ""
+
+#: action.py:5777
+msgid "Updating ToC in device database"
+msgstr ""
+
+#: action.py:5778
+#, python-brace-format
+msgid "Number of books to update {0}"
+msgstr ""
+
+#: dialogs.py:114
+msgid "Awards"
+msgstr ""
+
+#: dialogs.py:114
+msgid "Displays each award when given."
+msgstr ""
+
+#: dialogs.py:115
+msgid "Bookstore"
+msgstr ""
+
+#: dialogs.py:115
+msgid "The Kobo Bookstore."
+msgstr ""
+
+#: dialogs.py:116
+msgid "Browse by category"
+msgstr ""
+
+#: dialogs.py:116
+msgid "Lists several categories from the Kobo Bookstore."
+msgstr ""
+
+#: dialogs.py:117
+msgid "Extras"
+msgstr ""
+
+#: dialogs.py:117
+msgid "A tile is displayed for each extra when used."
+msgstr ""
+
+#: dialogs.py:118
+msgid "Global Stats"
+msgstr ""
+
+#: dialogs.py:118
+msgid "Displays the number of finished books in your library."
+msgstr ""
+
+#: dialogs.py:119
+msgid "Library"
+msgstr ""
+
+#: dialogs.py:119
+msgid "Shows new books added to the library."
+msgstr ""
+
+#: dialogs.py:120
+msgid "Quick Tour"
+msgstr ""
+
+#: dialogs.py:120
+msgid ""
+"The device Quick Tour that is displayed when the device is first set-up."
+msgstr ""
+
+#: dialogs.py:121
+msgid "Pocket Article"
+msgstr ""
+
+#: dialogs.py:121
+msgid "Pocket articles."
+msgstr ""
+
+#: dialogs.py:122
+msgid "Recommendations"
+msgstr ""
+
+#: dialogs.py:122
+msgid "Kobo's recommendations for you."
+msgstr ""
+
+#: dialogs.py:123
+msgid "Related Items"
+msgstr ""
+
+#: dialogs.py:123
+msgid ""
+"After a sync, will show books related to any you are reading. There can be "
+"one tile for each of your books."
+msgstr ""
+
+#: dialogs.py:124
+msgid "Release Notes"
+msgstr ""
+
+#: dialogs.py:124
+msgid ""
+"Shows that there was an update to the firmware with the new version number. "
+"You probably don't want to dismiss this."
+msgstr ""
+
+#: dialogs.py:125
+msgid "Shelf"
+msgstr ""
+
+#: dialogs.py:125
+msgid "Can have a tile for each shelf."
+msgstr ""
+
+#: dialogs.py:126
+msgid "Sync"
+msgstr ""
+
+#: dialogs.py:126
+msgid ""
+"Displays when a sync was last done. Does not have options to dismiss it."
+msgstr ""
+
+#: dialogs.py:127
+msgid "Top 50"
+msgstr ""
+
+#: dialogs.py:127
+msgid "The Top 50 books in the Kobo store."
+msgstr ""
+
+#: dialogs.py:131
+msgid "Chess"
+msgstr ""
+
+#: dialogs.py:131
+msgid "Take on your eReader in the classic game of strategy and skill."
+msgstr ""
+
+#: dialogs.py:132
+msgid "Sketch Pad"
+msgstr ""
+
+#: dialogs.py:132
+msgid ""
+"Discover your inner artist or make notes and then save your creation in your "
+"Library."
+msgstr ""
+
+#: dialogs.py:133
+msgid "Sudoku"
+msgstr ""
+
+#: dialogs.py:133
+msgid "Try your wits with this logic-based number puzzle."
+msgstr ""
+
+#: dialogs.py:134
+msgid "Web Browser"
+msgstr ""
+
+#: dialogs.py:134
+msgid ""
+"Take the on-ramp to the information superhighway, right on your eReader."
+msgstr ""
+
+#: dialogs.py:135
+msgid "Unblock It"
+msgstr ""
+
+#: dialogs.py:135
+msgid "Liberate your block by moving other blocks out of the way."
+msgstr ""
+
+#: dialogs.py:136
+msgid "Solitaire"
+msgstr ""
+
+#: dialogs.py:136
+msgid "Play classic solitaire games like Klondike, Spider, and Freecell."
+msgstr ""
+
+#: dialogs.py:137
+msgid "Word Scramble"
+msgstr ""
+
+#: dialogs.py:137
+msgid "Find words in a 4x4 grid."
+msgstr ""
+
+#: dialogs.py:155
+msgid "Default"
+msgstr ""
+
+#: dialogs.py:156
+msgid "RTL"
+msgstr ""
+
+#: dialogs.py:157
+msgid "LTR"
+msgstr ""
+
+#: dialogs.py:215
+msgid "Creating queue for checking images directory"
+msgstr ""
+
+#: dialogs.py:218
+msgid "Creating queue for removing annotations files"
+msgstr ""
+
+#: dialogs.py:221
+msgid "Queueing books for storing reading position"
+msgstr ""
+
+#: dialogs.py:237 dialogs.py:315
+msgid "Preparing the list of books ..."
+msgstr ""
+
+#: dialogs.py:399
+msgid "Reader font settings"
+msgstr ""
+
+#: dialogs.py:404
+msgid "Font Face"
+msgstr ""
+
+#: dialogs.py:407
+msgid "Font Size"
+msgstr ""
+
+#: dialogs.py:411
+msgid "Font size to use when reading. The device default is about 22."
+msgstr ""
+
+#: dialogs.py:414
+msgid "Line Spacing"
+msgstr ""
+
+#: dialogs.py:419
+msgid ""
+"The line spacing number is how many times the right arrow is pressed on the "
+"device."
+msgstr ""
+
+#: dialogs.py:422
+msgid "Custom setting"
+msgstr ""
+
+#: dialogs.py:424
+msgid ""
+"If you want to try a line spacing other than the Kobo specified, check this "
+"and enter a number."
+msgstr ""
+
+#: dialogs.py:430
+msgid ""
+"Kobo use from 1.3 to 4.0. Any number can be entered, but whether the device "
+"will use it, is another matter."
+msgstr ""
+
+#: dialogs.py:432
+msgid "Left margins"
+msgstr ""
+
+#: dialogs.py:436
+msgid ""
+"Margins on the device are set in multiples of two, but single steps work."
+msgstr ""
+
+#: dialogs.py:440
+msgid "Lock margins"
+msgstr ""
+
+#: dialogs.py:442
+msgid ""
+"Lock the left and right margins to the same value. Changing the left margin "
+"will also set the right margin."
+msgstr ""
+
+#: dialogs.py:445
+msgid "Right margins"
+msgstr ""
+
+#: dialogs.py:449
+msgid ""
+"Margins on the device are set in multiples of three, but single steps work."
+msgstr ""
+
+#: dialogs.py:452
+msgid "Justification"
+msgstr ""
+
+#: dialogs.py:456 dialogs.py:3241
+msgid "Update config file"
+msgstr ""
+
+#: dialogs.py:458
+msgid ""
+"Update the 'Kobo eReader.conf' file with the new settings. These will be "
+"used when opening new books or books that do not have stored settings."
+msgstr ""
+
+#: dialogs.py:464
+msgid "&Get configuration from device"
+msgstr ""
+
+#: dialogs.py:466
+msgid "Read the device configuration file to get the current default settings."
+msgstr ""
+
+#: dialogs.py:469
+msgid "&Get settings from device"
+msgstr ""
+
+#: dialogs.py:471
+msgid "Fetches the current for the selected book from the device."
+msgstr ""
+
+#: dialogs.py:701
+msgid "Metadata to update"
+msgstr ""
+
+#: dialogs.py:707 dialogs.py:2672 dialogs.py:2875 dialogs.py:3735
+msgid "Title"
+msgstr ""
+
+#: dialogs.py:710
+msgid "Use 'Title Sort'"
+msgstr ""
+
+#: dialogs.py:713 dialogs.py:3736
+msgid "Author"
+msgstr ""
+
+#: dialogs.py:716
+msgid "Use 'Author Sort'"
+msgstr ""
+
+#: dialogs.py:720
+msgid "Comments/Synopsis"
+msgstr ""
+
+#: dialogs.py:723
+msgid "Use template"
+msgstr ""
+
+#: dialogs.py:728
+msgid "Enter a template to use to set the comment/synopsis."
+msgstr ""
+
+#: dialogs.py:733
+msgid "Series and Index"
+msgstr ""
+
+#: dialogs.py:736
+msgid "Publisher"
+msgstr ""
+
+#: dialogs.py:740
+msgid "Published Date"
+msgstr ""
+
+#: dialogs.py:743
+msgid "ISBN"
+msgstr ""
+
+#: dialogs.py:747
+msgid "Language"
+msgstr ""
+
+#: dialogs.py:754
+msgid "Subtitle"
+msgstr ""
+
+#: dialogs.py:759
+msgid ""
+"Enter a template to use to set the subtitle. If the template is empty, the "
+"subtitle will be cleared."
+msgstr ""
+
+#: dialogs.py:764
+msgid "Reading Direction"
+msgstr ""
+
+#: dialogs.py:765
+msgid "Set the reading direction"
+msgstr ""
+
+#: dialogs.py:774
+msgid "Date Added"
+msgstr ""
+
+#: dialogs.py:775
+msgid "Set the date added to the device. This is used when sorting."
+msgstr ""
+
+#: dialogs.py:785
+msgid "Use Plugboard"
+msgstr ""
+
+#: dialogs.py:786
+msgid ""
+"Set the metadata on the device using the plugboard for the device and book "
+"format."
+msgstr ""
+
+#: dialogs.py:790
+msgid "Update Kobo ePubs"
+msgstr ""
+
+#: dialogs.py:791
+msgid "Update the metadata for kePubs downloaded from the Kobo server."
+msgstr ""
+
+#: dialogs.py:859 dialogs.py:1139 dialogs.py:1243 dialogs.py:1464
+#: dialogs.py:1823 dialogs.py:3045
+msgid "No options selected"
+msgstr ""
+
+#: dialogs.py:860 dialogs.py:1140 dialogs.py:1244 dialogs.py:1465
+#: dialogs.py:1824 dialogs.py:3046
+msgid "You must select at least one option to continue."
+msgstr ""
+
+#: dialogs.py:945 dialogs.py:1182 dialogs.py:1307 dialogs.py:2999
+#: dialogs.py:3188
+msgid "Options"
+msgstr ""
+
+#: dialogs.py:950
+msgid "Shelf column:"
+msgstr ""
+
+#: dialogs.py:951
+msgid ""
+"Select a custom column to store the retrieved shelf names. The column type "
+"must\n"
+"be of type 'text'."
+msgstr ""
+
+#: dialogs.py:959
+msgid "All books on device"
+msgstr ""
+
+#: dialogs.py:960
+msgid ""
+"Get the shelves for all the books on the device that are in the library. If "
+"not checked, will only get them for the selected books."
+msgstr ""
+
+#: dialogs.py:963
+msgid "Replace column with shelves"
+msgstr ""
+
+#: dialogs.py:964
+msgid ""
+"If this is selected, the current value in the library, will be replaced by\n"
+"the retrieved shelves. Otherwise, the retrieved shelves will be added to the "
+"value"
+msgstr ""
+
+#: dialogs.py:997
+msgid "No shelf column selected"
+msgstr ""
+
+#: dialogs.py:1039
+msgid "Book Tiles"
+msgstr ""
+
+#: dialogs.py:1040
+msgid "For books, you can dismiss the 'Finished' and 'New' tiles."
+msgstr ""
+
+#: dialogs.py:1045
+msgid "New"
+msgstr ""
+
+#: dialogs.py:1046
+msgid ""
+"Select this option if you want to dismiss new books. This will act on all "
+"tiles of this type."
+msgstr ""
+
+#: dialogs.py:1049
+msgid "Select this option if you want to dismiss finished books."
+msgstr ""
+
+#: dialogs.py:1051
+msgid "In the Cloud"
+msgstr ""
+
+#: dialogs.py:1052
+msgid ""
+"Select this option if you want to dismiss books that are 'In the Cloud'."
+msgstr ""
+
+#: dialogs.py:1055
+msgid "Database Trigger"
+msgstr ""
+
+#: dialogs.py:1056
+msgid ""
+"When a tile is added or changed, the database trigger will automatically set "
+"them to be dismissed. This will be done for the tile types selected above."
+msgstr ""
+
+#: dialogs.py:1061
+msgid "Change database trigger"
+msgstr ""
+
+#: dialogs.py:1062
+msgid "Select this option if you want to change the current database trigger."
+msgstr ""
+
+#: dialogs.py:1066 dialogs.py:1798
+msgid "Create or change trigger"
+msgstr ""
+
+#: dialogs.py:1067 dialogs.py:1799
+msgid "To create or change the trigger, select this option."
+msgstr ""
+
+#: dialogs.py:1071 dialogs.py:1802
+msgid "Delete trigger"
+msgstr ""
+
+#: dialogs.py:1072 dialogs.py:1803
+msgid ""
+"This will remove the existing trigger and let the device work as Kobo "
+"intended it."
+msgstr ""
+
+#: dialogs.py:1080 dialogs.py:1195 dialogs.py:2823 dialogs.py:3655
+msgid "Clear all"
+msgstr ""
+
+#: dialogs.py:1081 dialogs.py:1196
+msgid "Clear all selections"
+msgstr ""
+
+#: dialogs.py:1087
+msgid ""
+"This is the list of Tile types that can be dismissed. Select the one you "
+"want to dismiss."
+msgstr ""
+
+#: dialogs.py:1187
+msgid "Dismiss current Extras tiles"
+msgstr ""
+
+#: dialogs.py:1188
+msgid ""
+"Select this option if you want to dismiss the Extras tiles already on the "
+"home screen."
+msgstr ""
+
+#: dialogs.py:1198 dialogs.py:2820 dialogs.py:3643
+msgid "Select all"
+msgstr ""
+
+#: dialogs.py:1199
+msgid "Select all Extras"
+msgstr ""
+
+#: dialogs.py:1205
+msgid "This is the list of Extras tiles."
+msgstr ""
+
+#: dialogs.py:1312
+msgid "Store"
+msgstr ""
+
+#: dialogs.py:1313
+msgid "Store the current reading position in the calibre library."
+msgstr ""
+
+#: dialogs.py:1317 config.py:635
+msgid "Only if more recent"
+msgstr ""
+
+#: dialogs.py:1318 config.py:636
+msgid ""
+"Only store the reading position if the last read timestamp on the device is "
+"more recent than in the library."
+msgstr ""
+
+#: dialogs.py:1321 config.py:639
+msgid "Not if finished in library"
+msgstr ""
+
+#: dialogs.py:1322 config.py:640
+msgid ""
+"Do not store the reading position if the library has the book as finished. "
+"This is if the percent read is 100%."
+msgstr ""
+
+#: dialogs.py:1326
+msgid "Clear if unread"
+msgstr ""
+
+#: dialogs.py:1327
+msgid ""
+"If the book on the device is shown as unread, clear the reading position "
+"stored in the library."
+msgstr ""
+
+#: dialogs.py:1330
+msgid "Run in background"
+msgstr ""
+
+#: dialogs.py:1331
+msgid "Do store or restore as background job."
+msgstr ""
+
+#: dialogs.py:1335
+msgid "Restore"
+msgstr ""
+
+#: dialogs.py:1336
+msgid "Copy the current reading position back to the device."
+msgstr ""
+
+#: dialogs.py:1340
+msgid "Set reading status"
+msgstr ""
+
+#: dialogs.py:1341
+msgid ""
+"If this is not set, when the current reading position is on the device, the "
+"reading status will not be changes. If the percent read is 100%, the book "
+"will be marked as finished. Otherwise, it will be in progress."
+msgstr ""
+
+#: dialogs.py:1344
+msgid "Set date to now"
+msgstr ""
+
+#: dialogs.py:1345
+msgid ""
+"Setting the date to now will put the book at the top of the \"Recent reads\" "
+"list."
+msgstr ""
+
+#: dialogs.py:1348
+msgid "Update rating"
+msgstr ""
+
+#: dialogs.py:1349
+msgid ""
+"Set the book rating on the device. If the current rating in the library is "
+"zero, the rating on the device will be reset."
+msgstr ""
+
+#: dialogs.py:1353
+msgid "Profile"
+msgstr ""
+
+#: dialogs.py:1494 config.py:930
+msgid "Destination:"
+msgstr ""
+
+#: dialogs.py:1495
+msgid "Select the destination the annotations files are to be backed up in."
+msgstr ""
+
+#: dialogs.py:1499 config.py:935
+msgid "..."
+msgstr ""
+
+#: dialogs.py:1553
+msgid "Remove Annotations Files"
+msgstr ""
+
+#: dialogs.py:1558
+msgid "Remove..."
+msgstr ""
+
+#: dialogs.py:1562 dialogs.py:3168
+msgid "All"
+msgstr ""
+
+#: dialogs.py:1562
+msgid "Remove the annotations directory and all files within it"
+msgstr ""
+
+#: dialogs.py:1563
+msgid "For selected books"
+msgstr ""
+
+#: dialogs.py:1563
+msgid "Only remove annotations files for the selected books"
+msgstr ""
+
+#: dialogs.py:1564
+msgid "Where book is not on device"
+msgstr ""
+
+#: dialogs.py:1564
+msgid "Remove annotations files where there is no book on the device"
+msgstr ""
+
+#: dialogs.py:1565
+msgid "Empty"
+msgstr ""
+
+#: dialogs.py:1565
+msgid "Remove all empty annotations files"
+msgstr ""
+
+#: dialogs.py:1566
+msgid "Not empty"
+msgstr ""
+
+#: dialogs.py:1566
+msgid "Only remove annotations files if they contain annotations"
+msgstr ""
+
+#: dialogs.py:1649
+msgid "Upload Covers"
+msgstr ""
+
+#: dialogs.py:1654
+msgid "Black and White Covers"
+msgstr ""
+
+#: dialogs.py:1657
+msgid "Dithered Covers"
+msgstr ""
+
+#: dialogs.py:1659
+msgid "PNG Covers"
+msgstr ""
+
+#: dialogs.py:1662
+msgid "Keep cover aspect ratio"
+msgstr ""
+
+#: dialogs.py:1665
+msgid "Letterbox Covers"
+msgstr ""
+
+#: dialogs.py:1670
+msgid ""
+"Choose the color to use when letterboxing the cover. The default color is "
+"black (#000000)"
+msgstr ""
+
+#: dialogs.py:1676
+msgid "Upload Covers for Kobo ePubs"
+msgstr ""
+
+#: dialogs.py:1740 dialogs.py:1743
+msgid "Remove Covers"
+msgstr ""
+
+#: dialogs.py:1748
+msgid "Remove full size covers"
+msgstr ""
+
+#: dialogs.py:1749
+msgid ""
+"Check this if you want to remove just the full size cover from the device. "
+"This will save space, but, if covers are used for the sleep screen, they "
+"will not look very good."
+msgstr ""
+
+#: dialogs.py:1752
+msgid "Remove covers for Kobo epubs"
+msgstr ""
+
+#: dialogs.py:1753
+msgid ""
+"Check this if you want to remove covers for any Kobo epubs synced from the "
+"Kobo server."
+msgstr ""
+
+#: dialogs.py:1792
+msgid "AnalyticsEvents Database Trigger"
+msgstr ""
+
+#: dialogs.py:1793
+msgid "When an entry is added to the AnalyticsEvents, it will be removed."
+msgstr ""
+
+#: dialogs.py:1853
+msgid "Clean Images"
+msgstr ""
+
+#: dialogs.py:1857
+msgid "Delete extra cover image files"
+msgstr ""
+
+#: dialogs.py:1858
+msgid ""
+"Check this if you want to delete the extra cover image files from the images "
+"directory on the device."
+msgstr ""
+
+#: dialogs.py:1887
+msgid "Lock Series Index"
+msgstr ""
+
+#: dialogs.py:1908
+msgid "&Assign this index value to all remaining books"
+msgstr ""
+
+#: dialogs.py:1932
+msgid "You have conflicting or out of sequence series indexes"
+msgstr ""
+
+#: dialogs.py:1935
+msgid "Empty book added to series"
+msgstr ""
+
+#: dialogs.py:1938
+msgid "The book data has been changed"
+msgstr ""
+
+#: dialogs.py:1941
+msgid "The series data is unchanged"
+msgstr ""
+
+#: dialogs.py:1976
+msgid "Value assigned by user"
+msgstr ""
+
+#: dialogs.py:2021
+msgid "Lock original series index"
+msgstr ""
+
+#: dialogs.py:2025
+msgid "Lock series index..."
+msgstr ""
+
+#: dialogs.py:2029 dialogs.py:2284
+msgid "Unlock series index"
+msgstr ""
+
+#: dialogs.py:2033
+msgid "Unlock all series index"
+msgstr ""
+
+#: dialogs.py:2204
+msgid "Manage Series"
+msgstr ""
+
+#: dialogs.py:2214
+msgid "Series &Column:"
+msgstr ""
+
+#: dialogs.py:2222
+msgid "Series &Name:"
+msgstr ""
+
+#: dialogs.py:2235
+msgid "&Start At:"
+msgstr ""
+
+#: dialogs.py:2248
+msgid "Clean titles of Kobo books"
+msgstr ""
+
+#: dialogs.py:2250
+msgid ""
+"Removes series information from the titles. For Kobo books, this is '(Series "
+"Name - #1)'"
+msgstr ""
+
+#: dialogs.py:2265
+msgid "Move book up in series (Alt+Up)"
+msgstr ""
+
+#: dialogs.py:2267
+msgid "Alt+Up"
+msgstr ""
+
+#: dialogs.py:2271
+msgid "Move book down in series (Alt+Down)"
+msgstr ""
+
+#: dialogs.py:2273
+msgid "Alt+Down"
+msgstr ""
+
+#: dialogs.py:2279
+msgid "Lock to index value..."
+msgstr ""
+
+#: dialogs.py:2291
+msgid "Remove book from the series list"
+msgstr ""
+
+#: dialogs.py:2298
+msgid "Move series index to left of decimal point (Alt+Left)"
+msgstr ""
+
+#: dialogs.py:2300
+msgid "Alt+Left"
+msgstr ""
+
+#: dialogs.py:2304
+msgid "Move series index to right of decimal point (Alt+Right)"
+msgstr ""
+
+#: dialogs.py:2306
+msgid "Alt+Right"
+msgstr ""
+
+#: dialogs.py:2315
+msgid " &Restore Original Series "
+msgstr ""
+
+#: dialogs.py:2498 config.py:1032
+msgid "Are you sure?"
+msgstr ""
+
+#: dialogs.py:2499
+msgid "Remove the selected book(s) from the series list?"
+msgstr ""
+
+#: dialogs.py:2672
+msgid "Author(s)"
+msgstr ""
+
+#: dialogs.py:2672
+msgid "File Path"
+msgstr ""
+
+#: dialogs.py:2672
+msgid "PubDate"
+msgstr ""
+
+#: dialogs.py:2672
+msgid "File Timestamp"
+msgstr ""
+
+#: dialogs.py:2732
+msgid "Books not in Device Database"
+msgstr ""
+
+#: dialogs.py:2789
+msgid "Show Reading Position Changes"
+msgstr ""
+
+#: dialogs.py:2799
+#, python-brace-format
+msgid "Profile: {0}"
+msgstr ""
+
+#: dialogs.py:2800
+#, python-brace-format
+msgid "Device: {0}"
+msgstr ""
+
+#: dialogs.py:2805
+msgid "Select updated books in library"
+msgstr ""
+
+#: dialogs.py:2808
+msgid "Update Goodread reading progress"
+msgstr ""
+
+#: dialogs.py:2875
+msgid "Authors(s)"
+msgstr ""
+
+#: dialogs.py:2875
+msgid "Current %"
+msgstr ""
+
+#: dialogs.py:2875
+msgid "New %"
+msgstr ""
+
+#: dialogs.py:2875
+msgid "Current Date"
+msgstr ""
+
+#: dialogs.py:2875
+msgid "New Date"
+msgstr ""
+
+#: dialogs.py:2875
+msgid "Book ID"
+msgstr ""
+
+#: dialogs.py:3005
+msgid "Shelf to Keep"
+msgstr ""
+
+#: dialogs.py:3006 dialogs.py:3068
+msgid "Oldest"
+msgstr ""
+
+#: dialogs.py:3011 dialogs.py:3068
+msgid "Newest"
+msgstr ""
+
+#: dialogs.py:3017
+msgid "Purge duplicate shelves"
+msgstr ""
+
+#: dialogs.py:3019
+msgid ""
+"When this option is selected, the duplicated rows are deleted from the "
+"database. If this is done, they might be restore during the next sync to the "
+"Kobo server."
+msgstr ""
+
+#: dialogs.py:3068
+msgid "Shelf Name"
+msgstr ""
+
+#: dialogs.py:3068
+msgid "Number"
+msgstr ""
+
+#: dialogs.py:3097
+msgid "(Unnamed shelf)"
+msgstr ""
+
+#: dialogs.py:3156
+msgid "Order the shelves with series names."
+msgstr ""
+
+#: dialogs.py:3157
+msgid "Order the shelves with author names."
+msgstr ""
+
+#: dialogs.py:3158
+msgid "Order the shelves that do not have series or author names."
+msgstr ""
+
+#: dialogs.py:3159
+msgid "Order all shelves."
+msgstr ""
+
+#: dialogs.py:3162
+msgid "Shelves to order"
+msgstr ""
+
+#: dialogs.py:3168 dialogs.py:3394
+msgid "Authors"
+msgstr ""
+
+#: dialogs.py:3168 config.py:1402
+msgid "Other"
+msgstr ""
+
+#: dialogs.py:3176
+msgid "Get shelves"
+msgstr ""
+
+#: dialogs.py:3177 config.py:1363
+msgid "Edit the keyboard shortcuts associated with this plugin"
+msgstr ""
+
+#: dialogs.py:3196
+msgid "Order by series name and index and title."
+msgstr ""
+
+#: dialogs.py:3197
+msgid "Order by the published date."
+msgstr ""
+
+#: dialogs.py:3200
+msgid "Order by"
+msgstr ""
+
+#: dialogs.py:3206
+msgid "Published date"
+msgstr ""
+
+#: dialogs.py:3214
+msgid "Selecting ascending will sort the shelf in series order."
+msgstr ""
+
+#: dialogs.py:3215
+msgid "Selecting descending will sort the shelf in reverse series order."
+msgstr ""
+
+#: dialogs.py:3218
+msgid "Order in"
+msgstr ""
+
+#: dialogs.py:3224
+msgid "Ascending"
+msgstr ""
+
+#: dialogs.py:3224
+msgid "Descending"
+msgstr ""
+
+#: dialogs.py:3243
+msgid ""
+"If this is selected, the configuration file is updated to set the selected "
+"sort for the shelves to 'Date Added'."
+msgstr ""
+
+#: dialogs.py:3249 dialogs.py:3427 dialogs.py:3634
+msgid "Remove"
+msgstr ""
+
+#: dialogs.py:3250
+msgid ""
+"Remove the selected shelves from the list. This will mean the ordering for "
+"these shelves will not be changed."
+msgstr ""
+
+#: dialogs.py:3291
+msgid "Shelf/Series Name"
+msgstr ""
+
+#: dialogs.py:3291
+msgid "Books on Shelf"
+msgstr ""
+
+#: dialogs.py:3389
+msgid "Related books type"
+msgstr ""
+
+#: dialogs.py:3393
+msgid "The related books will be all books in a series."
+msgstr ""
+
+#: dialogs.py:3394
+msgid "The related books will be all books by the same author."
+msgstr ""
+
+#: dialogs.py:3409
+msgid "Get list"
+msgstr ""
+
+#: dialogs.py:3410
+msgid "Get the list of categories to use for the related books"
+msgstr ""
+
+#: dialogs.py:3420
+msgid "Series/Author Name"
+msgstr ""
+
+#: dialogs.py:3420
+msgid "Number of books"
+msgstr ""
+
+#: dialogs.py:3428
+msgid ""
+"Remove the selected category from the list. This will mean related books "
+"will not be changed for that category."
+msgstr ""
+
+#: dialogs.py:3430
+msgid "Delete all"
+msgstr ""
+
+#: dialogs.py:3431
+msgid "Delete all related books for sideloaded books."
+msgstr ""
+
+#: dialogs.py:3455
+msgid "Do you want to remove related books for all sideloaded books?"
+msgstr ""
+
+#: dialogs.py:3514
+msgid "Reading status"
+msgstr ""
+
+#: dialogs.py:3518
+msgid "Change reading status"
+msgstr ""
+
+#: dialogs.py:3522
+msgid "Unread"
+msgstr ""
+
+#: dialogs.py:3526
+msgid "Reading"
+msgstr ""
+
+#: dialogs.py:3534
+msgid "Reset reading position"
+msgstr ""
+
+#: dialogs.py:3536
+msgid ""
+"If this option is checked, the current position and last reading date will "
+"be reset."
+msgstr ""
+
+#: dialogs.py:3572
+msgid "&Template editor"
+msgstr ""
+
+#: dialogs.py:3589
+msgid "Edit template"
+msgstr ""
+
+#: dialogs.py:3600
+msgid "Invalid template"
+msgstr ""
+
+#: dialogs.py:3601
+#, python-format
+msgid "The template %s is invalid:"
+msgstr ""
+
+#: dialogs.py:3619
+msgid "Update ToCs in Device Database"
+msgstr ""
+
+#: dialogs.py:3631
+msgid "Update ToC"
+msgstr ""
+
+#: dialogs.py:3632
+msgid "Update ToC in device database for selected books."
+msgstr ""
+
+#: dialogs.py:3635
+msgid "Remove selected books from the list"
+msgstr ""
+
+#: dialogs.py:3639
+msgid "Send Books"
+msgstr ""
+
+#: dialogs.py:3640
+msgid "Send books to device that have been updated in the library."
+msgstr ""
+
+#: dialogs.py:3645 dialogs.py:3653
+msgid "Select all books in the list."
+msgstr ""
+
+#: dialogs.py:3647
+msgid "Select Books to send"
+msgstr ""
+
+#: dialogs.py:3649
+msgid "Select all books that need to be sent to the device."
+msgstr ""
+
+#: dialogs.py:3651
+msgid "Select Books to update"
+msgstr ""
+
+#: dialogs.py:3657
+msgid "Unselect all books in the list."
+msgstr ""
+
+#: dialogs.py:3674 dialogs.py:3688
+msgid "Update Books"
+msgstr ""
+
+#: dialogs.py:3675
+#, python-brace-format
+msgid ""
+"There are {0} books that need to be updated on the device. After the book "
+"has been sent to the device, you can run the check and update the ToC.<br/"
+">Do you want to send the books to the device?"
+msgstr ""
+
+#: dialogs.py:3689
+#, python-brace-format
+msgid ""
+"There are {0} books that need to have their ToC updated on the device. Any "
+"selected books that have not been imported into the database on the device "
+"are ignored.<br/>Do you want to update the ToC in the database on the device?"
+msgstr ""
+
+#: dialogs.py:3737
+msgid "Library ToC"
+msgstr ""
+
+#: dialogs.py:3738
+msgid "Library Format"
+msgstr ""
+
+#: dialogs.py:3739
+msgid "Kobo ToC"
+msgstr ""
+
+#: dialogs.py:3740
+msgid "Kobo Format"
+msgstr ""
+
+#: dialogs.py:3741 dialogs.py:3744 config.py:1251
+msgid "Status"
+msgstr ""
+
+#: dialogs.py:3742
+msgid "Send"
+msgstr ""
+
+#: dialogs.py:3743
+msgid "Kobo Database ToC"
+msgstr ""
+
+#: dialogs.py:3745
+msgid "ToC"
+msgstr ""
+
+#: dialogs.py:3746
+msgid "Reading Position"
+msgstr ""
+
+#: dialogs.py:3747
+msgid "Comment"
+msgstr ""
+
+#: dialogs.py:3983
+msgid "About "
+msgstr ""
+
+#: dialogs.py:3988
+msgid "OK"
+msgstr ""
+
+#: config.py:196
+msgid "* File timestamp"
+msgstr ""
+
+#: config.py:519
+msgid "(Unknown device)"
+msgstr ""
+
+#: config.py:551
+msgid "Profiles:"
+msgstr ""
+
+#: config.py:558
+msgid "Add profile"
+msgstr ""
+
+#: config.py:563
+msgid "Delete profile"
+msgstr ""
+
+#: config.py:568 config.py:704
+msgid "Rename profile"
+msgstr ""
+
+#: config.py:576
+msgid "&Device this profile is for:"
+msgstr ""
+
+#: config.py:577
+msgid "Select the device this profile is for."
+msgstr ""
+
+#: config.py:583
+msgid "Custom Columns"
+msgstr ""
+
+#: config.py:593
+msgid "Current Reading Location Column:"
+msgstr ""
+
+#: config.py:594
+msgid ""
+"Select a custom column to store the current reading location. The column "
+"type must be 'text'. Leave this blank if you do not want to store or restore "
+"the current reading location."
+msgstr ""
+
+#: config.py:600
+msgid "Percent Read Column:"
+msgstr ""
+
+#: config.py:601
+msgid ""
+"Column used to store the current percent read. The column type must be a "
+"'integer'. Leave this blank if you do not want to store or restore the "
+"percentage read."
+msgstr ""
+
+#: config.py:607
+msgid "Rating Column:"
+msgstr ""
+
+#: config.py:608
+msgid ""
+"Column used to store the rating. The column type must be a 'integer'. Leave "
+"this blank if you do not want to store or restore the rating."
+msgstr ""
+
+#: config.py:614
+msgid "Last Read Column:"
+msgstr ""
+
+#: config.py:615
+msgid ""
+"Column used to store when the book was last read. The column type must be a "
+"'Date'. Leave this blank if you do not want to store the last read timestamp."
+msgstr ""
+
+#: config.py:621
+msgid "Store on connect"
+msgstr ""
+
+#: config.py:626
+msgid "Store current bookmarks on connect"
+msgstr ""
+
+#: config.py:627
+msgid ""
+"When this is checked, the library will be updated with the current bookmark "
+"for all books on the device."
+msgstr ""
+
+#: config.py:631
+msgid "Prompt to store any changes"
+msgstr ""
+
+#: config.py:632
+msgid ""
+"Enable this to be prompted to save the changed bookmarks after an automatic "
+"store is done."
+msgstr ""
+
+#: config.py:674
+msgid "Add new profile"
+msgstr ""
+
+#: config.py:675
+msgid "Enter a unique display name for this profile:"
+msgstr ""
+
+#: config.py:685 config.py:717
+msgid "Add failed"
+msgstr ""
+
+#: config.py:686 config.py:717
+msgid "A profile with the same name already exists"
+msgstr ""
+
+#: config.py:705
+msgid "Enter a new display name for this profile:"
+msgstr ""
+
+#: config.py:735
+msgid "Cannot delete"
+msgstr ""
+
+#: config.py:735
+msgid "You must have at least one profile"
+msgstr ""
+
+#: config.py:737
+#, python-brace-format
+msgid "Do you want to delete the profile named '{0}'"
+msgstr ""
+
+#: config.py:861
+msgid "Devices:"
+msgstr ""
+
+#: config.py:873
+msgid "Add connected device"
+msgstr ""
+
+#: config.py:875
+msgid ""
+"If you do not have a device connected currently, either plug one\n"
+"in now or exit the dialog and connect to folder/iTunes first"
+msgstr ""
+
+#: config.py:883
+msgid "Rename the currently connected device"
+msgstr ""
+
+#: config.py:890
+msgid "Delete this device from the device list"
+msgstr ""
+
+#: config.py:895
+msgid "Configure options for each device"
+msgstr ""
+
+#: config.py:896
+msgid "Selected this option to configure backup and firmware for each device."
+msgstr ""
+
+#: config.py:902
+msgid "Firmware Update Options"
+msgstr ""
+
+#: config.py:907
+msgid "Check for Kobo firmware updates daily?"
+msgstr ""
+
+#: config.py:908
+msgid ""
+"If this is selected the plugin will check for Kobo firmware updates when "
+"your Kobo device is plugged in, once per 24-hour period."
+msgstr ""
+
+#: config.py:911
+msgid "Use early firmware adopter affiliate?"
+msgstr ""
+
+#: config.py:912
+msgid ""
+"WARNING: THIS OPTION RISKS DOWNLOADING THE WRONG FIRMWARE FOR YOUR DEVICE! "
+"YOUR DEVICE MAY NOT FUNCTION PROPERLY IF THIS HAPPENS! Choose this option to "
+"attempt to download Kobo firmware updates before they are officially "
+"available for your device."
+msgstr ""
+
+#: config.py:915
+msgid "Device Database Backup"
+msgstr ""
+
+#: config.py:920
+msgid "Backup the device database daily"
+msgstr ""
+
+#: config.py:921
+msgid ""
+"If this is selected the plugin will backup the device database the first "
+"time it is connected each day."
+msgstr ""
+
+#: config.py:925
+msgid "Backup the device database on each connection"
+msgstr ""
+
+#: config.py:926
+msgid ""
+"If this is selected the plugin will backup the device database each time the "
+"device is connected."
+msgstr ""
+
+#: config.py:931
+msgid "Select the destination to backup the device database to."
+msgstr ""
+
+#: config.py:942
+msgid "Copies to keep"
+msgstr ""
+
+#: config.py:943
+msgid ""
+"Select this to limit the number of backup kept. If not set, the backup files "
+"must be manually deleted."
+msgstr ""
+
+#: config.py:946
+msgid "The number of backup copies of the database to keep. The minimum is 2."
+msgstr ""
+
+#: config.py:951
+msgid "Compress database with config files"
+msgstr ""
+
+#: config.py:952
+msgid ""
+"If checked, the database file will be added to the zip file with "
+"configuration files."
+msgstr ""
+
+#: config.py:1001 config.py:1004 config.py:1023
+msgid "Rename failed"
+msgstr ""
+
+#: config.py:1001 config.py:1029
+msgid "You must select a device first"
+msgstr ""
+
+#: config.py:1005
+msgid "You can only rename a device that is currently connected"
+msgstr ""
+
+#: config.py:1009
+msgid "Rename device"
+msgstr ""
+
+#: config.py:1010
+msgid "Enter a new display name for this device:"
+msgstr ""
+
+#: config.py:1023
+msgid "An error occured while renaming."
+msgstr ""
+
+#: config.py:1029
+msgid "Delete failed"
+msgstr ""
+
+#: config.py:1033
+#, python-brace-format
+msgid "You are about to remove the <b>{0}</b> device from this list. "
+msgstr ""
+
+#: config.py:1034
+msgid "Are you sure you want to continue?"
+msgstr ""
+
+#: config.py:1251
+msgid "Menu"
+msgstr ""
+
+#: config.py:1251
+msgid "Name"
+msgstr ""
+
+#: config.py:1251
+msgid "Model"
+msgstr ""
+
+#: config.py:1251
+msgid "Serial Number"
+msgstr ""
+
+#: config.py:1251
+msgid "Version"
+msgstr ""
+
+#: config.py:1342
+msgid "Other Options"
+msgstr ""
+
+#: config.py:1347
+msgid "&Library Button default:"
+msgstr ""
+
+#: config.py:1348 config.py:1355
+msgid ""
+"If plugin is placed as a toolbar button, choose a default action when "
+"clicked on"
+msgstr ""
+
+#: config.py:1354
+msgid "&Device Button default:"
+msgstr ""
+
+#: config.py:1361
+msgid "Keyboard shortcuts..."
+msgstr ""
+
+#: config.py:1367
+msgid "&View library preferences..."
+msgstr ""
+
+#: config.py:1368
+msgid "View data stored in the library database for this plugin"
+msgstr ""
+
+#: config.py:1391
+msgid "Kobo Utilities Options"
+msgstr ""
+
+#: config.py:1400
+msgid "Profiles"
+msgstr ""
+
+#: config.py:1401
+msgid "Devices"
+msgstr ""

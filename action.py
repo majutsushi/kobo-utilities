@@ -18,7 +18,7 @@ import six
 from six import text_type as unicode
 
 try:
-    from urllib.request import urlopen
+    from urllib.request import urlopen, Request
     from urllib.parse import quote
 except ImportError:
     from urllib import quote, urlopen
@@ -1237,7 +1237,8 @@ class KoboUtilitiesAction(InterfaceAction):
                 update_url = KOBO_FIRMWARE_UPDATE_CHECK_URL.format(version_info[5], affiliate, version_info[2], serial_no)
                 debug_print("auto_firmware_update_check - update_url:%s" % update_url)
                 update_data = None
-                resp = urlopen(update_url)
+                #resp = urlopen(update_url)
+                resp = urlopen(Request(update_url, headers={'User-Agent': 'Mozilla'}))
                 if resp.getcode() == 200:
                     import json
                     update_data = json.loads(resp.read())

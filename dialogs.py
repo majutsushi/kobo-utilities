@@ -108,6 +108,22 @@ KOBO_FONTS = {
                  'Kobo UD Kakugo':       'KBJ-UDKakugo Pr6N M', 
                  'OpenDyslexic':         'OpenDyslexic', 
                  },
+			(4, 34, 20097): { # Format is: Display name, setting name
+                 'Document Default':     'default', 
+                 'Amasis':               'Amasis', 
+                 'Avenir':               'Avenir Next', 
+                 'Caecilia':             'Caecilia',
+                 'Georgia':              'Georgia', 
+                 'Gill Sans':            'Gill Sans', 
+                 'Kobo Nickel':          'Kobo Nickel', 
+                 'Malabar':              'Malabar', 
+                 'AR UDJingxihei':       'AR UDJingxihei', 
+                 'Kobo Tsukushi Mincho': 'KBJ-TsukuMin Pr6N RB', 
+                 'Kobo UD Kakugo':       'KBJ-UDKakugo Pr6N M', 
+                 'OpenDyslexic':         'OpenDyslexic', 
+                 'Rakuten Serif':        'Rakuten Serif',
+                 'Rakuten Sans':         'Rakuten Sans',                    
+                 },     
             }
 
 TILE_TYPES    = {   # Format is: Activity/Tile name, Display Name, tooltip

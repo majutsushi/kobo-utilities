@@ -6038,7 +6038,7 @@ class KoboUtilitiesAction(InterfaceAction):
             HELP_FILE = 'KoboUtilities_Help_en.html'
             if lang == 'fr':
                 HELP_FILE = 'KoboUtilities_Help_fr.html'
-            file_path = os.path.join(config_dir, 'plugins', HELP_FILE)
+            file_path = os.path.join(config_dir, 'plugins', HELP_FILE).replace(os.sep, '/')
             file_data = self.load_resources('help/' + HELP_FILE)['help/' + HELP_FILE]
             debug_print('show_help - file_path:', file_path)
 #             debug_print('show_help - file_data:', file_data)

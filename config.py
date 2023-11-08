@@ -361,7 +361,7 @@ CUSTOM_COLUMN_DEFAULTS = {
                     'description' : _("Kobo Reading location from the device."),
                     'columns_list' : 'avail_text_columns',
                     'config_label' : _('Current Reading Location Column:'),
-                    'config_tool_tip' : _("Select a custom column to store the current reading location. The column type must be 'text'. Leave this blank if you do not want to store or restore the current reading location."),
+                    'config_tool_tip' : _("Select a custom column to store the current reading location. The column type must be 'text' or 'comments.' Leave this blank if you do not want to store or restore the current reading location."),
                 },
                 CUSTOM_COLUMN_DEFAULT_LOOKUP_PERCENT_READ : {
                     'column_heading': _("Kobo % Read"),
@@ -864,7 +864,7 @@ class ProfilesTab(QWidget):
         return custom_columns
 
     def get_text_custom_columns(self):
-        column_types = ['text']
+        column_types = ['text','comments']
         return self.get_custom_columns(column_types)
 
     def get_date_custom_columns(self):

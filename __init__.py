@@ -24,7 +24,7 @@ class ActionKoboUtilities(InterfaceActionBase):
     description             = "Utilities to use with Kobo ereaders"
     supported_platforms     = ['windows', 'osx', 'linux']
     author                  = 'David Forrester'
-    version                 = (2, 16,  10)
+    version                 = (2, 16,  11)
     minimum_calibre_version = (0,  9, 20)
 
     #: This field defines the GUI plugin class that contains all the code

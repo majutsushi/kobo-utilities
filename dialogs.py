@@ -923,7 +923,7 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         return self.get_custom_columns(column_types)
 
     def get_text_type_custom_columns(self):
-        column_types = ['text']
+        column_types = ['text', 'comments']
         return self.get_custom_columns(column_types)
 
     def get_custom_columns(self, column_types):

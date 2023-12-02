@@ -650,7 +650,7 @@ class ProfilesTab(QWidget):
         options_layout = QGridLayout()
         auto_store_group.setLayout(options_layout)
 
-        self.store_on_connect_checkbox = QCheckBox(_("Store current bookmarks on connect"), self)
+        self.store_on_connect_checkbox = QCheckBox(_("Store current bookmarks/reading position on connect"), self)
         self.store_on_connect_checkbox.setToolTip(_("When this is checked, the library will be updated with the current bookmark for all books on the device."))
         self.store_on_connect_checkbox.clicked.connect(self.store_on_connect_checkbox_clicked)
         options_layout.addWidget(self.store_on_connect_checkbox, 0, 0, 1, 3)

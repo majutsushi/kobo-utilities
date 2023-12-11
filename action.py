@@ -8,7 +8,7 @@ __docformat__ = 'restructuredtext en'
 
 import calendar
 import os, threading, time, shutil, re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from contextlib import closing
 from collections import OrderedDict, defaultdict
 
@@ -6146,8 +6146,9 @@ def convert_kobo_date(kobo_date):
 #                            converted_date = time.gmtime(os.path.getctime(self.path))
 #                            debug_print("convert_kobo_date - time.gmtime(os.path.getctime(self.path)) - kobo_date={0}'".format(kobo_date))
 #                        except:
-                        converted_date = time.gmtime()
-                        debug_print("convert_kobo_date - time.gmtime() - kobo_date={0}'".format(kobo_date))
+                        # The date is in some unknown format. Return now in the local timezone
+                        converted_date = datetime.now()  # time.gmtime()
+                        debug_print("convert_kobo_date - datetime.now() - kobo_date={0}'".format(kobo_date))
     return converted_date
 
 

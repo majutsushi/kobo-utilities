@@ -37,8 +37,6 @@ from calibre_plugins.koboutilities.action import (
     device_database_connection,
 )
 
-# from calibre_plugins.koboutilities.common_utils import debug_print
-
 # TODO: Sort out the logging
 logger = Log()  # logging.getLogger(__name__)
 JOBS_DEBUG = True
@@ -51,83 +49,6 @@ def debug_print(*args):
         BASE_TIME = time.time()
     if cfg.DEBUG or JOBS_DEBUG or DEBUG:  # or True:
         prints("DEBUG: %6.1f" % (time.time() - BASE_TIME), *args)
-
-
-#     logger.info('loggerINFO: %6.1f'%(time.time()-BASE_TIME), *args)
-#    logger(print('loggerDEBUG: %6.1f'%(time.time()-BASE_TIME), *args))
-
-
-def do_koboutilitiesa(books_to_scan, options, cpus, notification=lambda x, y: x):
-    """
-    Master job, to launch child jobs to modify each ePub
-    """
-    server = Server(pool_size=cpus)
-
-    print("do_koboutilitiesa - options=%s" % (options))
-    # Queue all the jobs
-
-    args = [
-        "calibre_plugins.koboutilities.jobs",
-        "do_store_location_single",
-        (books_to_scan, options),
-    ]
-    print("do_koboutilitiesa - args=%s" % (args))
-    job = ParallelJob("arbitrary", str(book_id), done=None, args=args)
-    job._book_id = book_id
-    job._title = title
-    job._authors = authors
-    job._contentIDs = contentIDs
-    server.add_job(job)
-
-    for book_id, contentIDs, title, authors in books_to_scan:
-        print(
-            "do_koboutilitiesa - book_id=%s, title=%s, authors=%s"
-            % (book_id, title, authors)
-        )
-        args = [
-            "calibre_plugins.koboutilities.jobs",
-            "do_store_location_single",
-            (book_id, contentIDs, options),
-        ]
-        print("do_koboutilitiesa - args=%s" % (args))
-        job = ParallelJob("arbitrary", str(book_id), done=None, args=args)
-        job._book_id = book_id
-        job._title = title
-        job._authors = authors
-        job._contentIDs = contentIDs
-        server.add_job(job)
-
-    # This server is an arbitrary_n job, so there is a notifier available.
-    # Set the % complete to a small number to avoid the 'unavailable' indicator
-    notification(0.01, "Storing reading locations")
-
-    # dequeue the job results as they arrive, saving the resultsdevice_statusotal = len(books_to_scan)
-    count = 0
-    stored_locations = dict()
-    while True:
-        job = server.changed_jobs_queue.get()
-        # A job can 'change' when it is not finished, for example if it
-        # produces a notification. Ignore these.
-        job.update()
-        if not job.is_finished:
-            continue
-        # A job really finished. Get the information.
-        stored_location = job.result
-        book_id = job._book_id
-        stored_locations[book_id] = stored_location
-        count += 1
-        notification(float(count) / total, "Storing locations")
-        # Add this job's output to the current log
-        print("Logfile for book ID %d (%s / %s)" % (book_id, job._title, job._authors))
-        print(job.details)
-        print("\tstored_location=", stored_location)
-        if count >= total:
-            # All done!
-            break
-
-    server.close()
-    # return the map as the job result
-    return stored_locations
 
 
 def do_check_firmware_update(
@@ -372,7 +293,6 @@ def do_device_database_backup(backup_options, cpus, notification=lambda x, y: x)
             len(backup_files) - copies_to_keep,
         )
 
-        #        for file in backup_files[copies_to_keep - 1:]:
         if len(backup_files) - copies_to_keep > 0:
             for filename in sorted(backup_files)[: len(backup_files) - copies_to_keep]:
                 debug_print(
@@ -393,7 +313,6 @@ def do_device_database_backup(backup_options, cpus, notification=lambda x, y: x)
             config_backup_file_search,
         )
         backup_files = glob.glob(config_backup_file_search)
-        # debug_print('do_device_database_backup - backup_files=', backup_files)
         debug_print(
             "do_device_database_backup - backup_files=",
             backup_files[: len(backup_files) - copies_to_keep],
@@ -403,7 +322,6 @@ def do_device_database_backup(backup_options, cpus, notification=lambda x, y: x)
             len(backup_files) - copies_to_keep,
         )
 
-        #        for file in backup_files[copies_to_keep - 1:]:
         if len(backup_files) - copies_to_keep > 0:
             for filename in sorted(backup_files)[: len(backup_files) - copies_to_keep]:
                 debug_print(
@@ -441,7 +359,6 @@ def do_store_locations(books_to_scan, options, cpus, notification=lambda x, y: x
         "do_store_locations_all",
         (books_to_scan, options),
     ]
-    #    debug_print("do_store_locations - args=%s" % (args))
     debug_print("do_store_locations - len(books_to_scan)=%d" % (len(books_to_scan)))
     job = ParallelJob("arbitrary", "Store locations", done=None, args=args)
     server.add_job(job)
@@ -462,15 +379,10 @@ def do_store_locations(books_to_scan, options, cpus, notification=lambda x, y: x
         if not job.is_finished:
             debug_print("do_store_locations - Job not finished")
             continue
-        #        debug_print("do_store_locations - Job finished")
         # A job really finished. Get the information.
         stored_locations = job.result
-        #        book_id = job._book_id
-        #        stored_locations[book_id] = stored_location
         count += 1
         notification(float(count) / total, "Storing locations")
-        # Add this job's output to the current log
-        # debug_print("Stored_location=", stored_locations)
         number_bookmarks = len(stored_locations) if stored_locations else 0
         debug_print("Stored_location count=%d" % number_bookmarks)
         debug_print(job.details)
@@ -574,7 +486,6 @@ def _store_bookmarks(log, books, options):
             debug_print("_store_bookmarks - contentIds='%s'" % (contentIDs))
             device_status = None
             for contentID in contentIDs:
-                #                log("_store_bookmarks - contentId='%s'" % (contentID))
                 debug_print("_store_bookmarks - contentId='%s'" % (contentID))
                 fetch_values = (contentID,)
                 if contentID.endswith(".kepub.epub"):
@@ -631,9 +542,7 @@ def _store_bookmarks(log, books, options):
 
             new_last_read = None
             if device_status["DateLastRead"]:
-                #                debug_print("_store_bookmarks - device_status['DateLastRead']=", device_status['DateLastRead'])
                 new_last_read = convert_kobo_date(device_status["DateLastRead"])
-            #                debug_print("_store_bookmarks - new_last_read=", new_last_read)
 
             if last_read_column_name is not None and store_if_more_recent:
                 debug_print("_store_bookmarks - setting mi.last_read=", new_last_read)
@@ -663,7 +572,6 @@ def _store_bookmarks(log, books, options):
                 kobo_chapteridbookmarked = device_status["ChapterIDBookmarked"]
                 kobo_adobe_location = None
             else:
-                #                debug_print("_store_bookmarks -device_status[0]=", device_status[0])
                 kobo_chapteridbookmarked = (
                     device_status["ChapterIDBookmarked"][len(contentID) + 1 :]
                     if device_status["ChapterIDBookmarked"]
@@ -697,7 +605,6 @@ def _store_bookmarks(log, books, options):
                 new_kobo_percentRead = 0
                 new_last_read = None
             elif device_status["ReadStatus"] > 0:
-                #                debug_print("_store_bookmarks - current_chapterid != new_chapterid=", current_chapterid != new_chapterid)
                 try:
                     debug_print(
                         "_store_bookmarks - Start of checks for current_last_read - reading_position_changed='%s'"
@@ -861,7 +768,6 @@ def do_clean_images_dir(options, cpus, notification=lambda x, y: x):
         % (main_image_path)
     )
     imageids_files_main = _get_file_imageIds(main_image_path)
-    #    debug_print("Getting ImageIDs from main images directory - imageids_files_main", imageids_files_main)
 
     notification(2 / 7, "Getting ImageIDs from SD card images directory")
     debug_print(
@@ -872,7 +778,6 @@ def do_clean_images_dir(options, cpus, notification=lambda x, y: x):
     notification(3 / 7, "Getting ImageIDs from device database.")
     debug_print("Getting ImageIDs from device database.")
     imageids_db = _get_imageId_set(device_database_path)
-    #        debug_print("clean_images_dir - len(imageids_db)=%d imageids_db=%s" % (len(imageids_db), imageids_db))
 
     notification(4 / 7, "Checking/removing images from main images directory")
     extra_imageids_files_main = set(imageids_files_main.keys()) - imageids_db
@@ -880,7 +785,6 @@ def do_clean_images_dir(options, cpus, notification=lambda x, y: x):
         "Checking/removing images from main images directory - Number of extra images: %d"
         % (len(extra_imageids_files_main))
     )
-    #    debug_print("Checking/removing images from main images directory - extra_imageids_files_main:", extra_imageids_files_main)
     extra_image_files_main = _remove_extra_files(
         extra_imageids_files_main,
         imageids_files_main,
@@ -895,7 +799,6 @@ def do_clean_images_dir(options, cpus, notification=lambda x, y: x):
         "Checking/removing images from SD card images directory - Number of extra images: %d"
         % (len(extra_imageids_files_sd))
     )
-    #    debug_print("Checking/removing images from SD card images directory - extra_imageids_files_sd:", extra_imageids_files_sd)
     extra_image_files_sd = _remove_extra_files(
         extra_imageids_files_sd,
         imageids_files_sd,
@@ -917,18 +820,12 @@ def _get_file_imageIds(image_path):
     imageids_files = {}
     if image_path:
         for path, dirs, files in os.walk(image_path):
-            #            debug_print("_get_file_imageIds - path=%s, dirs=%s" % (path, dirs))
-            #            debug_print("_get_file_imageIds - files=", files)
-            #            debug_print("_get_file_imageIds - len(files)=", len(files))
             for filename in files:
-                #                debug_print("_get_file_imageIds - filename=", filename)
                 if filename.find(" - N3_") > 0:
-                    #                    debug_print("check_covers - filename=%s" % (filename))
                     imageid = filename.split(" - N3_")[0]
                     imageids_files[imageid] = path
                     continue
                 elif filename.find(" - AndroidBookLoadTablet_Aspect") > 0:
-                    #                    debug_print("check_covers - filename=%s" % (filename))
                     imageid = filename.split(" - AndroidBookLoadTablet_Aspect")[0]
                     imageids_files[imageid] = path
                     continue
@@ -938,7 +835,6 @@ def _get_file_imageIds(image_path):
                         "check_covers: not 'N3' file - filename=%s" % (filename)
                     )
 
-    #    imageids_files = set(imageids_files)
     return imageids_files
 
 
@@ -995,7 +891,6 @@ def _get_imageId_set(device_database_path):
         cursor.execute(imageId_query)
         for i, row in enumerate(cursor):
             imageIDs.append(row["ImageId"])
-        #            debug_print("_get_imageid_set - row[0]='%s'" % (row[0]))
 
         cursor.close()
 
@@ -1026,7 +921,6 @@ def do_remove_annotations(options, books, cpus, notification=lambda x, y: x):
             debug_print("do_remove_annotations: removing annotations directory - done")
     elif options[cfg.KEY_REMOVE_ANNOT_ACTION] == cfg.KEY_REMOVE_ANNOT_SELECTED:
         if books and len(books) > 0:
-            #            debug_print("do_remove_annotations: for selected books:", books)
             annotation_files = _get_annotation_files_for_books(
                 books, annotations_dir, annotations_ext, device_path
             )
@@ -1101,7 +995,6 @@ def _get_annotation_files(annotations_path, annotations_ext, device_path):
                 if filename.endswith(annotations_ext):
                     annotation_files[filename] = path
 
-    #    annotation_files = set(annotation_files)
     return annotation_files
 
 
@@ -1112,8 +1005,6 @@ def _get_annotation_files_for_books(
     debug_print("_get_annotation_files_for_books - annotations_path=", annotations_path)
     debug_print("_get_annotation_files_for_books - device_path=", device_path)
     for book in books:
-        #        debug_print("_get_annotation_files_for_books - book=", book)
-        #            book_path = path.replace(annotations_path, device_path)
         for filename in book[2]:
             debug_print("_get_annotation_files_for_books - filename=", filename)
             book_filename = filename
@@ -1167,7 +1058,6 @@ def _book_file_does_not_exists(
     book_file = os.path.splitext(annotation_filename)[0]
     book_path = annotation_path.replace(annotations_dir, device_path)
     book_file = os.path.join(book_path, book_file)
-    #    debug_print("_book_file_exists - book_file=", book_file)
     return not os.path.exists(book_file)
 
 
@@ -1189,6 +1079,5 @@ def _annotation_file_is_not_empty(
     with open(annotation_filepath) as annotation_file:
         soup = BeautifulStoneSoup(annotation_file.read())
         annotation = soup.find("annotation")
-    #        debug_print("_annotation_file_is_empty - annotation=", annotation)
 
     return annotation is not None

@@ -67,23 +67,10 @@ class SeriesBook(object):
                 self._series_index_format = self._mi.kobo_series_number.replace(
                     numbers[0], "%g", 1
                 )
-            #            self._orig_series_index = re.findall(r"\d*", self._mi.kobo_series_number)
             debug_print(
                 "SeriesBook:get_series_index - self._orig_series_index=",
                 self._orig_series_index,
             )
-
-    def get_mi_to_persist(self):
-        # self._mi will be potentially polluted with changes applied to multiple series columns
-        # Instead return a Metadata object with only changes relevant to the last series column selected.
-        debug_print("SeriesBook:get_mi_to_persist")
-        self._orig_title = self._mi.title
-        if hasattr(self._mi, "pubdate"):
-            self._orig_pubdate = self._mi.pubdate
-        self._orig_series = self._mi.series
-        self._orig_series_index = self._mi.series_index
-
-        return self._orig_mi
 
     def revert_changes(self):
         debug_print("SeriesBook:revert_changes")
@@ -146,8 +133,6 @@ class SeriesBook(object):
         return self._orig_series_index
 
     def orig_series_index_string(self):
-        #        debug_print("SeriesBook:orig_series_index - self._orig_series_index=", self._orig_series_index)
-        #        debug_print("SeriesBook:orig_series_index - self._orig_series_index.__class__=", self._orig_series_index.__class__)
         if self._orig_series_index_string is not None:
             return self._orig_series_index_string
 

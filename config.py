@@ -153,7 +153,6 @@ KEY_SET_READING_STATUS = "setRreadingStatus"
 KEY_READING_STATUS = "readingStatus"
 KEY_SET_PUBLISHED_DATE = "published_date"
 KEY_SET_ISBN = "isbn"
-KEY_SET_NOT_INTERESTED = "mark_not_interested"
 KEY_SET_LANGUAGE = "language"
 KEY_SET_READING_DIRECTION = "set_reading_direction"
 KEY_READING_DIRECTION = "reading_direction"
@@ -281,7 +280,6 @@ METADATA_OPTIONS_DEFAULTS = {
     KEY_READING_STATUS: -1,
     KEY_SET_PUBLISHED_DATE: False,
     KEY_SET_ISBN: False,
-    KEY_SET_NOT_INTERESTED: False,
     KEY_SET_LANGUAGE: False,
     KEY_RESET_POSITION: False,
     KEY_USE_PLUGBOARD: False,
@@ -490,7 +488,6 @@ def get_plugin_pref(store_name, option):
         "get_plugin_pref - start - store_name='%s', option='%s'" % (store_name, option)
     )
     c = plugin_prefs[store_name]
-    #     debug_print("get_plugin_pref - c:", c)
     default_value = plugin_prefs.defaults[store_name][option]
     return c.get(option, default_value)
 
@@ -505,7 +502,6 @@ def get_plugin_prefs(store_name, fill_defaults=False):
 
 def get_prefs(prefs_store, store_name):
     debug_print("get_prefs - start - store_name='%s'" % (store_name,))
-    #     debug_print("get_prefs - start - prefs_store='%s'" % (prefs_store,))
     store = {}
     if prefs_store is not None and store_name in prefs_store:
         for key in plugin_prefs.defaults[store_name].keys():
@@ -518,8 +514,6 @@ def get_prefs(prefs_store, store_name):
 
 
 def get_pref(store, store_name, option, defaults=None):
-    #     debug_print("get_pref - start - store_name='%s'" % (store_name, ))
-    #     debug_print("get_pref - start - option='%s'" % (option,))
     if defaults:
         default_value = defaults[option]
     else:
@@ -623,7 +617,6 @@ def get_profile_info(db, profile_name):
 
 def set_default_profile(db, profile_name):
     library_config = get_library_config(db)
-    #    library_config[KEY_DEFAULT_LIST] = profile_name
     set_library_config(db, library_config)
 
 
@@ -866,18 +859,8 @@ class ProfilesTab(QWidget):
 
     # Called by Calibre before save_settings
     def validate(self):
-        #        import traceback
-        #        traceback.print_stack()
-
         debug_print("BEGIN Validate")
         valid = True
-        # Only save if we were able to get data to avoid corrupting stored data
-        #        if self.do_daily_backp_checkbox.checkState() == Qt.Checked and not len(self.dest_directory_edit.text()):
-        #            error_dialog(self, 'No destination directory',
-        #                            'If the automatic device backup is set, there must be a destination directory.',
-        #                            show=True, show_copy_button=False)
-        #            valid = False
-
         debug_print("END Validate, status = %s" % valid)
         return valid
 
@@ -950,8 +933,6 @@ class ProfilesTab(QWidget):
         # As we are about to rename profile, persist the current profiles details if any
         self.persist_profile_config()
         self.profiles[new_profile_name] = self.profiles[old_profile_name]
-        #        if self.default_profile == old_profile_name:
-        #            self.default_profile = new_profile_name
         del self.profiles[old_profile_name]
         self.profile_name = new_profile_name
         # Now update the profiles combobox
@@ -980,8 +961,6 @@ class ProfilesTab(QWidget):
         ):
             return
         del self.profiles[self.profile_name]
-        #        if self.default_profile == self.profile_name:
-        #            self.default_profile = self.profiles.keys()[0]
         # Now update the profiles combobox
         self.select_profile_combo.populate_combo(self.profiles)
         self.refresh_current_profile_info()
@@ -1011,7 +990,6 @@ class ProfilesTab(QWidget):
         last_read_column = get_pref(
             column_prefs, CUSTOM_COLUMNS_STORE_NAME, KEY_LAST_READ_CUSTOM_COLUMN
         )
-        #        debug_print("ProfilesTab:refresh_current_profile_info - current_Location_column=%s, percent_read_column=%s, rating_column=%s" % (current_Location_column, percent_read_column, rating_column))
 
         store_prefs = profile_map.get(STORE_OPTIONS_STORE_NAME, STORE_OPTIONS_DEFAULTS)
         store_on_connect = get_pref(
@@ -1164,14 +1142,7 @@ class ProfilesTab(QWidget):
         datatype = CUSTOM_COLUMN_DEFAULTS[lookup_name]["datatype"]
         column_heading = CUSTOM_COLUMN_DEFAULTS[lookup_name]["column_heading"]
 
-        # current_lookup_names = self.custom_columns[lookup_name]['current_columns'].keys()
         new_lookup_name = lookup_name
-        # i = 0
-        # while new_lookup_name in current_lookup_names:
-        #     i += 1
-        #     new_lookup_name = "{0}_{1}".format(lookup_name, i)
-        # if i > 0:
-        #     column_heading = "{0} {1}".format(column_heading, i)
 
         create_new_custom_column_instance = (
             self.parent_dialog.get_create_new_custom_column_instance
@@ -1187,8 +1158,6 @@ class ProfilesTab(QWidget):
         )
         debug_print("ProfilesTab:create_custom_column - result:", result)
         if result[0] == CreateNewCustomColumn.Result.COLUMN_ADDED:
-            # print(self.get_text_custom_columns())
-            # print(self.plugin_action.gui.current_db.field_metadata.custom_field_metadata())
             self.custom_columns[lookup_name]["combo_box"].populate_combo(
                 self.custom_columns[lookup_name]["current_columns"](), result[1]
             )
@@ -1431,10 +1400,6 @@ class DevicesTab(QWidget):
                 show=True,
                 show_copy_button=False,
             )
-        # if not is_connected:
-        #     return error_dialog(self, _('Rename failed'),
-        #                         _('You can only rename a device that is currently connected'),
-        #                         show=True, show_copy_button=False)
 
         old_name = device_info["name"]
         new_device_name, ok = QInputDialog.getText(
@@ -1511,25 +1476,21 @@ class DevicesTab(QWidget):
 
         if self._connected_device_info is None or not self.plugin_action.haveKobo():
             self.add_device_btn.setEnabled(False)
-            # self.rename_device_btn.setEnabled(False)
         else:
             # Check to see whether we are connected to a device we already know about
             is_new_device = True
-            can_rename = False
             drive_info = self._connected_device_info[4]
             if drive_info:
                 # This is a non iTunes device that we can check to see if we have the UUID for
                 device_uuid = drive_info["main"]["device_store_uuid"]
                 if device_uuid in devices:
                     is_new_device = False
-                    can_rename = True
             else:
                 # This is a device without drive info like iTunes
                 device_type = self._connected_device_info[0]
                 if device_type in devices:
                     is_new_device = False
             self.add_device_btn.setEnabled(is_new_device)
-            # self.rename_device_btn.setEnabled(can_rename)
         if update_table:
             self.devices_table.populate_table(devices, self._connected_device_info)
             self.refresh_current_device_options()
@@ -1583,8 +1544,6 @@ class DevicesTab(QWidget):
             self.dest_directory_edit.setText(path)
 
     def refresh_current_device_options(self):
-        #         debug_print("DevicesTab:refresh_current_device_options - Start")
-
         if self.individual_device_options:
             (self.current_device_info, _is_connected) = (
                 self.devices_table.get_selected_device_info()
@@ -1650,13 +1609,10 @@ class DevicesTab(QWidget):
         else:
             self.copies_to_keep_checkbox.setCheckState(Qt.Checked)
             self.copies_to_keep_spin.setProperty("value", copies_to_keep)
-        #         debug_print("DevicesTab:refresh_current_device_options - do_daily_backup=%s, backup_each_connection=%s" % (do_daily_backup, backup_each_connection))
         if do_daily_backup:
             self.do_daily_backp_checkbox_clicked(do_daily_backup)
         if backup_each_connection:
             self.backup_each_connection_checkbox_clicked(backup_each_connection)
-
-    #         debug_print("DevicesTab:refresh_current_device_options - end")
 
     def persist_devices_config(self):
         debug_print("DevicesTab:persist_devices_config - Start")
@@ -1842,11 +1798,8 @@ class DevicesTableWidget(QTableWidget):
             (device_config, _is_connected) = convert_qvariant(
                 self.item(row, 1).data(Qt.UserRole)
             )
-            #            debug_print("DevicesTableWidget::get_data - device_config", device_config)
-            #            debug_print("DevicesTableWidget::get_data - _is_connected", _is_connected)
             device_config["active"] = self.item(row, 0).get_boolean_value()
             devices[device_config["uuid"]] = device_config
-        #        debug_print("DevicesTableWidget::get_data - devices:", devices)
         return devices
 
     def get_selected_device_info(self):
@@ -1994,11 +1947,6 @@ class ConfigWidget(QWidget):
         return self.devices_tab.devices_table.get_data()
 
     def delete_device_from_lists(self, library_config, device_uuid):
-        #        for list_info in library_config[KEY_PROFILES].itervalues():
-        #            if list_info[KEY_FOR_DEVICE] == device_uuid:
-        #                list_info[KEY_FOR_DEVICE] = DEFAULT_PROFILE_VALUES[KEY_FOR_DEVICE]
-        #                list_info[KEY_SYNC_AUTO] = DEFAULT_PROFILE_VALUES[KEY_SYNC_AUTO]
-        #                list_info[KEY_SYNC_CLEAR] = DEFAULT_PROFILE_VALUES[KEY_SYNC_CLEAR]
         set_library_config(self.plugin_action.gui.current_db, library_config)
 
     def save_settings(self):
@@ -2013,7 +1961,6 @@ class ConfigWidget(QWidget):
 
         library_config = self.profiles_tab.library_config
         library_config[KEY_PROFILES] = self.profiles_tab.profiles
-        #        library_config[KEY_DEFAULT_LIST] = self.profiles_tab.default_list
         set_library_config(self.plugin_action.gui.current_db, library_config)
 
     def edit_shortcuts(self):

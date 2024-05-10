@@ -125,8 +125,6 @@ from six import text_type as unicode
 from six.moves.configparser import SafeConfigParser
 from six.moves.urllib.parse import quote_plus
 
-# from calibre_plugins.koboutilities.action import (convert_kobo_date)
-
 # Checked with FW2.5.2
 LINE_SPACINGS = [1.3, 1.35, 1.4, 1.6, 1.775, 1.9, 2, 2.2, 3]
 LINE_SPACINGS_020901 = [
@@ -357,9 +355,6 @@ KEY_REMOVE_ANNOT_EMPTY = 2
 KEY_REMOVE_ANNOT_NONEMPTY = 3
 KEY_REMOVE_ANNOT_SELECTED = 4
 
-# This is where all preferences for this plugin will be stored
-# plugin_prefs = JSONConfig('plugins/Kobo Utilities')
-
 # pulls in translation files for _() strings
 try:
     debug_print("KoboUtilites::dialogs.py - loading translations")
@@ -473,7 +468,6 @@ class QueueProgressDialog(QProgressDialog):
             device_book_paths = self.plugin_action.get_device_paths_from_id(
                 book.calibre_id
             )
-            #            debug_print("QueueProgressDialog::do_all_books -- device_book_paths:", device_book_paths)
             book.contentIDs = [
                 self.plugin_action.contentid_from_path(
                     path, self.plugin_action.CONTENTTYPE
@@ -508,7 +502,6 @@ class QueueProgressDialog(QProgressDialog):
                         "#value#"
                     ]
 
-                #                debug_print("QueueProgressDialog::do_books - adding:", book.calibre_id, book.contentIDs, title, authors, current_chapterid, current_percentRead, current_rating, current_last_read)
                 self.books_to_scan.append(
                     (
                         book.calibre_id,
@@ -571,7 +564,6 @@ class QueueProgressDialog(QProgressDialog):
 
             for book in self.books:
                 self.i += 1
-                #                debug_print("QueueProgressDialog::do_remove_annotations_queue -- book:", book)
                 if self.plugin_action.isDeviceView():
                     device_book_paths = [book.path]
                     contentIDs = [book.contentID]
@@ -596,7 +588,6 @@ class QueueProgressDialog(QProgressDialog):
                     self.setLabelText(_("Queueing ") + title)
                     authors = authors_to_string(book.authors)
 
-                    #                debug_print("QueueProgressDialog::do_remove_annotations_queue - adding:", book.calibre_id, book.contentIDs, title, authors)
                     self.books_to_scan.append(
                         (book.calibre_id, book.contentIDs, book.paths, title, authors)
                     )
@@ -635,7 +626,6 @@ class ReaderOptionsDialog(SizePersistedDialog):
         self.font_list = self.get_font_list()
         self.initialize_controls()
 
-        #        self.options = gprefs.get(self.unique_pref_name+':settings', {})
         debug_print("ReaderOptionsDialog:__init__")
 
         # Set some default values from last time dialog was used.
@@ -1599,7 +1589,6 @@ class DismissTilesOptionsDialog(SizePersistedDialog):
         self.plugin_action = plugin_action
         self.help_anchor = "DismissTiles"
 
-        #        self.options = gprefs.get(self.unique_pref_name+':settings', {})
         self.options = cfg.get_plugin_prefs(cfg.DISMISSTILES_OPTIONS_STORE_NAME)
         self.initialize_controls()
 
@@ -1824,7 +1813,6 @@ class DispayExtrasTilesDialog(SizePersistedDialog):
         self.plugin_action = plugin_action
         self.help_anchor = "DispayExtrasTiles"
 
-        #        self.options = gprefs.get(self.unique_pref_name+':settings', {})
         self.options = cfg.get_plugin_prefs(cfg.DISPLAYEXTRASTILES_OPTIONS_STORE_NAME)
         self.initialize_controls()
 
@@ -1960,8 +1948,6 @@ class BookmarkOptionsDialog(SizePersistedDialog):
         self.plugin_action = plugin_action
         self.help_anchor = "StoreCurrentBookmark"
 
-        #        self.options = gprefs.get(self.unique_pref_name+':settings', {})
-
         # Set some default values from last time dialog was used.
         c = cfg.plugin_prefs[cfg.BOOKMARK_OPTIONS_STORE_NAME]
         store_bookmarks = c.get(
@@ -2019,7 +2005,6 @@ class BookmarkOptionsDialog(SizePersistedDialog):
             if set_rating and self.plugin_action.supports_ratings
             else Qt.Unchecked
         )
-        #        self.set_rating_checkbox.setEnabled(have_rating_column(self.plugin_action) and self.plugin_action.supports_ratings)
 
         self.clear_if_unread_checkbox.setCheckState(
             Qt.Checked if clear_if_unread else Qt.Unchecked
@@ -2140,7 +2125,6 @@ class BookmarkOptionsDialog(SizePersistedDialog):
         layout.addWidget(button_box)
 
     def ok_clicked(self):
-        #        gprefs.set(self.unique_pref_name+':settings', self.options)
         profile_name = unicode(self.select_profile_combo.currentText()).strip()
         msg = self.plugin_action.validate_profile(profile_name)
         if msg is not None:
@@ -2410,7 +2394,6 @@ class RemoveAnnotationsOptionsDialog(SizePersistedDialog):
                 _("Only remove annotations files if they contain annotations"),
                 True,
             ),
-            #                            (_("Remove if in database"), _("Remove annotations files if there are annotations in the datababase"),),
         }
 
         annotation_clean_option_group_box_layout = QVBoxLayout()
@@ -2899,7 +2882,6 @@ class AuthorsTableWidgetItem(ReadOnlyTableWidgetItem):
     def __init__(self, authors, author_sort=None):
         text = " & ".join(authors)
         ReadOnlyTableWidgetItem.__init__(self, text)
-        #        self.setTextColor(Qt.darkGray)
         self.setForeground(Qt.darkGray)
         self.author_sort = author_sort
 
@@ -2914,8 +2896,6 @@ class SeriesTableWidgetItem(ReadOnlyTableWidgetItem):
         if series_name:
             text = "%s [%s]" % (series_name, series_index)
             text = "%s - %s" % (series_name, series_index)
-        #            text = '%s [%s]' % (series_name, fmt_sidx(series_index))
-        #            text = '%s - %s' % (series_name, fmt_sidx(series_index))
         else:
             text = ""
         ReadOnlyTableWidgetItem.__init__(self, text)
@@ -3056,7 +3036,6 @@ class SeriesTableWidget(QTableWidget):
             3,
             SeriesTableWidgetItem(
                 book.orig_series_name(),
-                #                                                   book.orig_series_index(),
                 book.orig_series_index_string(),
                 is_original=True,
             ),
@@ -3413,7 +3392,6 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         self.renumber_series()
 
     def clean_title_checkbox_clicked(self, checked):
-        #        self.clean_title = checked
         self.clean_title(checked)
 
     def renumber_series(self, display_in_table=True):
@@ -3905,18 +3883,13 @@ class ShowReadingPositionChangesDialog(SizePersistedDialog):
         button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         button_box.accepted.connect(self._ok_clicked)
         button_box.rejected.connect(self.reject)
-        #         self.select_all_button = button_box.addButton(_("Select all"), QDialogButtonBox.ResetRole)
-        #         self.select_all_button.setToolTip(_("Select all books to add them to the calibre library."))
-        #         self.select_all_button.clicked.connect(self._select_all_clicked)
         self.select_all_button = button_box.addButton(
             _("Select all"), QDialogButtonBox.ResetRole
         )
-        #         self.clear_all_button.setObjectName('toggle_checkmarks_button')
         self.select_all_button.clicked.connect(self._select_all_clicked)
         self.clear_all_button = button_box.addButton(
             _("Clear all"), QDialogButtonBox.ResetRole
         )
-        #         self.clear_all_button.setObjectName('toggle_checkmarks_button')
         self.clear_all_button.clicked.connect(self._clear_all_clicked)
 
         layout.addWidget(button_box)
@@ -4007,7 +3980,6 @@ class ShowReadingPositionChangesTableWidget(QTableWidget):
         )
         row = 0
         for book_id, reading_position in reading_positions.items():
-            #            debug_print("ShowReadingPositionChangesDialog:populate_table - reading_position=", reading_position)
             self.populate_table_row(row, book_id, reading_position)
             row += 1
 
@@ -4021,7 +3993,6 @@ class ShowReadingPositionChangesTableWidget(QTableWidget):
         self.resizeColumnToContents(6)
         self.hideColumn(7)
         self.setSortingEnabled(True)
-        #        self.setMinimumSize(550, 0)
         self.selectRow(0)
         delegate = DateDelegate(self, default_to_today=False)
         self.setItemDelegateForColumn(5, delegate)
@@ -4032,14 +4003,9 @@ class ShowReadingPositionChangesTableWidget(QTableWidget):
             self.setColumnWidth(col, minimum)
 
     def populate_table_row(self, row, book_id, reading_position):
-        #        debug_print("ShowReadingPositionChangesTableWidget:populate_table_row - shelf:", row, reading_position[0], reading_position[1], reading_position[2], reading_position[3])
         self.blockSignals(True)
 
         book = self.db.get_metadata(book_id, index_is_id=True, get_cover=False)
-        #        debug_print("ShowReadingPositionChangesTableWidget:populate_table_row - book_id:", book_id)
-        #        debug_print("ShowReadingPositionChangesTableWidget:populate_table_row - book.title:", book.title)
-        #        debug_print("ShowReadingPositionChangesTableWidget:populate_table_row - book:", book)
-        #        debug_print("ShowReadingPositionChangesTableWidget:populate_table_row - reading_position:", reading_position)
 
         self.setItem(row, 0, CheckableTableWidgetItem(True))
 
@@ -4059,7 +4025,6 @@ class ShowReadingPositionChangesTableWidget(QTableWidget):
         current_percent.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
         self.setItem(row, 3, current_percent)
 
-        #        debug_print("ShowReadingPositionChangesTableWidget:populate_table_row - reading_position[4]:", reading_position[4])
         new_percentRead = 0
         if reading_position["ReadStatus"] == 1:
             new_percentRead = reading_position["___PercentRead"]
@@ -4095,7 +4060,6 @@ class ShowReadingPositionChangesTableWidget(QTableWidget):
         )
         book_idColumn = RatingTableWidgetItem(book_id)
         self.setItem(row, 7, book_idColumn)
-        #        titleColumn.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
         self.blockSignals(False)
 
     def select_all(self):
@@ -4104,9 +4068,6 @@ class ShowReadingPositionChangesTableWidget(QTableWidget):
     def toggle_checkmarks(self, select):
         for i in range(self.rowCount()):
             self.item(i, 0).setCheckState(select)
-
-
-#         self.repaint()
 
 
 class FixDuplicateShelvesDialog(SizePersistedDialog):
@@ -4148,19 +4109,16 @@ class FixDuplicateShelvesDialog(SizePersistedDialog):
         table_layout.addWidget(self.shelves_table)
 
         options_group = QGroupBox(_("Options"), self)
-        #        options_group.setToolTip(_("When a tile is added or changed, the database trigger will automatically set them to be dismissed. This will be done for the tile types selected above."))
         layout.addWidget(options_group)
         options_layout = QGridLayout()
         options_group.setLayout(options_layout)
 
         options_layout.addWidget(QLabel(_("Shelf to Keep")), 0, 0, 1, 1)
         self.keep_oldest_radiobutton = QRadioButton(_("Oldest"), self)
-        #        self.create_trigger_radiobutton.setToolTip(_("To create or change the trigger, select this option."))
         options_layout.addWidget(self.keep_oldest_radiobutton, 0, 1, 1, 1)
         self.keep_oldest_radiobutton.setEnabled(True)
 
         self.keep_newest_radiobutton = QRadioButton(_("Newest"), self)
-        #        self.delete_trigger_radiobutton.setToolTip(_("This will remove the existing trigger and let the device work as Kobo intended it."))
         options_layout.addWidget(self.keep_newest_radiobutton, 0, 2, 1, 1)
         self.keep_newest_radiobutton.setEnabled(True)
         self.keep_newest_radiobutton.click()
@@ -4222,10 +4180,6 @@ class DuplicateShelvesInDeviceDatabaseTableWidget(QTableWidget):
         QTableWidget.__init__(self, parent)
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
 
-    #        self.fmt = tweaks['gui_pubdate_display_format']
-    #        if self.fmt is None:
-    #            self.fmt = 'MMM yyyy'
-
     def populate_table(self, shelves):
         self.clear()
         self.setAlternatingRowColors(True)
@@ -4250,7 +4204,6 @@ class DuplicateShelvesInDeviceDatabaseTableWidget(QTableWidget):
         self.resizeColumnToContents(2)
         self.setMinimumColumnWidth(2, 150)
         self.setSortingEnabled(True)
-        #        self.setMinimumSize(550, 0)
         self.selectRow(0)
         delegate = DateDelegate(self, default_to_today=False)
         self.setItemDelegateForColumn(1, delegate)
@@ -4261,14 +4214,11 @@ class DuplicateShelvesInDeviceDatabaseTableWidget(QTableWidget):
             self.setColumnWidth(col, minimum)
 
     def populate_table_row(self, row, shelf):
-        #        debug_print("DuplicateShelvesInDeviceDatabaseTableWidget:populate_table_row - shelf:", row, shelf[0], shelf[1], shelf[2], shelf[3])
         self.blockSignals(True)
         shelf_name = shelf[0] if shelf[0] else _("(Unnamed shelf)")
         titleColumn = QTableWidgetItem(shelf_name)
         titleColumn.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
         self.setItem(row, 0, titleColumn)
-        #        self.setItem(row, 1, QTableWidgetItem(shelf[1]))
-        #        self.setItem(row, 2, QTableWidgetItem(shelf[2]))
         self.setItem(
             row,
             1,
@@ -4299,10 +4249,8 @@ class OrderSeriesShelvesDialog(SizePersistedDialog):
         self.initialize_controls()
         self.order_shelves_in = self.options[cfg.KEY_SORT_DESCENDING]
         if self.order_shelves_in:
-            #            self.descending_radiobutton.click()
             self.order_shelves_in_button_group.button(1).setChecked(True)
         else:
-            #            self.ascending_radiobutton.click()
             self.order_shelves_in_button_group.button(0).setChecked(True)
 
         if self.options.get(
@@ -4433,15 +4381,6 @@ class OrderSeriesShelvesDialog(SizePersistedDialog):
             self._order_shelves_in_radio_clicked
         )
 
-        #        options_layout.addWidget(QLabel(_("Order in")), 0, 0, 1, 1)
-        #        self.ascending_radiobutton = QRadioButton(_("Ascending"), self)
-        #        self.ascending_radiobutton.setToolTip(_("Selecting ascending will sort the shelf in series order."))
-        #        options_layout.addWidget(self.ascending_radiobutton, 0, 1, 1, 1)
-        #
-        #        self.descending_radiobutton = QRadioButton(_("Descending"), self)
-        #        options_layout.addWidget(self.descending_radiobutton, 0, 2, 1, 1)
-        #        self.descending_radiobutton.setToolTip(_("Selecting descending will sort the shelf in reverse series order."))
-
         self.update_config_checkbox = QCheckBox(_("Update config file"), self)
         options_layout.addWidget(self.update_config_checkbox, 0, 2, 1, 1)
         self.update_config_checkbox.setToolTip(
@@ -4527,7 +4466,6 @@ class OrderSeriesShelvesTableWidget(QTableWidget):
         self.setMinimumColumnWidth(0, 150)
         self.setColumnWidth(1, 150)
         self.setSortingEnabled(True)
-        #        self.setMinimumSize(550, 0)
         self.selectRow(0)
 
     def setMinimumColumnWidth(self, col, minimum):
@@ -4535,11 +4473,9 @@ class OrderSeriesShelvesTableWidget(QTableWidget):
             self.setColumnWidth(col, minimum)
 
     def populate_table_row(self, row, shelf):
-        #        debug_print("OrderSeriesShelvesTableWidget:populate_table_row - shelf:", row, shelf)
         self.blockSignals(True)
         nameColumn = QTableWidgetItem(shelf["name"])
         nameColumn.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-        #        nameColumn.setData(Qt.UserRole, QVariant(row))
         nameColumn.setData(Qt.UserRole, row)
         self.setItem(row, 0, nameColumn)
         shelf_count = RatingTableWidgetItem(shelf["count"], is_read_only=True)
@@ -4548,7 +4484,6 @@ class OrderSeriesShelvesTableWidget(QTableWidget):
         self.blockSignals(False)
 
     def get_shelves(self):
-        #        debug_print("OrderSeriesShelvesTableWidget:get_shelves - self.shelves:", self.shelves)
         shelves = []
         for row in range(self.rowCount()):
             rnum = convert_qvariant(self.item(row, 0).data(Qt.UserRole))
@@ -4836,9 +4771,6 @@ class TemplateConfig(QWidget):  # {{{
         l.addWidget(b, 1, 1, 1, 1)
         b.clicked.connect(self.edit_template)
 
-    #     def setEnabled(self, enabled):
-    #         self.l.setEnabled(enabled)
-
     @property
     def template(self):
         return unicode(self.t.text()).strip()
@@ -4869,9 +4801,6 @@ class TemplateConfig(QWidget):  # {{{
             )
 
             return False
-
-
-# }}}
 
 
 class UpdateBooksToCDialog(SizePersistedDialog):
@@ -5005,11 +4934,9 @@ class UpdateBooksToCDialog(SizePersistedDialog):
         self.accept()
 
     def _select_books_to_send_clicked(self):
-        # self.books_table.toggle_checkmarks(Qt.Unchecked)
         self.books_table.select_checkmarks_send()
 
     def _select_books_to_update_clicked(self):
-        # self.books_table.toggle_checkmarks(Qt.Unchecked)
         self.books_table.select_checkmarks_update_toc()
 
     def _select_all_clicked(self):
@@ -5071,7 +4998,6 @@ class ToCBookListTableWidget(QTableWidget):
         self.setColumnCount(len(header_labels))
         self.setHorizontalHeaderLabels(header_labels)
         self.horizontalHeader().setStretchLastSection(True)
-        # self.verticalHeader().setDefaultSectionSize(24)
         self.verticalHeader().hide()
 
         self.books = {}
@@ -5086,8 +5012,6 @@ class ToCBookListTableWidget(QTableWidget):
         self.setMinimumColumnWidth(2, 100)
         self.setMinimumColumnWidth(3, 100)
         self.setMinimumSize(300, 0)
-        # if len(books) > 0:
-        #     self.selectRow(0)
         self.sortItems(1)
         self.sortItems(0)
 
@@ -5096,7 +5020,6 @@ class ToCBookListTableWidget(QTableWidget):
             self.setColumnWidth(col, minimum)
 
     def populate_table_row(self, row, book):
-        #         debug_print("populate_table_row - book:", book)
         book_status = 0
         if book["good"]:
             icon = get_icon("ok.png")
@@ -5141,7 +5064,6 @@ class ToCBookListTableWidget(QTableWidget):
                 unicode(len(book["kobo_chapters"]))
             )
             kobo_chapters_count.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-            # url_cell.setData(Qt.UserRole, book['url'])
             self.setItem(
                 row, self.KOBO_DISC_CHAPTERS_COUNT_COLUMN_NO, kobo_chapters_count
             )
@@ -5212,13 +5134,11 @@ class ToCBookListTableWidget(QTableWidget):
             koboDatabaseReadingLocation = ReadOnlyTableWidgetItem(
                 book["koboDatabaseReadingLocation"]
             )
-            # url_cell.setData(Qt.UserRole, book['url'])
             self.setItem(
                 row, self.READING_POSITION_COLUMN_NO, koboDatabaseReadingLocation
             )
 
         comment_cell = ReadOnlyTableWidgetItem(book["comment"])
-        # comment_cell.setData(Qt.UserRole, book)
         self.setItem(row, self.STATUS_COMMENT_COLUMN_NO, comment_cell)
 
     @property

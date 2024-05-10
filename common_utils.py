@@ -278,14 +278,6 @@ def create_menu_action_unique(
     return ac
 
 
-def get_library_uuid(db):
-    try:
-        library_uuid = db.library_id
-    except:
-        library_uuid = ""
-    return library_uuid
-
-
 def call_plugin_callback(plugin_callback, parent, plugin_results=None):
     """
     This function executes a callback to a calling plugin. Because this
@@ -457,7 +449,6 @@ class RatingTableWidgetItem(QTableWidgetItem):
 
 class DateTableWidgetItem(QTableWidgetItem):
     def __init__(self, date_read, is_read_only=False, default_to_today=False, fmt=None):
-        #        debug_print("DateTableWidgetItem:__init__ - date_read=", date_read)
         if date_read is None or date_read == UNDEFINED_DATE and default_to_today:
             date_read = now()
         if is_read_only:
@@ -730,8 +721,6 @@ class CustomColumnComboBox(QComboBox):
         self.column_names = []
         selected_idx = 0
 
-        # debug_print("CustomColumnComboBox::populate_combo - custom_columns=", custom_columns)
-        # debug_print("CustomColumnComboBox::populate_combo - selected_column=", selected_column)
         for key in sorted(custom_columns.keys()):
             self.column_names.append(key)
             display_name = (
@@ -743,9 +732,6 @@ class CustomColumnComboBox(QComboBox):
             if key == selected_column:
                 selected_idx = len(self.column_names) - 1
 
-        # debug_print("CustomColumnComboBox::populate_combo - initial_items=", initial_items)
-        # debug_print("CustomColumnComboBox::populate_combo - initial_items.__class__=", initial_items.__class__)
-        # debug_print("CustomColumnComboBox::populate_combo - initial_items.__class__=", isinstance(initial_items, dict))
         if isinstance(initial_items, dict):
             for key in sorted(initial_items.keys()):
                 self.column_names.append(key)
@@ -755,7 +741,6 @@ class CustomColumnComboBox(QComboBox):
                     selected_idx = len(self.column_names) - 1
         else:
             for display_name in initial_items:
-                # debug_print("CustomColumnComboBox::populate_combo - initial_items - display_name=", display_name)
                 self.column_names.append(display_name)
                 self.addItem(display_name)
                 if display_name == selected_column:
@@ -881,7 +866,6 @@ class ProgressBar(QDialog):
         self.setLayout(self.l)
 
         self.label = QLabel(label)
-        #         self.label.setAlignment(Qt.AlignHCenter)
         self.l.addWidget(self.label)
 
         self.progressBar = QProgressBar(self)
@@ -913,12 +897,6 @@ class ProgressBar(QDialog):
 
     def set_progress_format(self, progress_format=None):
         pass
-
-
-#         if format is not None:
-#             self.progressBar.setFormat(progress_format)
-#         else:
-#                 self.progressBar.resetFormat()
 
 
 def prompt_for_restart(parent, title, message):

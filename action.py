@@ -84,11 +84,16 @@ from calibre.utils.logging import default_log
 from calibre_plugins.koboutilities import ActionKoboUtilities
 from calibre_plugins.koboutilities.book import SeriesBook
 from calibre_plugins.koboutilities.common_utils import (
+    BOOKMARK_SEPARATOR,
+    MIMETYPE_KOBO,
     ProgressBar,
+    check_device_database,
+    convert_kobo_date,
     create_menu_action_unique,
     debug_print,
     get_icon,
     get_library_uuid,
+    row_factory,
     set_plugin_icon_resources,
 )
 from calibre_plugins.koboutilities.dialogs import (
@@ -134,12 +139,6 @@ PLUGIN_ICONS = [
     "images/ms_ff.png",
     "images/device_connected.png",
 ]
-
-MIMETYPE_KOBO = "application/x-kobo-epub+zip"
-
-BOOKMARK_SEPARATOR = (
-    "|@ @|"  # Spaces are included to allow wrapping in the details panel
-)
 
 EPUB_FETCH_QUERY = (
     "SELECT c1.ChapterIDBookmarked, "
@@ -8266,75 +8265,3 @@ class KoboUtilitiesAction(InterfaceAction):
     def hide_progressbar(self):
         if self.pb:
             self.pb.hide()
-
-
-def row_factory(cursor, row):
-    return {k[0]: row[i] for i, k in enumerate(cursor.getdescription())}
-
-
-def device_database_connection(database_path, use_row_factory=False):
-    import apsw
-
-    db_connection = apsw.Connection(database_path)
-    if use_row_factory:
-        db_connection.setrowtrace(row_factory)
-
-    return db_connection
-
-
-def check_device_database(database_path):
-    with closing(device_database_connection(database_path)) as connection:
-        check_query = "PRAGMA integrity_check"
-        cursor = connection.cursor()
-
-        check_result = ""
-        cursor.execute(check_query)
-        result = cursor.fetchall()
-        if not result is None:
-            for line in result:
-                debug_print("_check_device_database - result line=", line)
-                check_result += "\n" + line[0]
-        else:
-            check_result = _("Execution of '%s' failed") % check_query
-
-        cursor.close()
-
-    return check_result
-
-
-def convert_kobo_date(kobo_date):
-    from calibre.utils.date import utc_tz
-
-    try:
-        converted_date = datetime.strptime(kobo_date, "%Y-%m-%dT%H:%M:%S.%f")
-        converted_date = datetime.strptime(kobo_date[0:19], "%Y-%m-%dT%H:%M:%S")
-        converted_date = converted_date.replace(tzinfo=utc_tz)
-    except:
-        try:
-            converted_date = datetime.strptime(kobo_date, "%Y-%m-%dT%H:%M:%S%+00:00")
-        except:
-            try:
-                converted_date = datetime.strptime(
-                    kobo_date.split("+")[0], "%Y-%m-%dT%H:%M:%S"
-                )
-                converted_date = converted_date.replace(tzinfo=utc_tz)
-            except:
-                try:
-                    converted_date = datetime.strptime(
-                        kobo_date.split("+")[0], "%Y-%m-%d"
-                    )
-                    converted_date = converted_date.replace(tzinfo=utc_tz)
-                except:
-                    try:
-                        from calibre.utils.date import parse_date
-
-                        converted_date = parse_date(kobo_date, assume_utc=True)
-                    except:
-                        # The date is in some unknown format. Return now in the local timezone
-                        converted_date = datetime.now()  # time.gmtime()
-                        debug_print(
-                            "convert_kobo_date - datetime.now() - kobo_date={0}'".format(
-                                kobo_date
-                            )
-                        )
-    return converted_date

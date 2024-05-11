@@ -55,6 +55,7 @@ except ImportError:
         QTextEdit,
         QVBoxLayout,
     )
+from datetime import datetime
 
 from calibre import prints
 from calibre.constants import DEBUG, iswindows
@@ -87,7 +88,11 @@ else:
         if vt == x.List:
             return [convert_qvariant(i) for i in x.toList()]
         return x.toPyObject()
+MIMETYPE_KOBO = "application/x-kobo-epub+zip"
 
+BOOKMARK_SEPARATOR = (
+    "|@ @|"  # Spaces are included to allow wrapping in the details panel
+)
 
 # Global definition of our plugin name. Used for common functions that require this.
 plugin_name = None
@@ -319,6 +324,78 @@ def call_plugin_callback(plugin_callback, parent, plugin_results=None):
             kwargs["plugin_results"] = plugin_results
         print("call_plugin_callback: about to call callback - kwargs=", kwargs)
         callback_func(*args, **kwargs)
+
+
+def row_factory(cursor, row):
+    return {k[0]: row[i] for i, k in enumerate(cursor.getdescription())}
+
+
+def device_database_connection(database_path, use_row_factory=False):
+    import apsw  # type: ignore[reportMissingImports]
+
+    db_connection = apsw.Connection(database_path)
+    if use_row_factory:
+        db_connection.setrowtrace(row_factory)
+
+    return db_connection
+
+
+def check_device_database(database_path):
+    with device_database_connection(database_path) as connection:
+        check_query = "PRAGMA integrity_check"
+        cursor = connection.cursor()
+
+        check_result = ""
+        cursor.execute(check_query)
+        result = cursor.fetchall()
+        if result is not None:
+            for line in result:
+                debug_print("_check_device_database - result line=", line)
+                check_result += "\n" + line[0]
+        else:
+            check_result = _("Execution of '%s' failed") % check_query
+
+        cursor.close()
+
+    return check_result
+
+
+def convert_kobo_date(kobo_date):
+    from calibre.utils.date import utc_tz
+
+    try:
+        converted_date = datetime.strptime(kobo_date, "%Y-%m-%dT%H:%M:%S.%f")
+        converted_date = datetime.strptime(kobo_date[0:19], "%Y-%m-%dT%H:%M:%S")
+        converted_date = converted_date.replace(tzinfo=utc_tz)
+    except ValueError:
+        try:
+            converted_date = datetime.strptime(kobo_date, "%Y-%m-%dT%H:%M:%S%+00:00")
+        except ValueError:
+            try:
+                converted_date = datetime.strptime(
+                    kobo_date.split("+")[0], "%Y-%m-%dT%H:%M:%S"
+                )
+                converted_date = converted_date.replace(tzinfo=utc_tz)
+            except ValueError:
+                try:
+                    converted_date = datetime.strptime(
+                        kobo_date.split("+")[0], "%Y-%m-%d"
+                    )
+                    converted_date = converted_date.replace(tzinfo=utc_tz)
+                except ValueError:
+                    try:
+                        from calibre.utils.date import parse_date
+
+                        converted_date = parse_date(kobo_date, assume_utc=True)
+                    except ValueError:
+                        # The date is in some unknown format. Return now in the local timezone
+                        converted_date = datetime.now()  # time.gmtime()
+                        debug_print(
+                            "convert_kobo_date - datetime.now() - kobo_date={0}'".format(
+                                kobo_date
+                            )
+                        )
+    return converted_date
 
 
 class ImageLabel(QLabel):

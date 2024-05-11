@@ -29,7 +29,7 @@ from calibre.utils.ipc.job import ParallelJob
 from calibre.utils.ipc.server import Server
 from calibre.utils.logging import Log
 from calibre.utils.zipfile import ZipFile
-from calibre_plugins.koboutilities.action import (
+from .common_utils import (
     BOOKMARK_SEPARATOR,
     MIMETYPE_KOBO,
     check_device_database,

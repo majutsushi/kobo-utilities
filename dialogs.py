@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # vim:fileencoding=UTF-8:ts=4:sw=4:sta:et:sts=4:ai
 
 # from constants import debug
@@ -8,9 +7,7 @@ __license__ = "GPL v3"
 __copyright__ = "2012-2020, David Forrester <davidfor@internode.on.net>"
 __docformat__ = "restructuredtext en"
 
-import os
 import re
-import traceback
 from configparser import ConfigParser
 from datetime import datetime
 from functools import partial
@@ -23,13 +20,12 @@ from calibre.gui2 import (
     gprefs,
     open_url,
     question_dialog,
-    warning_dialog,
 )
 from calibre.gui2.complete2 import EditWithComplete
 from calibre.gui2.dialogs.confirm_delete import confirm
 from calibre.gui2.dialogs.template_dialog import TemplateDialog
 from calibre.gui2.widgets2 import ColorButton
-from calibre.utils.config import JSONConfig, tweaks
+from calibre.utils.config import tweaks
 from calibre.utils.date import qt_to_dt, utc_tz
 from calibre.utils.icu import sort_key
 from qt.core import (
@@ -79,7 +75,6 @@ from .common_utils import (
     SizePersistedDialog,
     debug_print,
     get_icon,
-    get_library_uuid,
 )
 
 # Checked with FW2.5.2
@@ -3033,10 +3028,7 @@ class SeriesTableWidget(QTableWidget):
 
     def dropEvent(self, event):
         rows = self.selectionModel().selectedRows()
-        selrows = []
-        for row in rows:
-            selrows.append(row.row())
-        selrows.sort()
+        selrows = sorted(row.row() for row in rows)
         drop_row = self.rowAt(event.pos().y())
         if drop_row == -1:
             drop_row = self.rowCount() - 1
@@ -3440,10 +3432,7 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         rows = self.series_table.selectionModel().selectedRows()
         if len(rows) == 0:
             return
-        selrows = []
-        for row in rows:
-            selrows.append(row.row())
-        selrows.sort()
+        selrows = sorted(row.row() for row in rows)
         first_sel_row = self.series_table.currentRow()
         for row in reversed(selrows):
             self.books.pop(row)
@@ -3464,10 +3453,7 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
             return
         # Workaround for strange selection bug in Qt which "alters" the selection
         # in certain circumstances which meant move down only worked properly "once"
-        selrows = []
-        for row in rows:
-            selrows.append(row.row())
-        selrows.sort()
+        selrows = sorted(row.row() for row in rows)
         for selrow in selrows:
             self.series_table.swap_row_widgets(selrow - 1, selrow + 1)
             self.books[selrow - 1], self.books[selrow] = (
@@ -3491,10 +3477,7 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
             return
         # Workaround for strange selection bug in Qt which "alters" the selection
         # in certain circumstances which meant move down only worked properly "once"
-        selrows = []
-        for row in rows:
-            selrows.append(row.row())
-        selrows.sort()
+        selrows = sorted(row.row() for row in rows)
         for selrow in reversed(selrows):
             self.series_table.swap_row_widgets(selrow + 2, selrow)
             self.books[selrow + 1], self.books[selrow] = (

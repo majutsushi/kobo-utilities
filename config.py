@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # vim:fileencoding=UTF-8:ts=4:sw=4:sta:et:sts=4:ai
 
 __license__ = "GPL v3"
@@ -47,7 +46,6 @@ from .common_utils import (
     SimpleComboBox,
     debug_print,
     get_icon,
-    get_library_uuid,
 )
 
 SUPPORTS_CREATE_CUSTOM_COLUMN = False
@@ -56,7 +54,7 @@ try:
 
     debug_print("Kobo Utilities Configuration - CreateNewCustomColumn is supported")
     SUPPORTS_CREATE_CUSTOM_COLUMN = True
-except ImportError as e:
+except ImportError:
     debug_print("Kobo Utilities Configuration - CreateNewCustomColumn is not supported")
     SUPPORTS_CREATE_CUSTOM_COLUMN = False
 
@@ -494,7 +492,7 @@ def migrate_library_config_if_required(db, library_config):
     library_config[KEY_SCHEMA_VERSION] = DEFAULT_SCHEMA_VERSION
 
     # Any migration code in future will exist in here.
-    if schema_version <= 0.1 and not "profiles" in library_config:
+    if schema_version <= 0.1 and "profiles" not in library_config:
         print("Migrating Kobo Utilities library config")
         profile_config = {}
         profile_config[KEY_FOR_DEVICE] = TOKEN_ANY_DEVICE
@@ -620,7 +618,7 @@ def get_profile_names(db, exclude_auto=True):
     library_config = get_library_config(db)
     profiles = library_config[KEY_PROFILES]
     if not exclude_auto:
-        return sorted(list(profiles.keys()))
+        return sorted(profiles.keys())
 
     profile_names = []
     for profile_name, profile_info in profiles.items():
@@ -1133,6 +1131,9 @@ class ProfilesTab(QWidget):
 
 class DevicesTab(QWidget):
     def __init__(self, parent_dialog, plugin_action):
+        self.current_device_info = None
+        self.update_check_last_time = 0
+
         self.parent_dialog = parent_dialog
         QWidget.__init__(self)
 
@@ -1627,10 +1628,10 @@ class DevicesTab(QWidget):
 class DeviceColumnComboBox(QComboBox):
     def __init__(self, parent):
         QComboBox.__init__(self, parent)
+        self.device_ids = [None, TOKEN_ANY_DEVICE]
 
     def populate_combo(self, devices, selected_device_uuid):
         self.clear()
-        self.device_ids = [None, TOKEN_ANY_DEVICE]
         self.addItem("")
         self.addItem(TOKEN_ANY_DEVICE)
         selected_idx = 0

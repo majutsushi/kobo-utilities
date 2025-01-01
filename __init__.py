@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # vim:fileencoding=UTF-8:ts=4:sw=4:sta:et:sts=4:ai
 
 __license__ = "GPL v3"
@@ -22,7 +21,7 @@ class ActionKoboUtilities(InterfaceActionBase):
 
     name = "Kobo Utilities"
     description = "Utilities to use with Kobo ereaders"
-    supported_platforms = ["windows", "osx", "linux"]
+    supported_platforms = ["windows", "osx", "linux"]  # noqa: RUF012
     author = "David Forrester"
     version = (2, 16, 13)
     # Calibre 5.13.0: Python 3.8.5

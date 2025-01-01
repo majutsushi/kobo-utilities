@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # vim:fileencoding=UTF-8:ts=4:sw=4:sta:et:sts=4:ai
 
 __license__ = "GPL v3"
@@ -12,9 +11,8 @@ import shutil
 import threading
 import time
 from collections import OrderedDict, defaultdict
-from contextlib import closing
-from datetime import datetime, timedelta, timezone
 from configparser import ConfigParser, NoOptionError
+from datetime import datetime, timedelta
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 
@@ -40,7 +38,6 @@ from calibre.gui2.dialogs.message_box import ViewLog
 from calibre.gui2.library.views import DeviceBooksView
 from calibre.ptempfile import remove_dir
 from calibre.utils.config import config_dir
-from calibre.utils.date import parse_date
 from calibre.utils.icu import sort_key
 from calibre.utils.logging import default_log
 from qt.core import (
@@ -65,7 +62,6 @@ from .common_utils import (
     create_menu_action_unique,
     debug_print,
     get_icon,
-    get_library_uuid,
     row_factory,
     set_plugin_icon_resources,
 )
@@ -207,6 +203,8 @@ def qhash(inputstr):
 
 
 class KoboUtilitiesAction(InterfaceAction):
+    interface_action_base_plugin: ActionKoboUtilities
+
     name = "KoboUtilities"
     giu_name = _("Kobo Utilities")
     # Create our top-level menu/toolbar action (text, icon_path, tooltip, keyboard shortcut)
@@ -220,6 +218,7 @@ class KoboUtilitiesAction(InterfaceAction):
     plugin_device_metadata_available = pyqtSignal()
 
     def genesis(self):
+        # The attribute in the super class gets assigned dynamically
         base = self.interface_action_base_plugin
         self.version = base.name + " v%d.%d.%d" % base.version
 
@@ -262,16 +261,18 @@ class KoboUtilitiesAction(InterfaceAction):
 
     def haveKoboTouch(self):
         try:
-            from calibre_plugins.kobotouchbeta_plugin import KOBOTOUCHBETA
+            from calibre_plugins.kobotouchbeta_plugin import (  # type: ignore[reportMissingImports]
+                KOBOTOUCHBETA,
+            )
 
             haveKoboTouch = isinstance(self.device, KOBOTOUCHBETA)
-        except:
+        except ModuleNotFoundError:
             haveKoboTouch = False
         haveKoboTouch = haveKoboTouch or isinstance(self.device, KOBOTOUCH)
         haveKoboTouch = haveKoboTouch and self.haveKobo()
         return haveKoboTouch
 
-    def library_changed(self, db):
+    def library_changed(self, db):  # noqa: ARG002
         # We need to reset our menus after switching libraries
         self.device = self.get_device()
 
@@ -1654,7 +1655,7 @@ class KoboUtilitiesAction(InterfaceAction):
     def device_serial_no(self):
         return self.device_version_info()[0]
 
-    def auto_backup_device_database(self, from_menu=False):
+    def auto_backup_device_database(self):
         debug_print("auto_backup_device_database - start")
         if not self.current_backup_config:
             debug_print("auto_backup_device_database - no backup configuration")
@@ -3080,7 +3081,7 @@ class KoboUtilitiesAction(InterfaceAction):
                     job.result,
                     db,
                     profileName,
-                    not goodreads_sync_plugin == None,
+                    goodreads_sync_plugin is not None,
                 )
                 dlg.exec_()
                 if dlg.result() != dlg.Accepted:
@@ -3805,7 +3806,7 @@ class KoboUtilitiesAction(InterfaceAction):
                             len(os.path.splitext(paths[0])) > 1
                         ):  # No extension - is kepub
                             the_path = paths[1]
-                    path_map[_id] = dict(path=the_path, fmts=get_formats(_id))
+                    path_map[_id] = {"path": the_path, "fmts": get_formats(_id)}
             return path_map
 
         annotationText = []
@@ -3850,7 +3851,7 @@ class KoboUtilitiesAction(InterfaceAction):
         bookmarked_books = self.device.get_annotations(path_map)
         debug_print("_getAnnotationForSelected - bookmarked_books=", bookmarked_books)
 
-        for i, id_ in enumerate(bookmarked_books):
+        for id_ in bookmarked_books:
             bm = self.device.UserAnnotation(
                 bookmarked_books[id_][0], bookmarked_books[id_][1]
             )
@@ -3954,7 +3955,7 @@ class KoboUtilitiesAction(InterfaceAction):
         return total_books, uploaded_covers, not_on_device_books
 
     def _remove_covers(self, books):
-        with closing(self.device_database_connection()) as connection:
+        with self.device_database_connection() as connection:
             total_books = 0
             removed_covers = 0
             not_on_device_books = 0
@@ -4051,9 +4052,7 @@ class KoboUtilitiesAction(InterfaceAction):
         return removed_covers, not_on_device_books, total_books
 
     def _open_cover_image_directory(self, books):
-        with closing(
-            self.device_database_connection(use_row_factory=True)
-        ) as connection:
+        with self.device_database_connection(use_row_factory=True) as connection:
             total_books = 0
             removed_covers = 0
             not_on_device_books = 0
@@ -4134,25 +4133,21 @@ class KoboUtilitiesAction(InterfaceAction):
         return removed_covers, not_on_device_books, total_books
 
     def _get_imageid_set(self):
-        with closing(
-            self.device_database_connection(use_row_factory=True)
-        ) as connection:
+        with self.device_database_connection(use_row_factory=True) as connection:
             imageId_query = (
                 "SELECT DISTINCT ImageId " "FROM content " "WHERE BookID IS NULL"
             )
             cursor = connection.cursor()
 
-            imageIDs = []
             cursor.execute(imageId_query)
-            for i, row in enumerate(cursor):
-                imageIDs.append(row["ImageId"])
+            imageIDs = {row["ImageId"] for row in cursor}
 
             cursor.close()
 
-        return set(imageIDs)
+        return imageIDs
 
     def _check_book_in_database(self, books):
-        with closing(self.device_database_connection()) as connection:
+        with self.device_database_connection() as connection:
             not_on_device_books = []
 
             imageId_query = (
@@ -4169,7 +4164,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 query_values = (book.contentID,)
                 cursor.execute(imageId_query, query_values)
                 try:
-                    result = next(cursor)
+                    next(cursor)
                 except StopIteration:
                     debug_print(
                         "_check_book_in_database - no match for contentId='%s'"
@@ -4182,7 +4177,7 @@ class KoboUtilitiesAction(InterfaceAction):
         return not_on_device_books
 
     def _get_shelf_count(self):
-        with closing(self.device_database_connection()) as connection:
+        with self.device_database_connection() as connection:
             shelves = []
 
             shelves_query = (
@@ -4213,7 +4208,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
     def _get_series_shelf_count(self, order_shelf_type):
         debug_print("_get_series_shelf_count - order_shelf_type:", order_shelf_type)
-        with closing(self.device_database_connection()) as connection:
+        with self.device_database_connection() as connection:
             shelves = []
 
             series_query = (
@@ -4267,8 +4262,8 @@ class KoboUtilitiesAction(InterfaceAction):
             """Quote URL-unsafe characters, For unsafe characters, need "%xx" rather than the
             other encoding used for urls.
             Pulled from calibre.ebooks.oeb.base.py:urlquote"""
-            ASCII_CHARS = set(chr(x) for x in range(128))
-            UNIBYTE_CHARS = set(chr(x) for x in range(256))
+            ASCII_CHARS = {chr(x) for x in range(128)}
+            UNIBYTE_CHARS = {chr(x) for x in range(256)}
             URL_SAFE = set(
                 "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                 "abcdefghijklmnopqrstuvwxyz"
@@ -4281,7 +4276,7 @@ class KoboUtilitiesAction(InterfaceAction):
             unsafe = URL_UNSAFE[unsafe]
             for char in shelf_name:
                 try:
-                    if not char in URL_SAFE:
+                    if char not in URL_SAFE:
                         char = ("%%%02x" % ord(char)).upper()
                         debug_print("urlquote - unsafe after ord char=", char)
                 except:
@@ -4312,9 +4307,7 @@ class KoboUtilitiesAction(InterfaceAction):
                     )
                 )
 
-        with closing(
-            self.device_database_connection(use_row_factory=True)
-        ) as connection:
+        with self.device_database_connection(use_row_factory=True) as connection:
             shelves_query = (
                 "SELECT sc.ShelfName, c.ContentId, c.Title, c.DateCreated, sc.DateModified, c.Series, c.SeriesNumber "
                 "FROM ShelfContent sc JOIN content c on sc.ContentId= c.ContentId "
@@ -4481,7 +4474,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
     def _get_related_books_count(self, related_category):
         debug_print("_get_related_books_count - order_shelf_type:", related_category)
-        with closing(self.device_database_connection()) as connection:
+        with self.device_database_connection() as connection:
             related_books = []
 
             series_query = (
@@ -4533,9 +4526,7 @@ class KoboUtilitiesAction(InterfaceAction):
         self.show_progressbar(total_related_books)
         self.pb.left_align_label()
 
-        with closing(
-            self.device_database_connection(use_row_factory=True)
-        ) as connection:
+        with self.device_database_connection(use_row_factory=True) as connection:
             series_query = (
                 "SELECT c.ContentID, c.Title, c.Attribution, Series, SeriesNumber "
                 "FROM content c "
@@ -4552,8 +4543,8 @@ class KoboUtilitiesAction(InterfaceAction):
             )
             get_queries = [series_query, author_query]
             get_query = get_queries[options[cfg.KEY_RELATED_BOOKS_TYPE]]
-            insert_query = "INSERT INTO volume_tabs " "VALUES ( ?, ? )"
-            delete_query = "DELETE FROM volume_tabs  " "WHERE tabId = ? "
+            insert_query = "INSERT INTO volume_tabs VALUES ( ?, ? )"
+            delete_query = "DELETE FROM volume_tabs WHERE tabId = ? "
 
             cursor = connection.cursor()
             for related_type in related_books:
@@ -4615,7 +4606,7 @@ class KoboUtilitiesAction(InterfaceAction):
         self.show_progressbar(100)
         self.pb.left_align_label()
 
-        with closing(self.device_database_connection()) as connection:
+        with self.device_database_connection() as connection:
             delete_query = (
                 "DELETE FROM volume_tabs  "
                 "WHERE tabId LIKE 'file%' "
@@ -4639,7 +4630,7 @@ class KoboUtilitiesAction(InterfaceAction):
             "_remove_duplicate_shelves - total shelves=%d: options=%s"
             % (len(shelves), options)
         )
-        with closing(self.device_database_connection()) as connection:
+        with self.device_database_connection() as connection:
             starting_shelves = 0
             shelves_removed = 0
             finished_shelves = 0
@@ -4686,7 +4677,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 "AND _IsDeleted = 'true'"
             )
 
-            shelves_purge = "DELETE FROM Shelf " "WHERE _IsDeleted = 'true'"
+            shelves_purge = "DELETE FROM Shelf WHERE _IsDeleted = 'true'"
 
             purge_shelves = options[cfg.KEY_PURGE_SHELVES]
             keep_newest = options[cfg.KEY_KEEP_NEWEST_SHELF]
@@ -4765,7 +4756,7 @@ class KoboUtilitiesAction(InterfaceAction):
         return check_device_database(self.device_database_path())
 
     def _block_analytics(self):
-        with closing(self.device_database_connection()) as connection:
+        with self.device_database_connection() as connection:
             block_result = "The trigger on the AnalyticsEvents table has been removed."
 
             cursor = connection.cursor()
@@ -4797,14 +4788,14 @@ class KoboUtilitiesAction(InterfaceAction):
         return block_result
 
     def _vacuum_device_database(self):
-        with closing(self.device_database_connection()) as connection:
+        with self.device_database_connection() as connection:
             compress_query = "VACUUM"
             cursor = connection.cursor()
 
             compress_result = ""
             cursor.execute(compress_query)
             result = cursor.fetchall()
-            if not result is None:
+            if result is not None:
                 debug_print("_vacuum_device_database - result=", result)
                 for line in result:
                     compress_result += "\n" + line[0]
@@ -4869,7 +4860,7 @@ class KoboUtilitiesAction(InterfaceAction):
         if self.supports_ratings:
             test_query += " left outer join ratings r on c1.ContentID = r.ContentID "
 
-        test_query += "WHERE c1.BookId IS NULL " "AND c1.ContentID = ?"
+        test_query += "WHERE c1.BookId IS NULL AND c1.ContentID = ?"
         debug_print("generate_metadata_query - test_query=%s" % test_query)
         return test_query
 
@@ -4912,7 +4903,7 @@ class KoboUtilitiesAction(InterfaceAction):
             ")"
             "VALUES (?, ?, ?)"
         )
-        rating_delete = "DELETE FROM ratings " "WHERE ContentID = ?"
+        rating_delete = "DELETE FROM ratings WHERE ContentID = ?"
 
         series_id_query = (
             "SELECT DISTINCT Series, SeriesID "
@@ -4923,9 +4914,7 @@ class KoboUtilitiesAction(InterfaceAction):
             "AND seriesid IS NOT NULL "
         )
 
-        with closing(
-            self.device_database_connection(use_row_factory=True)
-        ) as connection:
+        with self.device_database_connection(use_row_factory=True) as connection:
             test_query = self.generate_metadata_query()
             cursor = connection.cursor()
             kobo_series_dict = {}
@@ -5530,7 +5519,7 @@ class KoboUtilitiesAction(InterfaceAction):
         colon_pos = template.find(":")
         jacket_style = False
         if colon_pos > 0:
-            if template.startswith("template:") or template.startswith("plugboard:"):
+            if template.startswith(("template:", "plugboard:")):
                 jacket_style = False
                 template = template[colon_pos + 1 :]
             elif template.startswith("jacket:"):
@@ -5577,21 +5566,21 @@ class KoboUtilitiesAction(InterfaceAction):
             except:
                 pubdate = ""
 
-            args = dict(
-                title_str=title_str,
-                title=title_str,
-                author=author,
-                publisher=publisher,
-                pubdate_label=_("Published"),
-                pubdate=pubdate,
-                series_label=_("Series"),
-                series=series,
-                rating_label=_("Rating"),
-                rating=rating,
-                tags_label=_("Tags"),
-                tags=tags,
-                comments=comments,
-            )
+            args = {
+                "title_str": title_str,
+                "title": title_str,
+                "author": author,
+                "publisher": publisher,
+                "pubdate_label": _("Published"),
+                "pubdate": pubdate,
+                "series_label": _("Series"),
+                "series": series,
+                "rating_label": _("Rating"),
+                "rating": rating,
+                "tags_label": _("Tags"),
+                "tags": tags,
+                "comments": comments,
+            }
             for key in mi.custom_field_keys():
                 try:
                     display_name, val = mi.format_field_extended(key)[:2]
@@ -5658,9 +5647,7 @@ class KoboUtilitiesAction(InterfaceAction):
         store_if_more_recent = self.options[cfg.KEY_STORE_IF_MORE_RECENT]
         do_not_store_if_reopened = self.options[cfg.KEY_DO_NOT_STORE_IF_REOPENED]
 
-        with closing(
-            self.device_database_connection(use_row_factory=True)
-        ) as connection:
+        with self.device_database_connection(use_row_factory=True) as connection:
             self.progressbar(_("Storing reading positions"), on_top=True)
             self.show_progressbar(len(books))
 
@@ -6101,13 +6088,13 @@ class KoboUtilitiesAction(InterfaceAction):
             "c1.MimeType, "
         )
         if self.supports_ratings:
-            chapter_query += " r.Rating, " " r.DateModified "
+            chapter_query += " r.Rating, r.DateModified "
         else:
-            chapter_query += " NULL as Rating, " " NULL as DateModified "
+            chapter_query += " NULL as Rating, NULL as DateModified "
         chapter_query += "FROM content c1 "
         if self.supports_ratings:
             chapter_query += " left outer join ratings r on c1.ContentID = r.ContentID "
-        chapter_query += "WHERE c1.BookId IS NULL " "AND c1.ContentId = ?"
+        chapter_query += "WHERE c1.BookId IS NULL AND c1.ContentId = ?"
         debug_print("_restore_current_bookmark - chapter_query= ", chapter_query)
 
         volume_zero_query = (
@@ -6144,11 +6131,9 @@ class KoboUtilitiesAction(InterfaceAction):
             ")"
             "VALUES (?, ?, ?)"
         )
-        rating_delete = "DELETE FROM ratings " "WHERE ContentID = ?"
+        rating_delete = "DELETE FROM ratings WHERE ContentID = ?"
 
-        with closing(
-            self.device_database_connection(use_row_factory=True)
-        ) as connection:
+        with self.device_database_connection(use_row_factory=True) as connection:
             cursor = connection.cursor()
 
             for book in books:
@@ -6479,7 +6464,7 @@ class KoboUtilitiesAction(InterfaceAction):
             "ORDER BY c.ContentID, sc.ShelfName"
         )
 
-        with closing(self.device_database_connection()) as connection:
+        with self.device_database_connection() as connection:
             library_db = self.gui.current_db
             library_config = cfg.get_library_config(library_db)
             bookshelf_column_name = library_config.get(
@@ -6525,7 +6510,7 @@ class KoboUtilitiesAction(InterfaceAction):
                     )
                     cursor.execute(fetch_query, fetch_values)
 
-                    for i, row in enumerate(cursor):
+                    for row in cursor:
                         debug_print("_get_shelves_from_device - result=", row)
                         shelf_names.append(row[1])
                         update_library = True
@@ -6595,7 +6580,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
     def fetch_book_fonts(self):
         debug_print("fetch_book_fonts - start")
-        with closing(self.device_database_connection()) as connection:
+        with self.device_database_connection() as connection:
             book_options = {}
 
             fetch_query = (
@@ -6651,7 +6636,7 @@ class KoboUtilitiesAction(InterfaceAction):
         deleted_fonts = 0
         count_books = 0
 
-        with closing(self.device_database_connection()) as connection:
+        with self.device_database_connection() as connection:
             debug_print("_set_reader_fonts - connected to device database")
 
             test_query = (
@@ -6930,8 +6915,8 @@ class KoboUtilitiesAction(InterfaceAction):
             "DROP TRIGGER IF EXISTS KTE_Activity_DismissNewBookTiles",
         )
 
-        with closing(self.device_database_connection()) as connection:
-            update_query = "UPDATE Activity " "SET Enabled = 'false' " + where_clause
+        with self.device_database_connection() as connection:
+            update_query = "UPDATE Activity SET Enabled = 'false' " + where_clause
 
             cursor = connection.cursor()
 
@@ -6976,7 +6961,7 @@ class KoboUtilitiesAction(InterfaceAction):
             "(?, 'true', 'Extras', 2, strftime('%Y-%m-%dT%H:%m:%S'), X'00000000')"
         )
 
-        with closing(self.device_database_connection()) as connection:
+        with self.device_database_connection() as connection:
             cursor = connection.cursor()
 
             for extra_tile in self.options[cfg.KEY_TILE_OPTIONS]:
@@ -7119,10 +7104,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
         # Use local versions as just need a few details.
         def _convert_calibre_ids_to_books(db, ids):
-            books = []
-            for book_id in ids:
-                books.append(_convert_calibre_id_to_book(db, book_id))
-            return books
+            return [_convert_calibre_id_to_book(db, book_id) for book_id in ids]
 
         def _convert_calibre_id_to_book(db, book_id, get_cover=False):
             mi = db.get_metadata(book_id, index_is_id=True, get_cover=get_cover)
@@ -7284,9 +7266,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
     def _get_chapter_status(self, db, books):
         debug_print("Starting check of chapter status for {0} books".format(len(books)))
-        with closing(
-            self.device_database_connection(use_row_factory=True)
-        ) as connection:
+        with self.device_database_connection(use_row_factory=True) as connection:
             i = 0
             book_format = "EPUB"
             debug_print(
@@ -7475,7 +7455,6 @@ class KoboUtilitiesAction(InterfaceAction):
                                 debug_print(
                                     "_get_chapter_status - current chapter has not location. Not setting it."
                                 )
-                                pass
                 debug_print(
                     "_get_chapter_status - len(book['library_chapters']) =",
                     len(book["library_chapters"]),
@@ -7782,7 +7761,7 @@ class KoboUtilitiesAction(InterfaceAction):
             _("Number of books to update {0}").format(len(books))
         )
         self.show_progressbar(len(books))
-        with closing(self.device_database_connection()) as connection:
+        with self.device_database_connection() as connection:
             for book in books:
                 debug_print("update_device_toc_for_books - book=", book)
                 debug_print(
@@ -7827,7 +7806,7 @@ class KoboUtilitiesAction(InterfaceAction):
             databaseChapterId = self.getDatabaseChapterId(
                 book["ContentID"], chapter["path"], connection
             )
-            has_chapter = not databaseChapterId is None
+            has_chapter = databaseChapterId is not None
             debug_print("update_device_toc_for_book - has_chapter=", has_chapter)
             if (
                 has_chapter

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # vim:fileencoding=UTF-8:ts=4:sw=4:sta:et:sts=4:ai
 
 __license__ = "GPL v3"
@@ -55,7 +54,7 @@ class SeriesBook(object):
                 if self._mi.kobo_series_number is not None
                 else None
             )
-        except:
+        except ValueError:
             debug_print(
                 "SeriesBook:get_series_index - non numeric series - self._mi.kobo_series_number=%s"
                 % self._mi.kobo_series_number
@@ -147,7 +146,7 @@ class SeriesBook(object):
     def series_index(self):
         return self._mi.series_index
 
-    def series_index_string(self, column=None):
+    def series_index_string(self):
         if self._series_index_format is not None:
             return self._series_index_format % self._mi.series_index
         return fmt_sidx(self._mi.series_index)

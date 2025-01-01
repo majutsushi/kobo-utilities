@@ -1,18 +1,15 @@
-#!/usr/bin/env python
 # vim:fileencoding=UTF-8:ts=4:sw=4:sta:et:sts=4:ai
 
 __license__ = "GPL v3"
 __copyright__ = "2012-2017, David Forrester <davidfor@internode.on.net>"
 __docformat__ = "restructuredtext en"
 
-import logging
 import os
 import re
 import shutil
 import time
 import zipfile
 from datetime import datetime
-from contextlib import closing
 from urllib.request import urlopen
 
 from calibre import prints
@@ -47,7 +44,7 @@ def debug_print(*args):
 
 
 def do_check_firmware_update(
-    update_data, update_dest_dir, cpus, notification=lambda x, y: x
+    update_data, update_dest_dir, cpus, notification=lambda x, _y: x
 ):
     debug_print("do_check_firmware_update - start")
     server = Server(pool_size=cpus)
@@ -83,7 +80,7 @@ def do_check_firmware_update(
         return False
 
 
-def do_device_database_backup(backup_options, cpus, notification=lambda x, y: x):
+def do_device_database_backup(backup_options, cpus, notification=lambda x, _y: x):
     logger = Log()
     JOBS_DEBUG = True
     debug_print("do_device_database_backup - start")
@@ -339,7 +336,7 @@ def do_device_database_backup(backup_options, cpus, notification=lambda x, y: x)
     return
 
 
-def do_store_locations(books_to_scan, options, cpus, notification=lambda x, y: x):
+def do_store_locations(books_to_scan, options, cpus, notification=lambda x, _y: x):
     """
     Master job to do store the current reading positions
     """
@@ -365,7 +362,7 @@ def do_store_locations(books_to_scan, options, cpus, notification=lambda x, y: x
     # dequeue the job results as they arrive, saving the results
     total = 1
     count = 0
-    stored_locations = dict()
+    stored_locations = {}
     while True:
         job = server.changed_jobs_queue.get()
         # A job can 'change' when it is not finished, for example if it
@@ -409,10 +406,8 @@ def _store_current_bookmark(log, book_id, contentIDs, options):
     count_books = 0
     result = None
 
-    with closing(
-        device_database_connection(
-            options["device_database_path"], use_row_factory=True
-        )
+    with device_database_connection(
+        options["device_database_path"], use_row_factory=True
     ) as connection:
         cursor = connection.cursor()
         count_books += 1
@@ -441,7 +436,7 @@ def _store_bookmarks(log, books, options):
     debug_print("_store_bookmarks - start")
     debug_print("DEBUG=", DEBUG)
     count_books = 0
-    stored_locations = dict()
+    stored_locations = {}
     clear_if_unread = options[cfg.KEY_CLEAR_IF_UNREAD]
     store_if_more_recent = options[cfg.KEY_STORE_IF_MORE_RECENT]
     do_not_store_if_reopened = options[cfg.KEY_DO_NOT_STORE_IF_REOPENED]
@@ -456,10 +451,8 @@ def _store_bookmarks(log, books, options):
     rating_column_name = options[cfg.KEY_RATING_CUSTOM_COLUMN]
     last_read_column_name = options[cfg.KEY_LAST_READ_CUSTOM_COLUMN]
 
-    with closing(
-        device_database_connection(
-            options["device_database_path"], use_row_factory=True
-        )
+    with device_database_connection(
+        options["device_database_path"], use_row_factory=True
     ) as connection:
         cursor = connection.cursor()
         count_books += 1
@@ -752,7 +745,7 @@ def value_changed(old_value, new_value):
     )
 
 
-def do_clean_images_dir(options, cpus, notification=lambda x, y: x):
+def do_clean_images_dir(options, cpus, notification=lambda x, _y: x):
     main_image_path = options["main_image_path"]
     sd_image_path = options["sd_image_path"]
     device_database_path = options["device_database_path"]
@@ -814,7 +807,7 @@ def do_clean_images_dir(options, cpus, notification=lambda x, y: x):
 def _get_file_imageIds(image_path):
     imageids_files = {}
     if image_path:
-        for path, dirs, files in os.walk(image_path):
+        for path, _dirs, files in os.walk(image_path):
             for filename in files:
                 if filename.find(" - N3_") > 0:
                     imageid = filename.split(" - N3_")[0]
@@ -866,14 +859,13 @@ def _remove_extra_files(
                 debug_print("_remove_extra_files - removed path=%s" % (image_path))
             except Exception as e:
                 debug_print("_remove_extra_files - removed path exception=", e)
-                pass
 
     return extra_image_files
 
 
 def _get_imageId_set(device_database_path):
-    with closing(
-        device_database_connection(device_database_path, use_row_factory=True)
+    with device_database_connection(
+        device_database_path, use_row_factory=True
     ) as connection:
         imageId_query = (
             "SELECT DISTINCT ImageId "
@@ -882,17 +874,14 @@ def _get_imageId_set(device_database_path):
         )
         cursor = connection.cursor()
 
-        imageIDs = []
         cursor.execute(imageId_query)
-        for i, row in enumerate(cursor):
-            imageIDs.append(row["ImageId"])
-
+        imageIDs = {row["ImageId"] for row in cursor}
         cursor.close()
 
-    return set(imageIDs)
+    return imageIDs
 
 
-def do_remove_annotations(options, books, cpus, notification=lambda x, y: x):
+def do_remove_annotations(options, books, cpus, notification=lambda x, _y: x):
     annotations_dir = options["annotations_dir"]
     annotations_ext = options["annotations_ext"]
     device_path = options["device_path"]

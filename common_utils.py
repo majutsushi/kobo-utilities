@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # vim:fileencoding=UTF-8:ts=4:sw=4:sta:et:sts=4:ai
 
 __license__ = "GPL v3"
@@ -20,6 +19,8 @@ from calibre.gui2 import (
 )
 from calibre.gui2.actions import menu_action_unique_name
 from calibre.gui2.keyboard import ShortcutConfig
+from calibre.gui2.library.delegates import DateDelegate as _DateDelegate
+from calibre.gui2.library.delegates import TextDelegate
 from calibre.utils.config import config_dir
 from calibre.utils.date import UNDEFINED_DATE, format_date, now
 from qt.core import (
@@ -196,12 +197,12 @@ def create_menu_action_unique(
     kb = ia.gui.keyboard
     if unique_name is None:
         unique_name = menu_text
-    if not shortcut == False:
+    if shortcut is not False:
         full_unique_name = menu_action_unique_name(ia, unique_name)
         if full_unique_name in kb.shortcuts:
             shortcut = False
         else:
-            if shortcut is not None and not shortcut == False:
+            if shortcut is not None and shortcut is not False:
                 if len(shortcut) == 0:
                     shortcut = None
                 else:
@@ -220,7 +221,7 @@ def create_menu_action_unique(
         triggered=triggered,
         shortcut_name=shortcut_name,
     )
-    if shortcut == False and not orig_shortcut == False:
+    if shortcut is False and orig_shortcut is not False:
         if ac.calibre_shortcut_unique_name in ia.gui.keyboard.shortcuts:
             kb.replace_action(ac.calibre_shortcut_unique_name, ac)
     if image:
@@ -316,27 +317,30 @@ def check_device_database(database_path):
 
 
 def convert_kobo_date(kobo_date):
-    from calibre.utils.date import utc_tz
+    from calibre.utils.date import local_tz, utc_tz
 
     try:
-        converted_date = datetime.strptime(kobo_date, "%Y-%m-%dT%H:%M:%S.%f")
-        converted_date = datetime.strptime(kobo_date[0:19], "%Y-%m-%dT%H:%M:%S")
-        converted_date = converted_date.replace(tzinfo=utc_tz)
+        converted_date = datetime.strptime(kobo_date, "%Y-%m-%dT%H:%M:%S.%f").replace(
+            tzinfo=utc_tz
+        )
+        converted_date = datetime.strptime(
+            kobo_date[0:19], "%Y-%m-%dT%H:%M:%S"
+        ).replace(tzinfo=utc_tz)
     except ValueError:
         try:
-            converted_date = datetime.strptime(kobo_date, "%Y-%m-%dT%H:%M:%S%+00:00")
+            converted_date = datetime.strptime(
+                kobo_date, "%Y-%m-%dT%H:%M:%S%+00:00"
+            ).replace(tzinfo=utc_tz)
         except ValueError:
             try:
                 converted_date = datetime.strptime(
                     kobo_date.split("+")[0], "%Y-%m-%dT%H:%M:%S"
-                )
-                converted_date = converted_date.replace(tzinfo=utc_tz)
+                ).replace(tzinfo=utc_tz)
             except ValueError:
                 try:
                     converted_date = datetime.strptime(
                         kobo_date.split("+")[0], "%Y-%m-%d"
-                    )
-                    converted_date = converted_date.replace(tzinfo=utc_tz)
+                    ).replace(tzinfo=utc_tz)
                 except ValueError:
                     try:
                         from calibre.utils.date import parse_date
@@ -344,7 +348,7 @@ def convert_kobo_date(kobo_date):
                         converted_date = parse_date(kobo_date, assume_utc=True)
                     except ValueError:
                         # The date is in some unknown format. Return now in the local timezone
-                        converted_date = datetime.now()  # time.gmtime()
+                        converted_date = datetime.now(tz=local_tz)
                         debug_print(
                             "convert_kobo_date - datetime.now() - kobo_date={0}'".format(
                                 kobo_date
@@ -428,7 +432,7 @@ class SizePersistedDialog(QDialog):
         else:
             self.restoreGeometry(self.geom)
 
-    def dialog_closing(self, result):
+    def dialog_closing(self, result):  # noqa: ARG002
         geom = bytearray(self.saveGeometry())
         gprefs[self.unique_pref_name] = geom
         self.persist_custom_prefs()
@@ -439,7 +443,6 @@ class SizePersistedDialog(QDialog):
         save_custom_pref() if you have a setting you want persisted that you can
         retrieve in your __init__() using load_custom_pref() when next opened
         """
-        pass
 
     def load_custom_pref(self, name, default=None):
         return gprefs.get(self.unique_pref_name + ":" + name, default)
@@ -447,7 +450,7 @@ class SizePersistedDialog(QDialog):
     def save_custom_pref(self, name, value):
         gprefs[self.unique_pref_name + ":" + name] = value
 
-    def help_link_activated(self, url):
+    def help_link_activated(self, url):  # noqa: ARG002
         if self.plugin_action is not None:
             self.plugin_action.show_help(anchor=self.help_anchor)
 
@@ -490,9 +493,6 @@ class DateTableWidgetItem(QTableWidgetItem):
         else:
             super(DateTableWidgetItem, self).__init__("")
             self.setData(Qt.DisplayRole, QDateTime(date_read))
-
-
-from calibre.gui2.library.delegates import DateDelegate as _DateDelegate
 
 
 class DateDelegate(_DateDelegate):
@@ -652,7 +652,7 @@ class ProfileComboBox(QComboBox):
     def populate_combo(self, profiles, selected_text=None):
         self.blockSignals(True)
         self.clear()
-        for list_name in list(sorted(profiles.keys())):
+        for list_name in sorted(profiles.keys()):
             self.addItem(list_name)
         self.select_view(selected_text)
 
@@ -683,7 +683,7 @@ class KeyComboBox(QComboBox):
         self.setCurrentIndex(selected_idx)
 
     def selected_key(self):
-        for key, value in list(self.values.items()):
+        for key, _value in list(self.values.items()):
             if key == str(self.currentText()).strip():
                 return key
 
@@ -716,11 +716,15 @@ class CustomColumnComboBox(QComboBox):
     def __init__(
         self,
         parent,
-        custom_columns={},
+        custom_columns=None,
         selected_column="",
-        initial_items=[""],
+        initial_items=None,
         create_column_callback=None,
     ):
+        if custom_columns is None:
+            custom_columns = {}
+        if initial_items is None:
+            initial_items = [""]
         super(CustomColumnComboBox, self).__init__(parent)
         debug_print(
             "CustomColumnComboBox::__init__ - create_column_callback=",
@@ -733,8 +737,10 @@ class CustomColumnComboBox(QComboBox):
         self.populate_combo(custom_columns, selected_column, initial_items)
 
     def populate_combo(
-        self, custom_columns, selected_column, initial_items=[""], show_lookup_name=True
+        self, custom_columns, selected_column, initial_items=None, show_lookup_name=True
     ):
+        if initial_items is None:
+            initial_items = [""]
         self.clear()
         self.column_names = []
         selected_idx = 0
@@ -783,7 +789,10 @@ class CustomColumnComboBox(QComboBox):
             "CustomColumnComboBox::current_text_changed - new_text == self.CREATE_NEW_COLUMN_ITEM='%s'"
             % (new_text == self.CREATE_NEW_COLUMN_ITEM)
         )
-        if new_text == self.CREATE_NEW_COLUMN_ITEM:
+        if (
+            new_text == self.CREATE_NEW_COLUMN_ITEM
+            and self.create_column_callback is not None
+        ):
             debug_print("CustomColumnComboBox::current_text_changed - calling callback")
             result = self.create_column_callback()
             if not result:
@@ -828,9 +837,6 @@ class KeyboardConfigDialog(SizePersistedDialog):
     def commit(self):
         self.keyboard_widget.commit()
         self.accept()
-
-
-from calibre.gui2.library.delegates import TextDelegate
 
 
 class TextWithLengthDelegate(TextDelegate):

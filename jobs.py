@@ -43,43 +43,6 @@ def debug_print(*args):
         prints("DEBUG: %6.1f" % (time.time() - BASE_TIME), *args)
 
 
-def do_check_firmware_update(
-    update_data, update_dest_dir, cpus, notification=lambda x, _y: x
-):
-    debug_print("do_check_firmware_update - start")
-    server = Server(pool_size=cpus)
-
-    debug_print("do_check_firmware_update - %s" % update_data["UpgradeURL"])
-
-    notification(0.01, "Fetching update data")
-
-    if update_data["UpgradeURL"] is not None:
-        notification(0.25, "Fetching update file")
-        debug_print(
-            "do_check_firmware_update - update_url:%s" % update_data["UpgradeURL"]
-        )
-        resp = urlopen(update_data["UpgradeURL"])
-        if resp.getcode() == 200:
-            from calibre.ptempfile import PersistentTemporaryFile
-
-            notification(0.5, "Saving firmware update data to temporary location")
-            zf_tmp = PersistentTemporaryFile("kobo-update.zip")
-            zf_tmp.write(resp.read())
-            zf_update = zipfile.ZipFile(zf_tmp)
-            notification(0.75, "Writing update file to Kobo device")
-            zf_update.extractall(update_dest_dir)
-            notification(1, "Update file written")
-            return True
-        else:
-            return Exception(
-                "Couldn't fetch firmware update: got HTTP%s" % resp.getcode()
-            )
-    else:
-        debug_print("do_check_firmware_update - No firmware update required")
-        notification(1, "No update available")
-        return False
-
-
 def do_device_database_backup(backup_options, cpus, notification=lambda x, _y: x):
     logger = Log()
     JOBS_DEBUG = True

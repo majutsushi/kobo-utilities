@@ -77,9 +77,7 @@ KEY_STORE_ON_CONNECT = "storeOnConnect"
 KEY_PROMPT_TO_STORE = "promptToStore"
 KEY_STORE_IF_MORE_RECENT = "storeIfMoreRecent"
 KEY_DO_NOT_STORE_IF_REOPENED = "doNotStoreIfReopened"
-KEY_DO_UPDATE_CHECK = "doFirmwareUpdateCheck"
-KEY_LAST_FIRMWARE_CHECK_TIME = "firmwareUpdateCheckLastTime"
-KEY_DO_EARLY_FIRMWARE_CHECK = "doEarlyFirmwareUpdate"
+
 KEY_FOR_DEVICE = "forDevice"
 KEY_INDIVIDUAL_DEVICE_OPTIONS = "individualDeviceOptions"
 
@@ -95,7 +93,6 @@ DISPLAYEXTRASTILES_OPTIONS_STORE_NAME = "displayExtrasTilesOptionsStore"
 FIXDUPLICATESHELVES_OPTIONS_STORE_NAME = "fixDuplicatesOptionsStore"
 ORDERSERIESSHELVES_OPTIONS_STORE_NAME = "orderSeriesShelvesOptionsStore"
 SETRELATEDBOOKS_OPTIONS_STORE_NAME = "setRelatedBooksOptionsStore"
-UPDATE_OPTIONS_STORE_NAME = "updateOptionsStore"
 GET_SHELVES_OPTIONS_STORE_NAME = "getShelvesOptionStore"
 READING_POSITION_CHANGES_STORE_NAME = "readingPositionChangesStore"
 
@@ -320,12 +317,6 @@ SETRELATEDBOOKS_OPTIONS_DEFAULTS = {
     KEY_RELATED_BOOKS_TYPE: KEY_RELATED_BOOKS_SERIES,
 }
 
-UPDATE_OPTIONS_DEFAULTS = {
-    KEY_DO_UPDATE_CHECK: False,
-    KEY_LAST_FIRMWARE_CHECK_TIME: 0,
-    KEY_DO_EARLY_FIRMWARE_CHECK: False,
-}
-
 BACKUP_OPTIONS_DEFAULTS = {
     KEY_DO_DAILY_BACKUP: False,
     KEY_BACKUP_EACH_CONNECTION: False,
@@ -349,7 +340,6 @@ CUSTOM_COLUMNS_OPTIONS_DEFAULTS = {
 
 DEFAULT_PROFILE_VALUES = {
     KEY_FOR_DEVICE: None,
-    UPDATE_OPTIONS_STORE_NAME: UPDATE_OPTIONS_DEFAULTS,
     STORE_OPTIONS_STORE_NAME: STORE_OPTIONS_DEFAULTS,
 }
 DEFAULT_LIBRARY_VALUES = {
@@ -431,7 +421,6 @@ plugin_prefs.defaults[SETRELATEDBOOKS_OPTIONS_STORE_NAME] = (
     SETRELATEDBOOKS_OPTIONS_DEFAULTS
 )
 plugin_prefs.defaults[STORE_LIBRARIES] = {}
-plugin_prefs.defaults[UPDATE_OPTIONS_STORE_NAME] = UPDATE_OPTIONS_DEFAULTS
 plugin_prefs.defaults[BACKUP_OPTIONS_STORE_NAME] = BACKUP_OPTIONS_DEFAULTS
 plugin_prefs.defaults[GET_SHELVES_OPTIONS_STORE_NAME] = GET_SHELVES_OPTIONS_DEFAULTS
 plugin_prefs.defaults[STORE_DEVICES] = DEFAULT_DEVICES_VALUES
@@ -782,6 +771,19 @@ class ProfilesTab(QWidget):
             )
         )
         options_layout.addWidget(self.do_not_store_if_reopened_checkbox, 1, 2, 1, 1)
+
+        layout.addWidget(
+            QLabel(
+                _(
+                    "You can use this site to download the latest version of Kobo firmware:"
+                )
+            )
+        )
+        fwsite = QLabel("https://pgaskin.net/KoboStuff/kobofirmware.html")
+        fwsite.setTextInteractionFlags(
+            Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard
+        )
+        layout.addWidget(fwsite)
 
         layout.addStretch(1)
 
@@ -1192,7 +1194,7 @@ class DevicesTab(QWidget):
             _("Configure options for each device"), self
         )
         self.device_options_for_each_checkbox.setToolTip(
-            _("Selected this option to configure backup and firmware for each device.")
+            _("Selected this option to configure backup for each device.")
         )
         self.device_options_for_each_checkbox.clicked.connect(
             self.device_options_for_each_checkbox_clicked
@@ -1201,36 +1203,7 @@ class DevicesTab(QWidget):
             self.device_options_for_each_checkbox.setCheckState(Qt.Checked)
         layout.addWidget(self.device_options_for_each_checkbox)
 
-        update_options_group = QGroupBox(_("Firmware Update Options"), self)
-        layout.addWidget(update_options_group)
         options_layout = QGridLayout()
-        update_options_group.setLayout(options_layout)
-
-        self.do_update_check = QCheckBox(
-            _("Check for Kobo firmware updates daily?"), self
-        )
-        self.do_update_check.setToolTip(
-            _(
-                "If this is selected the plugin will check for Kobo firmware updates when your Kobo device is plugged in, once per 24-hour period."
-            )
-        )
-        options_layout.addWidget(self.do_update_check, 0, 0, 1, 1)
-
-        self.do_early_firmware_check = QCheckBox(
-            _("Use early firmware adopter affiliate?"), self
-        )
-        self.do_early_firmware_check.setToolTip(
-            _(
-                "WARNING: THIS OPTION RISKS DOWNLOADING THE WRONG FIRMWARE FOR YOUR DEVICE! YOUR DEVICE MAY NOT FUNCTION PROPERLY IF THIS HAPPENS! Choose this option to attempt to download Kobo firmware updates before they are officially available for your device."
-            )
-        )
-        options_layout.addWidget(self.do_early_firmware_check, 0, 1, 1, 1)
-
-        backup_options_group = QGroupBox(_("Device Database Backup"), self)
-        layout.addWidget(backup_options_group)
-        options_layout = QGridLayout()
-        backup_options_group.setLayout(options_layout)
-
         self.do_daily_backp_checkbox = QCheckBox(
             _("Backup the device database daily"), self
         )
@@ -1514,28 +1487,13 @@ class DevicesTab(QWidget):
                 self.devices_table.get_selected_device_info()
             )
             if self.current_device_info:
-                update_prefs = self.current_device_info.get(
-                    UPDATE_OPTIONS_STORE_NAME, UPDATE_OPTIONS_DEFAULTS
-                )
                 backup_prefs = self.current_device_info.get(
                     BACKUP_OPTIONS_STORE_NAME, BACKUP_OPTIONS_DEFAULTS
                 )
             else:
-                update_prefs = UPDATE_OPTIONS_DEFAULTS
                 backup_prefs = BACKUP_OPTIONS_DEFAULTS
         else:
-            update_prefs = get_plugin_prefs(UPDATE_OPTIONS_STORE_NAME)
             backup_prefs = get_plugin_prefs(BACKUP_OPTIONS_STORE_NAME)
-
-        do_check_for_firmware_updates = get_pref(
-            update_prefs, UPDATE_OPTIONS_STORE_NAME, KEY_DO_UPDATE_CHECK
-        )
-        do_early_firmware_updates = get_pref(
-            update_prefs, UPDATE_OPTIONS_STORE_NAME, KEY_DO_EARLY_FIRMWARE_CHECK
-        )
-        self.update_check_last_time = get_pref(
-            update_prefs, UPDATE_OPTIONS_STORE_NAME, KEY_LAST_FIRMWARE_CHECK_TIME
-        )
 
         do_daily_backup = get_pref(
             backup_prefs, BACKUP_OPTIONS_STORE_NAME, KEY_DO_DAILY_BACKUP
@@ -1553,12 +1511,6 @@ class DevicesTab(QWidget):
             backup_prefs, BACKUP_OPTIONS_STORE_NAME, KEY_BACKUP_ZIP_DATABASE
         )
 
-        self.do_update_check.setCheckState(
-            Qt.Checked if do_check_for_firmware_updates else Qt.Unchecked
-        )
-        self.do_early_firmware_check.setCheckState(
-            Qt.Checked if do_early_firmware_updates else Qt.Unchecked
-        )
         self.do_daily_backp_checkbox.setCheckState(
             Qt.Checked if do_daily_backup else Qt.Unchecked
         )
@@ -1582,16 +1534,6 @@ class DevicesTab(QWidget):
     def persist_devices_config(self):
         debug_print("DevicesTab:persist_devices_config - Start")
 
-        update_prefs = {}
-        update_prefs[KEY_DO_UPDATE_CHECK] = (
-            self.do_update_check.checkState() == Qt.Checked
-        )
-        update_prefs[KEY_DO_EARLY_FIRMWARE_CHECK] = (
-            self.do_early_firmware_check.checkState() == Qt.Checked
-        )
-        update_prefs[KEY_LAST_FIRMWARE_CHECK_TIME] = self.update_check_last_time
-        debug_print("DevicesTab:persist_devices_config - update_prefs:", update_prefs)
-
         backup_prefs = {}
         backup_prefs[KEY_DO_DAILY_BACKUP] = (
             self.do_daily_backp_checkbox.checkState() == Qt.Checked
@@ -1612,10 +1554,8 @@ class DevicesTab(QWidget):
 
         if self.individual_device_options:
             if self.current_device_info:
-                self.current_device_info[UPDATE_OPTIONS_STORE_NAME] = update_prefs
                 self.current_device_info[BACKUP_OPTIONS_STORE_NAME] = backup_prefs
         else:
-            plugin_prefs[UPDATE_OPTIONS_STORE_NAME] = update_prefs
             plugin_prefs[BACKUP_OPTIONS_STORE_NAME] = backup_prefs
 
         new_prefs = get_plugin_prefs(COMMON_OPTIONS_STORE_NAME)

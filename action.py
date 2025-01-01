@@ -181,11 +181,7 @@ FETCH_QUERIES[(1, 9, 17)] = {"epub": EPUB_FETCH_QUERY, "kepub": KEPUB_FETCH_QUER
 # With 4.17.13651, epub location is stored in the same way a for kepubs.
 FETCH_QUERIES[(4, 17, 13651)] = {"epub": KEPUB_FETCH_QUERY, "kepub": KEPUB_FETCH_QUERY}
 
-KOBO_FIRMWARE_UPDATE_CHECK_URL = (
-    "https://api.kobobooks.com/1.0/UpgradeCheck/Device/{0}/{1}/{2}/{3}"
-)
 KOBO_ROOT_DIR_NAME = ".kobo"
-KOBO_FIRMWARE_UPDATE_CHECK_INTERVAL = 86400
 KOBO_EPOCH_CONF_NAME = "epoch.conf"
 
 load_translations()
@@ -370,15 +366,6 @@ class KoboUtilitiesAction(InterfaceAction):
                     "KoboUtilites:_on_device_metadata_available - About to start auto store"
                 )
                 self.auto_store_current_bookmark()
-
-            if (
-                self.haveKoboTouch()
-                and self.current_firmware_check_config[cfg.KEY_DO_UPDATE_CHECK]
-            ):
-                debug_print(
-                    "KoboUtilities:_on_device_metadata_available - About to do firmware check"
-                )
-                self.auto_firmware_update_check()
 
         self.rebuild_menus()
 
@@ -699,16 +686,6 @@ class KoboUtilitiesAction(InterfaceAction):
             )
 
             self.menu.addSeparator()
-            self.firmware_update_action = self.create_menu_item_ex(
-                self.menu,
-                _("Check for Kobo Updates") + "...",  # shortcut=False,
-                unique_name="Check for Kobo Updates",
-                shortcut_name=_("Check for Kobo Updates"),
-                triggered=self.menu_firmware_update_check,
-                enabled=haveKobo,
-                is_library_action=True,
-                is_device_action=True,
-            )
             self.set_time_on_device_action = self.create_menu_item_ex(
                 self.menu,
                 _("Set time on device"),
@@ -1467,31 +1444,6 @@ class KoboUtilitiesAction(InterfaceAction):
             plugin_action=self,
         )
 
-    def should_check_kobo_updates(self):
-        last_check = self.current_firmware_check_config[
-            cfg.KEY_LAST_FIRMWARE_CHECK_TIME
-        ]
-        now = calendar.timegm(time.gmtime())
-        debug_print("Delta since last update check: %s" % (now - last_check))
-        return KOBO_FIRMWARE_UPDATE_CHECK_INTERVAL < (now - last_check)
-
-    def menu_firmware_update_check(self):
-        debug_print("menu_firmware_update_check - start")
-        if not self.should_check_kobo_updates() and not question_dialog(
-            self.gui,
-            _("Kobo Firmware Update"),
-            _(
-                "You last checked for a Kobo update less than a day ago. Do you want to check again now?"
-            ),
-            show_copy_button=False,
-        ):
-            return
-        else:
-            options = self.current_firmware_check_config
-            options[cfg.KEY_LAST_FIRMWARE_CHECK_TIME] = 0
-            cfg.plugin_prefs[cfg.UPDATE_OPTIONS_STORE_NAME] = options
-        self.auto_firmware_update_check(from_menu=True)
-
     def set_time_on_device(self):
         debug_print("set_time_on_device - start")
         now = calendar.timegm(time.gmtime())
@@ -1505,143 +1457,6 @@ class KoboUtilitiesAction(InterfaceAction):
             _("Kobo Utilities") + " - " + _("Time file created on device."), 3000
         )
         debug_print("set_time_on_device - end")
-
-    def auto_firmware_update_check(self, from_menu=False):
-        debug_print("auto_firmware_update_check - start")
-
-        if self.should_check_kobo_updates():
-            options = cfg.get_plugin_prefs(
-                cfg.UPDATE_OPTIONS_STORE_NAME, fill_defaults=True
-            )
-            options[cfg.KEY_LAST_FIRMWARE_CHECK_TIME] = calendar.timegm(time.gmtime())
-            cfg.plugin_prefs[cfg.UPDATE_OPTIONS_STORE_NAME] = options
-            self.device_path = self.get_device_path()
-
-            kobo_update_file = os.path.join(
-                self.device_path, KOBO_ROOT_DIR_NAME, "KoboRoot.tgz"
-            )
-            kobo_manifest_sums_file = os.path.join(
-                self.device_path, KOBO_ROOT_DIR_NAME, "manifest.md5sum"
-            )
-            kobo_upgrade_dir = os.path.join(
-                self.device_path, KOBO_ROOT_DIR_NAME, "upgrade"
-            )
-            if os.path.exists(kobo_update_file):
-                if not question_dialog(
-                    self.gui,
-                    _("Kobo Firmware Update"),
-                    _(
-                        "The KoboRoot.tgz file is already in place for an upgrade. Do you want to check for updates anyway?"
-                    ),
-                    show_copy_button=False,
-                ):
-                    return
-                else:
-                    os.unlink(kobo_update_file)
-            if os.path.exists(kobo_manifest_sums_file):
-                os.unlink(kobo_manifest_sums_file)
-            if os.path.exists(kobo_upgrade_dir):
-                shutil.rmtree(kobo_upgrade_dir)
-
-            is_beta_user = False
-            try:
-                kobo_config, config_file_path = self.get_config_file()
-                is_beta_user = kobo_config.has_section(
-                    "FeatureSettings"
-                ) and kobo_config.getboolean("FeatureSettings", "AcceptPreviewUpgrades")
-            except ValueError:
-                is_beta_user = False
-            except NoOptionError:
-                is_beta_user = False
-            if is_beta_user:
-                beta_continue_anyway = question_dialog(
-                    self.gui,
-                    _("Kobo Firmware Update"),
-                    _(
-                        "You appear to be a beta tester. Upgrade checking currently only works for official firmware releases. Do you wish to continue checking for official release firmware updates?"
-                    ),
-                    show_copy_button=False,
-                )
-                if not beta_continue_anyway:
-                    debug_print(
-                        "do_check_firmware_update - beta tester is not checking for firmware"
-                    )
-                    return
-            version_info = self.device_version_info()
-            if version_info:
-                # Check affiliate.conf for the affiliate unless the early update check box is selected
-                affiliate = "whsmith"
-                affiliate_file = os.path.join(
-                    self.device_path, KOBO_ROOT_DIR_NAME, "affiliate.conf"
-                )
-                if not self.current_firmware_check_config[
-                    cfg.KEY_DO_EARLY_FIRMWARE_CHECK
-                ] and os.path.isfile(affiliate_file):
-                    affiliate_config = ConfigParser(allow_no_value=True)
-                    affiliate_config.optionxform = str
-                    affiliate_config.read(affiliate_file)
-                    if affiliate_config.has_section(
-                        "General"
-                    ) and affiliate_config.has_option("General", "affiliate"):
-                        affiliate = affiliate_config.get("General", "affiliate")
-                serial_no = self.device_serial_no()
-                update_url = KOBO_FIRMWARE_UPDATE_CHECK_URL.format(
-                    version_info[5], affiliate, version_info[2], serial_no
-                )
-                debug_print("auto_firmware_update_check - update_url:%s" % update_url)
-                update_data = None
-                resp = urlopen(Request(update_url, headers={"User-Agent": "Mozilla"}))
-                if resp.getcode() == 200:
-                    import json
-
-                    update_data = json.loads(resp.read())
-                    debug_print(
-                        "do_check_firmware_update - update_data:\n%s" % update_data
-                    )
-                    if update_data["UpgradeURL"] is not None:
-                        m = re.search(
-                            r"\/kobo\-update\-(?P<version>\d+\.\d+\.\d+)\.zip$",
-                            update_data["UpgradeURL"],
-                        )
-                        if m:
-                            upgrade_version = m.group("version")
-                        else:
-                            upgrade_version = "(Unknown)"
-                        upgrade_continue = question_dialog(
-                            self.gui,
-                            _("Kobo Firmware Update"),
-                            _(
-                                "A Kobo firmware update to version {0} is available. Do you want to update? You have version {1}.".format(
-                                    upgrade_version, version_info[2]
-                                )
-                            ),
-                            show_copy_button=False,
-                        )
-                        if upgrade_continue:
-                            self._firmware_update(update_data)
-                    else:
-                        debug_print(
-                            "auto_firmware_update_check - No firmware upgrade available"
-                        )
-                        if from_menu:
-                            info_dialog(
-                                self.gui,
-                                _("Kobo Firmware Update"),
-                                _(
-                                    "Kobo firmware update check complete - no updates available"
-                                ),
-                                show=True,
-                                show_copy_button=False,
-                            )
-                else:
-                    raise ValueError(
-                        "Couldn't check for firmware update: got HTTP%s"
-                        % resp.getcode()
-                    )
-        else:
-            debug_print(
-                "auto_firmware_update_check - Not checking for firmware, only checking once per day"
-            )
 
     def device_version_info(self):
         if not self.version_info:
@@ -2850,7 +2665,6 @@ class KoboUtilitiesAction(InterfaceAction):
         self.current_device_profile = None
         self.current_device_config = None
         self.current_backup_config = None
-        self.current_firmware_check_config = None
         self.device_uuid = None
         self.version_info = None
         self.supports_series = None
@@ -2903,15 +2717,9 @@ class KoboUtilitiesAction(InterfaceAction):
                 self.current_backup_config = cfg.get_prefs(
                     self.current_device_config, cfg.BACKUP_OPTIONS_STORE_NAME
                 )
-                self.current_firmware_check_config = cfg.get_prefs(
-                    self.current_device_config, cfg.UPDATE_OPTIONS_STORE_NAME
-                )
             else:
                 self.current_backup_config = cfg.get_plugin_prefs(
                     cfg.BACKUP_OPTIONS_STORE_NAME, fill_defaults=True
-                )
-                self.current_firmware_check_config = cfg.get_plugin_prefs(
-                    cfg.UPDATE_OPTIONS_STORE_NAME, fill_defaults=True
                 )
 
         self.supports_series = (
@@ -3109,84 +2917,8 @@ class KoboUtilitiesAction(InterfaceAction):
                         "progress", sorted(goodreads_sync_plugin.users.keys())[0]
                     )
 
-    def _firmware_update(self, update_data):
-        debug_print("KoboUtilitiesAction::_firmware_update")
-
-        cpus = 1  # self.gui.device_manager.server.pool_size
-        from .jobs import do_check_firmware_update
-
-        args = [
-            update_data,
-            os.path.join(self.get_device_path(), KOBO_ROOT_DIR_NAME),
-            cpus,
-        ]
-        desc = _("Downloading Kobo firmware update")
-        job = self.gui.device_manager.create_job(
-            do_check_firmware_update,
-            self.Dispatcher(self._firmware_completed),
-            description=desc,
-            args=args,
-        )
-        job._tdir = None
-        self.gui.status_bar.show_message(_("Kobo Utilities") + " - " + desc, 3000)
-
-    def _firmware_completed(self, job):
-        if job.failed:
-            self.gui.job_exception(
-                job, dialog_title=_("Failed to update Kobo firmware")
-            )
-            return
-
-        update_results = job.result
-        if update_results is True:
-            debug_print(
-                "KoboUtilitiesAction::_firmware_completed - Done updating Kobo firmware"
-            )
-            ret = question_dialog(
-                self.gui,
-                _("Kobo Firmware Update"),
-                _("Keep Kobo firmware update files?"),
-                show_copy_button=False,
-            )
-            if not ret:
-                device_path = self.get_device_path()
-                update_dir = os.path.join(device_path, KOBO_ROOT_DIR_NAME)
-                os.unlink(os.path.join(update_dir, "KoboRoot.tgz"))
-                try:
-                    shutil.rmtree(os.path.join(update_dir, "upgrade"))
-                except Exception as e:
-                    debug_print(
-                        "WARNING: _firmware_completed - Couldn't remove 'upgrade' directory: %s"
-                        % (str(e),)
-                    )
-                try:
-                    os.unlink(os.path.join(update_dir, "manifest.md5sum"))
-                except Exception as e:
-                    debug_print(
-                        "WARNING: _firmware_completed - Couldn't remove 'manifest.md5sum' file: %s"
-                        % (str(e),)
-                    )
-            else:
-                info_dialog(
-                    self.gui,
-                    _("Kobo Firmware Update"),
-                    _("Eject and unplug your Kobo device to complete the update"),
-                    show=True,
-                    show_copy_button=False,
-                )
-        elif isinstance(update_results, basestring):
-            info_dialog(self.gui, _("Kobo Firmware Update"), update_results, show=True)
-        elif isinstance(update_results, BaseException):
-            error_dialog(
-                self.gui,
-                _("Kobo Firmware Update"),
-                _("Exception encountered updating Kobo firmware"),
-                det_msg=update_results.message,
-                show=True,
-            )
-
     def _device_database_backup(self, backup_options):
-        debug_print("KoboUtilitiesAction::_firmware_update")
+        debug_print("KoboUtilitiesAction::_device_database_backup")
 
         cpus = 1  # self.gui.device_manager.server.pool_size
         from .jobs import do_device_database_backup

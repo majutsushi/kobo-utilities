@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # vim:fileencoding=UTF-8:ts=4:sw=4:sta:et:sts=4:ai
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # from constants import debug
 # from common_utils import debug_print
@@ -12,81 +11,11 @@ __docformat__ = "restructuredtext en"
 import os
 import re
 import traceback
+from configparser import ConfigParser
 from datetime import datetime
-
-# calibre Python 3 compatibility.
-import six
-from six import text_type as unicode
-
-try:
-    from PyQt5.Qt import (
-        QAbstractItemView,
-        QAction,
-        QApplication,
-        QButtonGroup,
-        QCheckBox,
-        QComboBox,
-        QDialog,
-        QDialogButtonBox,
-        QDoubleSpinBox,
-        QGridLayout,
-        QGroupBox,
-        QHBoxLayout,
-        QLabel,
-        QLineEdit,
-        QPixmap,
-        QProgressDialog,
-        QPushButton,
-        QRadioButton,
-        QSpacerItem,
-        QSpinBox,
-        Qt,
-        QTableWidget,
-        QTableWidgetItem,
-        QTimer,
-        QToolButton,
-        QUrl,
-        QVBoxLayout,
-        QWidget,
-    )
-    from PyQt5.QtWidgets import QSizePolicy
-except ImportError as e:
-    debug_print("Error loading QT5: ", e)
-    from PyQt4.Qt import (
-        QAbstractItemView,
-        QAction,
-        QApplication,
-        QButtonGroup,
-        QCheckBox,
-        QComboBox,
-        QDialog,
-        QDialogButtonBox,
-        QDoubleSpinBox,
-        QGridLayout,
-        QGroupBox,
-        QHBoxLayout,
-        QLabel,
-        QLineEdit,
-        QPixmap,
-        QProgressDialog,
-        QPushButton,
-        QRadioButton,
-        QSpacerItem,
-        QSpinBox,
-        Qt,
-        QTableWidget,
-        QTableWidgetItem,
-        QTimer,
-        QToolButton,
-        QUrl,
-        QVBoxLayout,
-        QWidget,
-    )
-    from PyQt4.QtGui import QSizePolicy
-
 from functools import partial
+from urllib.parse import quote_plus
 
-import six
 from calibre.ebooks.metadata import authors_to_string
 from calibre.gui2 import (
     choose_dir,
@@ -103,6 +32,38 @@ from calibre.gui2.widgets2 import ColorButton
 from calibre.utils.config import JSONConfig, tweaks
 from calibre.utils.date import qt_to_dt, utc_tz
 from calibre.utils.icu import sort_key
+from qt.core import (
+    QAbstractItemView,
+    QAction,
+    QApplication,
+    QButtonGroup,
+    QCheckBox,
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QDoubleSpinBox,
+    QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPixmap,
+    QProgressDialog,
+    QPushButton,
+    QRadioButton,
+    QSizePolicy,
+    QSpacerItem,
+    QSpinBox,
+    Qt,
+    QTableWidget,
+    QTableWidgetItem,
+    QTimer,
+    QToolButton,
+    QUrl,
+    QVBoxLayout,
+    QWidget,
+)
+
 from . import config as cfg
 from .book import SeriesBook
 from .common_utils import (
@@ -116,14 +77,10 @@ from .common_utils import (
     ReadOnlyTableWidgetItem,
     ReadOnlyTextIconWidgetItem,
     SizePersistedDialog,
-    convert_qvariant,
     debug_print,
     get_icon,
     get_library_uuid,
 )
-from six import text_type as unicode
-from six.moves.configparser import SafeConfigParser
-from six.moves.urllib.parse import quote_plus
 
 # Checked with FW2.5.2
 LINE_SPACINGS = [1.3, 1.35, 1.4, 1.6, 1.775, 1.9, 2, 2.2, 3]
@@ -356,12 +313,7 @@ KEY_REMOVE_ANNOT_NONEMPTY = 3
 KEY_REMOVE_ANNOT_SELECTED = 4
 
 # pulls in translation files for _() strings
-try:
-    debug_print("KoboUtilites::dialogs.py - loading translations")
-    load_translations()
-except NameError:
-    debug_print("KoboUtilites::dialogs.py - exception when loading translations")
-    pass  # load_translations() added in calibre 1.9
+load_translations()
 
 
 def get_plugin_pref(store_name, option):
@@ -782,17 +734,15 @@ class ReaderOptionsDialog(SizePersistedDialog):
     def ok_clicked(self):
         self.prefs = cfg.READING_OPTIONS_DEFAULTS
         self.prefs[cfg.KEY_READING_FONT_FAMILY] = self.font_list[
-            unicode(self.font_choice.currentText()).strip()
+            str(self.font_choice.currentText()).strip()
         ]
-        self.prefs[cfg.KEY_READING_ALIGNMENT] = unicode(
+        self.prefs[cfg.KEY_READING_ALIGNMENT] = str(
             self.justification_choice.currentText()
         ).strip()
-        self.prefs[cfg.KEY_READING_FONT_SIZE] = int(
-            unicode(self.font_size_spin.value())
-        )
+        self.prefs[cfg.KEY_READING_FONT_SIZE] = int(str(self.font_size_spin.value()))
         if self.custom_line_spacing_is_checked():
             self.prefs[cfg.KEY_READING_LINE_HEIGHT] = float(
-                unicode(self.custom_line_spacing_edit.text())
+                str(self.custom_line_spacing_edit.text())
             )
             debug_print(
                 "ReaderOptionsDialog:ok_clicked - custom -self.prefs[cfg.KEY_READING_LINE_HEIGHT]=",
@@ -800,17 +750,17 @@ class ReaderOptionsDialog(SizePersistedDialog):
             )
         else:
             self.prefs[cfg.KEY_READING_LINE_HEIGHT] = self.line_spacings[
-                int(unicode(self.line_spacing_spin.value()))
+                int(str(self.line_spacing_spin.value()))
             ]
             debug_print(
                 "ReaderOptionsDialog:ok_clicked - spin - self.prefs[cfg.KEY_READING_LINE_HEIGHT]=",
                 self.prefs[cfg.KEY_READING_LINE_HEIGHT],
             )
         self.prefs[cfg.KEY_READING_LEFT_MARGIN] = int(
-            unicode(self.left_margins_spin.value())
+            str(self.left_margins_spin.value())
         )
         self.prefs[cfg.KEY_READING_RIGHT_MARGIN] = int(
-            unicode(self.right_margins_spin.value())
+            str(self.right_margins_spin.value())
         )
         self.prefs[cfg.KEY_READING_LOCK_MARGINS] = (
             self.lock_margins_checkbox_is_checked()
@@ -835,18 +785,18 @@ class ReaderOptionsDialog(SizePersistedDialog):
         self.right_margins_spin.setEnabled(not checked)
         if checked:  # not self.custom_line_spacing_is_checked():
             self.right_margins_spin.setProperty(
-                "value", int(unicode(self.left_margins_spin.value()))
+                "value", int(str(self.left_margins_spin.value()))
             )
 
     def line_spacing_spin_changed(self, checked):
         self.custom_line_spacing_edit.setText(
-            unicode(self.line_spacings[int(unicode(self.line_spacing_spin.value()))])
+            str(self.line_spacings[int(str(self.line_spacing_spin.value()))])
         )
 
     def left_margins_spin_changed(self, checked):
         if self.lock_margins_checkbox_is_checked():
             self.right_margins_spin.setProperty(
-                "value", int(unicode(self.left_margins_spin.value()))
+                "value", int(str(self.left_margins_spin.value()))
             )
 
     def custom_line_spacing_is_checked(self):
@@ -856,7 +806,7 @@ class ReaderOptionsDialog(SizePersistedDialog):
         return self.lock_margins_checkbox.checkState() == Qt.Checked
 
     def get_device_settings(self):
-        koboConfig = SafeConfigParser(allow_no_value=True)
+        koboConfig = ConfigParser(allow_no_value=True)
         device = self.parent().device_manager.connected_device
         device_path = self.parent().device_manager.connected_device._main_prefix
         debug_print("get_device_settings - device_path=", device_path)
@@ -939,7 +889,7 @@ class ReaderOptionsDialog(SizePersistedDialog):
             )
             line_spacing_index = 0
         self.custom_line_spacing_checkbox.click()
-        self.custom_line_spacing_edit.setText(unicode(line_spacing))
+        self.custom_line_spacing_edit.setText(str(line_spacing))
         self.line_spacing_spin.setProperty("value", line_spacing_index)
 
         left_margins = reader_settings.get(
@@ -1338,7 +1288,7 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
 
         if self.new_prefs[cfg.KEY_SET_READING_DIRECTION]:
             self.new_prefs[cfg.KEY_READING_DIRECTION] = READING_DIRECTIONS[
-                unicode(self.reading_direction_combo.currentText()).strip()
+                str(self.reading_direction_combo.currentText()).strip()
             ]
 
         if self.new_prefs[cfg.KEY_SYNC_DATE]:
@@ -2125,7 +2075,7 @@ class BookmarkOptionsDialog(SizePersistedDialog):
         layout.addWidget(button_box)
 
     def ok_clicked(self):
-        profile_name = unicode(self.select_profile_combo.currentText()).strip()
+        profile_name = str(self.select_profile_combo.currentText()).strip()
         msg = self.plugin_action.validate_profile(profile_name)
         if msg is not None:
             error_dialog(
@@ -2156,7 +2106,7 @@ class BookmarkOptionsDialog(SizePersistedDialog):
             self.background_checkbox.checkState() == Qt.Checked
         )
         cfg.plugin_prefs[cfg.BOOKMARK_OPTIONS_STORE_NAME] = new_prefs
-        new_prefs["profileName"] = unicode(profile_name)
+        new_prefs["profileName"] = str(profile_name)
         self.options = new_prefs
         if self.options[cfg.KEY_DO_NOT_STORE_IF_REOPENED]:
             self.options[cfg.KEY_CLEAR_IF_UNREAD] = False
@@ -2317,7 +2267,7 @@ class BackupAnnotationsOptionsDialog(SizePersistedDialog):
                 show_copy_button=False,
             )
 
-        self.options["dest_directory"] = unicode(self.dest_directory_edit.text())
+        self.options["dest_directory"] = str(self.dest_directory_edit.text())
         gprefs.set(self.unique_pref_name + ":settings", self.options)
         self.accept()
 
@@ -2841,7 +2791,7 @@ class LockSeriesDialog(SizePersistedDialog):
         layout.addWidget(button_box)
 
     def get_value(self):
-        return float(unicode(self.value_spinbox.value()))
+        return float(str(self.value_spinbox.value()))
 
     def assign_same_value(self):
         return self.assign_same_checkbox.isChecked()
@@ -3148,7 +3098,7 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         # Display the books in the table
         self.block_events = False
         self.series_table.populate_table(books)
-        if len(unicode(self.series_combo.text()).strip()) > 0:
+        if len(str(self.series_combo.text()).strip()) > 0:
             self.series_table.setFocus()
         else:
             self.series_combo.setFocus()
@@ -3397,8 +3347,8 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
     def renumber_series(self, display_in_table=True):
         if len(self.books) == 0:
             return
-        series_name = unicode(self.series_combo.currentText()).strip()
-        series_index = float(unicode(self.series_start_number.value()))
+        series_name = str(self.series_combo.currentText()).strip()
+        series_index = float(str(self.series_start_number.value()))
         last_series_indent = 0
         for row, book in enumerate(self.books):
             book.set_series_name(series_name)
@@ -3636,11 +3586,9 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
     def cell_changed(self, row, column):
         book = self.books[row]
         if column == 0:
-            book.set_title(unicode(self.series_table.item(row, column).text()).strip())
+            book.set_title(str(self.series_table.item(row, column).text()).strip())
         elif column == 2:
-            qtdate = convert_qvariant(
-                self.series_table.item(row, column).data(Qt.DisplayRole)
-            )
+            qtdate = self.series_table.item(row, column).data(Qt.DisplayRole)
             book.set_pubdate(qt_to_dt(qtdate, as_utc=False))
 
     def item_selection_changed(self):
@@ -3915,9 +3863,7 @@ class ShowReadingPositionChangesDialog(SizePersistedDialog):
                 % (i, enabled)
             )
             if not enabled:
-                book_id = convert_qvariant(
-                    self.reading_locations_table.item(i, 7).data(Qt.DisplayRole)
-                )
+                book_id = self.reading_locations_table.item(i, 7).data(Qt.DisplayRole)
                 debug_print(
                     "ShowReadingPositionChangesDialog:_ok_clicked - row=%d, book_id=%s"
                     % (i, book_id)
@@ -4486,7 +4432,7 @@ class OrderSeriesShelvesTableWidget(QTableWidget):
     def get_shelves(self):
         shelves = []
         for row in range(self.rowCount()):
-            rnum = convert_qvariant(self.item(row, 0).data(Qt.UserRole))
+            rnum = self.item(row, 0).data(Qt.UserRole)
             shelf = self.shelves[rnum]
             shelves.append(shelf)
         return shelves
@@ -4773,7 +4719,7 @@ class TemplateConfig(QWidget):  # {{{
 
     @property
     def template(self):
-        return unicode(self.t.text()).strip()
+        return str(self.t.text()).strip()
 
     @template.setter
     def template(self, template):
@@ -4796,7 +4742,7 @@ class TemplateConfig(QWidget):  # {{{
             error_dialog(
                 self,
                 _("Invalid template"),
-                "<p>" + _("The template %s is invalid:") % tmpl + "<br>" + unicode(err),
+                "<p>" + _("The template %s is invalid:") % tmpl + "<br>" + str(err),
                 show=True,
             )
 
@@ -5047,7 +4993,7 @@ class ToCBookListTableWidget(QTableWidget):
 
         if "library_chapters" in book and len(book["library_chapters"]) > 0:
             library_chapters_count = ReadOnlyTableWidgetItem(
-                unicode(len(book["library_chapters"]))
+                str(len(book["library_chapters"]))
             )
             library_chapters_count.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
             self.setItem(
@@ -5055,13 +5001,13 @@ class ToCBookListTableWidget(QTableWidget):
             )
 
         if "library_format" in book:
-            library_format = ReadOnlyTableWidgetItem(unicode(book["library_format"]))
+            library_format = ReadOnlyTableWidgetItem(str(book["library_format"]))
             library_format.setTextAlignment(Qt.AlignCenter | Qt.AlignVCenter)
             self.setItem(row, self.LIBRARY_FORMAT_COLUMN_NO, library_format)
 
         if "kobo_chapters" in book and len(book["kobo_chapters"]) > 0:
             kobo_chapters_count = ReadOnlyTableWidgetItem(
-                unicode(len(book["kobo_chapters"]))
+                str(len(book["kobo_chapters"]))
             )
             kobo_chapters_count.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
             self.setItem(
@@ -5069,7 +5015,7 @@ class ToCBookListTableWidget(QTableWidget):
             )
 
         if "kobo_format" in book:
-            kobo_format = ReadOnlyTableWidgetItem(unicode(book["kobo_format"]))
+            kobo_format = ReadOnlyTableWidgetItem(str(book["kobo_format"]))
             kobo_format.setTextAlignment(Qt.AlignCenter | Qt.AlignVCenter)
             self.setItem(row, self.KOBO_DISC_FORMAT_COLUMN_NO, kobo_format)
 
@@ -5092,7 +5038,7 @@ class ToCBookListTableWidget(QTableWidget):
 
         if "kobo_database_chapters" in book and len(book["kobo_database_chapters"]) > 0:
             kobo_database_chapters_count = ReadOnlyTableWidgetItem(
-                unicode(len(book["kobo_database_chapters"]))
+                str(len(book["kobo_database_chapters"]))
             )
             kobo_database_chapters_count.setTextAlignment(
                 Qt.AlignRight | Qt.AlignVCenter
@@ -5146,9 +5092,7 @@ class ToCBookListTableWidget(QTableWidget):
         books = []
         for row in range(self.rowCount()):
             if self.item(row, self.UPDATE_TOC_COLUMN_NO).get_boolean_value():
-                rnum = convert_qvariant(
-                    self.item(row, self.TITLE_COLUMN_NO).data(Qt.UserRole)
-                )
+                rnum = self.item(row, self.TITLE_COLUMN_NO).data(Qt.UserRole)
                 book = self.books[rnum]
                 if book["can_update_toc"]:
                     books.append(book)
@@ -5159,9 +5103,7 @@ class ToCBookListTableWidget(QTableWidget):
         books = []
         for row in range(self.rowCount()):
             if self.item(row, self.SEND_TO_DEVICE_COLUMN_NO).get_boolean_value():
-                rnum = convert_qvariant(
-                    self.item(row, self.TITLE_COLUMN_NO).data(Qt.UserRole)
-                )
+                rnum = self.item(row, self.TITLE_COLUMN_NO).data(Qt.UserRole)
                 book = self.books[rnum]
                 books.append(book)
         return books
@@ -5199,7 +5141,7 @@ class ToCBookListTableWidget(QTableWidget):
 
     def select_checkmarks_send(self):
         for i in range(self.rowCount()):
-            rnum = convert_qvariant(self.item(i, 1).data(Qt.UserRole))
+            rnum = self.item(i, 1).data(Qt.UserRole)
             debug_print(
                 "select_checkmarks_send - rnum=%s, book=%s" % (rnum, self.books[rnum])
             )
@@ -5209,7 +5151,7 @@ class ToCBookListTableWidget(QTableWidget):
 
     def select_checkmarks_update_toc(self):
         for i in range(self.rowCount()):
-            book_no = convert_qvariant(self.item(i, 1).data(Qt.UserRole))
+            book_no = self.item(i, 1).data(Qt.UserRole)
             debug_print(
                 "select_checkmarks_update_toc - book_no=%s, book=%s"
                 % (book_no, self.books[book_no])

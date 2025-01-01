@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # vim:fileencoding=UTF-8:ts=4:sw=4:sta:et:sts=4:ai
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 __license__ = "GPL v3"
 __copyright__ = "2011, Grant Drake <grant.drake@gmail.com>, 2012-2022 updates by David Forrester <davidfor@internode.on.net>"
@@ -8,53 +7,6 @@ __docformat__ = "restructuredtext en"
 
 import os
 import time
-
-# calibre Python 3 compatibility.
-import six
-from six import text_type as unicode
-
-try:
-    from PyQt5.Qt import (
-        QAbstractItemView,
-        QComboBox,
-        QDateTime,
-        QDialog,
-        QDialogButtonBox,
-        QFont,
-        QHBoxLayout,
-        QIcon,
-        QLabel,
-        QLineEdit,
-        QListWidget,
-        QPixmap,
-        QProgressBar,
-        QStyledItemDelegate,
-        Qt,
-        QTableWidgetItem,
-        QTextEdit,
-        QVBoxLayout,
-    )
-except ImportError:
-    from PyQt4.Qt import (
-        QAbstractItemView,
-        QComboBox,
-        QDateTime,
-        QDialog,
-        QDialogButtonBox,
-        QFont,
-        QHBoxLayout,
-        QIcon,
-        QLabel,
-        QLineEdit,
-        QListWidget,
-        QPixmap,
-        QProgressBar,
-        QStyledItemDelegate,
-        Qt,
-        QTableWidgetItem,
-        QTextEdit,
-        QVBoxLayout,
-    )
 from datetime import datetime
 
 from calibre import prints
@@ -70,24 +22,27 @@ from calibre.gui2.actions import menu_action_unique_name
 from calibre.gui2.keyboard import ShortcutConfig
 from calibre.utils.config import config_dir
 from calibre.utils.date import UNDEFINED_DATE, format_date, now
+from qt.core import (
+    QAbstractItemView,
+    QComboBox,
+    QDateTime,
+    QDialog,
+    QDialogButtonBox,
+    QFont,
+    QHBoxLayout,
+    QIcon,
+    QLabel,
+    QLineEdit,
+    QListWidget,
+    QPixmap,
+    QProgressBar,
+    QStyledItemDelegate,
+    Qt,
+    QTableWidgetItem,
+    QTextEdit,
+    QVBoxLayout,
+)
 
-try:
-    from calibre.gui2 import QVariant
-
-    del QVariant
-except ImportError:
-    is_qt4 = False
-    convert_qvariant = lambda x: x
-else:
-    is_qt4 = True
-
-    def convert_qvariant(x):
-        vt = x.type()
-        if vt == x.String:
-            return unicode(x.toString())
-        if vt == x.List:
-            return [convert_qvariant(i) for i in x.toList()]
-        return x.toPyObject()
 MIMETYPE_KOBO = "application/x-kobo-epub+zip"
 
 BOOKMARK_SEPARATOR = (
@@ -586,18 +541,11 @@ class NoWheelComboBox(QComboBox):
 class CheckableTableWidgetItem(QTableWidgetItem):
     def __init__(self, checked=False, is_tristate=False):
         super(CheckableTableWidgetItem, self).__init__("")
-        try:  # TODO: For Qt Backwards compatibilyt.
-            self.setFlags(
-                Qt.ItemFlag.ItemIsSelectable
-                | Qt.ItemFlag.ItemIsUserCheckable
-                | Qt.ItemFlag.ItemIsEnabled
-            )
-        except:
-            self.setFlags(
-                Qt.ItemFlags(
-                    Qt.ItemIsSelectable | Qt.ItemIsUserCheckable | Qt.ItemIsEnabled
-                )
-            )
+        self.setFlags(
+            Qt.ItemFlag.ItemIsSelectable
+            | Qt.ItemFlag.ItemIsUserCheckable
+            | Qt.ItemFlag.ItemIsEnabled
+        )
         if is_tristate:
             self.setFlags(self.flags() | Qt.ItemIsTristate)
         if checked:
@@ -622,18 +570,11 @@ class CheckableTableWidgetItem(QTableWidgetItem):
 class ReadOnlyCheckableTableWidgetItem(ReadOnlyTableWidgetItem):
     def __init__(self, text, checked=False, is_tristate=False):
         super(ReadOnlyCheckableTableWidgetItem, self).__init__(text)
-        try:  # TODO: For Qt Backwards compatibilyt.
-            self.setFlags(
-                Qt.ItemFlag.ItemIsSelectable
-                | Qt.ItemFlag.ItemIsUserCheckable
-                | Qt.ItemFlag.ItemIsEnabled
-            )
-        except:
-            self.setFlags(
-                Qt.ItemFlags(
-                    Qt.ItemIsSelectable | Qt.ItemIsUserCheckable | Qt.ItemIsEnabled
-                )
-            )
+        self.setFlags(
+            Qt.ItemFlag.ItemIsSelectable
+            | Qt.ItemFlag.ItemIsUserCheckable
+            | Qt.ItemFlag.ItemIsEnabled
+        )
         if is_tristate:
             self.setFlags(self.flags() | Qt.ItemIsTristate)
         if checked:
@@ -699,7 +640,7 @@ class KeyValueComboBox(QComboBox):
 
     def selected_key(self):
         for key, value in list(self.values.items()):
-            if value == unicode(self.currentText()).strip():
+            if value == str(self.currentText()).strip():
                 return key
 
 
@@ -743,7 +684,7 @@ class KeyComboBox(QComboBox):
 
     def selected_key(self):
         for key, value in list(self.values.items()):
-            if key == unicode(self.currentText()).strip():
+            if key == str(self.currentText()).strip():
                 return key
 
 
@@ -765,7 +706,7 @@ class SimpleComboBox(QComboBox):
 
     def selected_key(self):
         for value in list(self.values):
-            if value == unicode(self.currentText()).strip():
+            if value == str(self.currentText()).strip():
                 return value
 
 
@@ -1052,7 +993,7 @@ class PrefsViewerDialog(SizePersistedDialog):
         if new_row < 0:
             self.value_text.clear()
             return
-        key = unicode(self.keys_list.currentItem().text())
+        key = str(self.keys_list.currentItem().text())
         val = self.db.prefs.get_namespaced(self.namespace, key, "")
         self.value_text.setPlainText(self.db.prefs.to_raw(val))
 
@@ -1071,8 +1012,8 @@ class PrefsViewerDialog(SizePersistedDialog):
         if not confirm(message, self.namespace + "_clear_settings", self):
             return
 
-        val = self.db.prefs.raw_to_object(unicode(self.value_text.toPlainText()))
-        key = unicode(self.keys_list.currentItem().text())
+        val = self.db.prefs.raw_to_object(str(self.value_text.toPlainText()))
+        key = str(self.keys_list.currentItem().text())
         self.db.prefs.set_namespaced(self.namespace, key, val)
 
         restart = prompt_for_restart(

@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # vim:fileencoding=UTF-8:ts=4:sw=4:sta:et:sts=4:ai
-from __future__ import absolute_import, division, print_function
 
 __license__ = "GPL v3"
 __copyright__ = "2012-2017, David Forrester <davidfor@internode.on.net>"
@@ -15,47 +14,11 @@ import time
 from collections import OrderedDict, defaultdict
 from contextlib import closing
 from datetime import datetime, timedelta, timezone
+from configparser import ConfigParser, NoOptionError
+from urllib.parse import quote
+from urllib.request import Request, urlopen
 
-# calibre Python 3 compatibility.
-import six
-from six import text_type as unicode
-
-try:
-    from urllib.parse import quote
-    from urllib.request import Request, urlopen
-except ImportError:
-    from urllib import quote, urlopen
-
-
-try:
-    from PyQt5.Qt import (
-        QFileDialog,
-        QIcon,
-        QMenu,
-        QModelIndex,
-        QTimer,
-        QUrl,
-        pyqtSignal,
-    )
-except ImportError:
-    from PyQt4.Qt import (
-        QFileDialog,
-        QIcon,
-        QMenu,
-        QModelIndex,
-        QTimer,
-        QUrl,
-        pyqtSignal,
-    )
-
-try:  # For Qt6 and backwards compatibility.
-    qFileDialog_FileMode_AnyFile = QFileDialog.FileMode.AnyFile
-except:
-    qFileDialog_FileMode_AnyFile = QFileDialog.AnyFile
-
-# For Python 3 migration
 from calibre import strftime
-from calibre.constants import numeric_version as calibre_version
 from calibre.devices.kobo.books import Book
 from calibre.devices.kobo.driver import KOBO, KOBOTOUCH
 from calibre.devices.usbms.driver import USBMS
@@ -80,6 +43,16 @@ from calibre.utils.config import config_dir
 from calibre.utils.date import parse_date
 from calibre.utils.icu import sort_key
 from calibre.utils.logging import default_log
+from qt.core import (
+    QFileDialog,
+    QIcon,
+    QMenu,
+    QModelIndex,
+    QTimer,
+    QUrl,
+    pyqtSignal,
+)
+
 from . import ActionKoboUtilities
 from . import config as cfg
 from .book import SeriesBook
@@ -120,7 +93,6 @@ from .dialogs import (
     UpdateBooksToCDialog,
     UpdateMetadataOptionsDialog,
 )
-from six.moves.configparser import NoOptionError, SafeConfigParser
 
 # Use he following to fake a connection to the device. Uses a directory rather than the device
 # DEBUGGING      = True
@@ -220,27 +192,14 @@ KOBO_ROOT_DIR_NAME = ".kobo"
 KOBO_FIRMWARE_UPDATE_CHECK_INTERVAL = 86400
 KOBO_EPOCH_CONF_NAME = "epoch.conf"
 
-try:
-    debug_print("KoboUtilites::action.py - loading translations")
-    load_translations()
-except NameError:
-    debug_print("KoboUtilites::action.py - exception when loading translations")
-    pass  # load_translations() added in calibre 1.9
+load_translations()
 
 
-# Implementation of QtQHash for strings. This doesn't seem to be in the Python implemention.
+# Implementation of QtQHash for strings. This doesn't seem to be in the Python implementation.
 def qhash(inputstr):
-    instr = ""
-    if isinstance(inputstr, str):
-        instr = inputstr
-    elif isinstance(inputstr, unicode):
-        instr = inputstr.encode("utf8")
-    else:
-        return -1
-
     h = 0x00000000
-    for i in range(0, len(instr)):
-        h = (h << 4) + ord(instr[i])
+    for c in inputstr:
+        h = (h << 4) + ord(c)
         h ^= (h & 0xF0000000) >> 23
         h &= 0x0FFFFFFF
 
@@ -341,7 +300,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 text += self.device_name
                 text += "\n"
                 text += _("Firmware version: ")
-                text += ".".join([unicode(i) for i in self.device.fwversion])
+                text += ".".join([str(i) for i in self.device.fwversion])
             text += "\n"
             text += _("Driver: ")
             text += self.device_driver_name
@@ -436,8 +395,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 )
                 # starting in calibre 2.10.0, actions are registers at
                 # the top gui level for OSX' benefit.
-                if calibre_version >= (2, 10, 0):
-                    self.gui.removeAction(action)
+                self.gui.removeAction(action)
             self.menu_actions = {}
             self.device_actions_map = []
             self.library_actions_map = []
@@ -1618,7 +1576,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 if not self.current_firmware_check_config[
                     cfg.KEY_DO_EARLY_FIRMWARE_CHECK
                 ] and os.path.isfile(affiliate_file):
-                    affiliate_config = SafeConfigParser(allow_no_value=True)
+                    affiliate_config = ConfigParser(allow_no_value=True)
                     affiliate_config.optionxform = str
                     affiliate_config.read(affiliate_file)
                     if affiliate_config.has_section(
@@ -1637,8 +1595,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
                     update_data = json.loads(resp.read())
                     debug_print(
-                        "do_check_firmware_update - update_data:\n%s"
-                        % unicode(update_data)
+                        "do_check_firmware_update - update_data:\n%s" % update_data
                     )
                     if update_data["UpgradeURL"] is not None:
                         m = re.search(
@@ -1908,7 +1865,7 @@ class KoboUtilitiesAction(InterfaceAction):
             title=_("Choose Backup Destination"),
             filters=[(_("SQLite database"), ["sqlite"])],
             add_all_files_filter=False,
-            mode=qFileDialog_FileMode_AnyFile,
+            mode=QFileDialog.FileMode.AnyFile,
         )
         if not fd.accepted:
             return
@@ -2532,8 +2489,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 )
                 debug_print("manage_series_on_device - book.series=", book.series)
                 debug_print(
-                    "manage_series_on_device - book.series_index=%s"
-                    % unicode(book.series_index)
+                    "manage_series_on_device - book.series_index=%s" % book.series_index
                 )
 
         if (
@@ -3540,7 +3496,6 @@ class KoboUtilitiesAction(InterfaceAction):
         self.show_progressbar(total_books)
 
         library_db = self.gui.current_db
-        custom_cols = library_db.field_metadata.custom_field_metadata()
 
         def value_changed(old_value, new_value):
             return (
@@ -3563,9 +3518,6 @@ class KoboUtilitiesAction(InterfaceAction):
                 "_update_database_columns - kobo_chapteridbookmarked_column_name=",
                 kobo_chapteridbookmarked_column_name,
             )
-            kobo_chapteridbookmarked_col = custom_cols[
-                kobo_chapteridbookmarked_column_name
-            ]
             kobo_chapteridbookmarked_col_label = library_db.field_metadata.key_to_label(
                 kobo_chapteridbookmarked_column_name
             )
@@ -3573,15 +3525,6 @@ class KoboUtilitiesAction(InterfaceAction):
                 "_update_database_columns - kobo_chapteridbookmarked_col_label=",
                 kobo_chapteridbookmarked_col_label,
             )
-        if kobo_percentRead_column_name is not None:
-            kobo_percentRead_col = custom_cols[kobo_percentRead_column_name]
-
-        if rating_column_name is not None:
-            if not rating_column_name == "rating":
-                rating_col = custom_cols[rating_column_name]
-
-        if last_read_column_name is not None:
-            last_read_col = custom_cols[last_read_column_name]
 
         debug_print(
             "_update_database_columns - kobo_chapteridbookmarked_column_name=",
@@ -3678,11 +3621,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 )
 
                 if value_changed(current_last_read, last_read):
-                    if hasattr(library_db, "new_api"):
-                        id_map_last_read[book_id] = last_read
-                    else:
-                        last_read_col["#value#"] = last_read
-                        mi.set_user_metadata(last_read_column_name, last_read_col)
+                    id_map_last_read[book_id] = last_read
                     book_updated = True
                 else:
                     book_updated = book_updated or False
@@ -3736,14 +3675,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 )["#value#"]
 
                 if value_changed(old_value, new_value):
-                    if hasattr(library_db, "new_api"):
-                        id_map_chapteridbookmarked[book_id] = new_value
-                    else:
-                        kobo_chapteridbookmarked_col["#value#"] = new_value
-                        mi.set_user_metadata(
-                            kobo_chapteridbookmarked_column_name,
-                            kobo_chapteridbookmarked_col,
-                        )
+                    id_map_chapteridbookmarked[book_id] = new_value
                     book_updated = True
                 else:
                     book_updated = book_updated or False
@@ -3762,13 +3694,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 )
 
                 if value_changed(current_percentRead, kobo_percentRead):
-                    if hasattr(library_db, "new_api"):
-                        id_map_percentRead[book_id] = kobo_percentRead
-                    else:
-                        kobo_percentRead_col["#value#"] = kobo_percentRead
-                        mi.set_user_metadata(
-                            kobo_percentRead_column_name, kobo_percentRead_col
-                        )
+                    id_map_percentRead[book_id] = kobo_percentRead
                     book_updated = True
                 else:
                     book_updated = book_updated or False
@@ -3788,60 +3714,47 @@ class KoboUtilitiesAction(InterfaceAction):
                         "#value#"
                     ]
                 if value_changed(current_rating, kobo_rating):
-                    if hasattr(library_db, "new_api"):
-                        id_map_rating[book_id] = kobo_rating
-                    else:
-                        if rating_column_name == "rating":
-                            mi.rating = kobo_rating
-                        else:
-                            rating_col["#value#"] = kobo_rating
-                            mi.set_user_metadata(rating_column_name, rating_col)
+                    id_map_rating[book_id] = kobo_rating
                     book_updated = True
                 else:
                     book_updated = book_updated or False
 
             id_map[book_id] = mi
 
-        if hasattr(library_db, "new_api"):
-            if kobo_chapteridbookmarked_column_name:
-                debug_print(
-                    "_update_database_columns - Updating metadata - for column: %s number of changes=%d"
-                    % (
-                        kobo_chapteridbookmarked_column_name,
-                        len(id_map_chapteridbookmarked),
-                    )
+        if kobo_chapteridbookmarked_column_name:
+            debug_print(
+                "_update_database_columns - Updating metadata - for column: %s number of changes=%d"
+                % (
+                    kobo_chapteridbookmarked_column_name,
+                    len(id_map_chapteridbookmarked),
                 )
-                library_db.new_api.set_field(
-                    kobo_chapteridbookmarked_column_name, id_map_chapteridbookmarked
-                )
-            if kobo_percentRead_column_name:
-                debug_print(
-                    "_update_database_columns - Updating metadata - for column: %s number of changes=%d"
-                    % (kobo_percentRead_column_name, len(id_map_percentRead))
-                )
-                library_db.new_api.set_field(
-                    kobo_percentRead_column_name, id_map_percentRead
-                )
-            if rating_column_name:
-                debug_print(
-                    "_update_database_columns - Updating metadata - for column: %s number of changes=%d"
-                    % (rating_column_name, len(id_map_rating))
-                )
-                library_db.new_api.set_field(rating_column_name, id_map_rating)
-            if last_read_column_name:
-                debug_print(
-                    "_update_database_columns - Updating metadata - for column: %s number of changes=%d"
-                    % (last_read_column_name, len(id_map_last_read))
-                )
-                library_db.new_api.set_field(last_read_column_name, id_map_last_read)
+            )
+            library_db.new_api.set_field(
+                kobo_chapteridbookmarked_column_name, id_map_chapteridbookmarked
+            )
+        if kobo_percentRead_column_name:
+            debug_print(
+                "_update_database_columns - Updating metadata - for column: %s number of changes=%d"
+                % (kobo_percentRead_column_name, len(id_map_percentRead))
+            )
+            library_db.new_api.set_field(
+                kobo_percentRead_column_name, id_map_percentRead
+            )
+        if rating_column_name:
+            debug_print(
+                "_update_database_columns - Updating metadata - for column: %s number of changes=%d"
+                % (rating_column_name, len(id_map_rating))
+            )
+            library_db.new_api.set_field(rating_column_name, id_map_rating)
+        if last_read_column_name:
+            debug_print(
+                "_update_database_columns - Updating metadata - for column: %s number of changes=%d"
+                % (last_read_column_name, len(id_map_last_read))
+            )
+            library_db.new_api.set_field(last_read_column_name, id_map_last_read)
 
-        if hasattr(library_db, "new_api"):
-            debug_print("_update_database_columns - Updating GUI - new DB engine")
-            self.gui.iactions["Edit Metadata"].refresh_gui(list(reading_locations))
-        else:
-            edit_metadata_action = self.gui.iactions["Edit Metadata"]
-            debug_print("_update_database_columns - Updating GUI - old DB engine")
-            edit_metadata_action.apply_metadata_changes(id_map)
+        debug_print("_update_database_columns - Updating GUI - new DB engine")
+        self.gui.iactions["Edit Metadata"].refresh_gui(list(reading_locations))
         debug_print("_update_database_columns - finished")
 
         self.hide_progressbar()
@@ -3948,7 +3861,7 @@ class KoboUtilitiesAction(InterfaceAction):
             book_heading = "<b>%(title)s</b> by <b>%(author)s</b>" % dict(
                 title=mi.title, author=authors_to_string(mi.authors)
             )
-            bookmark_html = unicode(user_notes_soup.div)
+            bookmark_html = str(user_notes_soup.div)
             debug_print("_getAnnotationForSelected - bookmark_html:", bookmark_html)
             annotationText.append(book_heading + bookmark_html)
 
@@ -4364,7 +4277,7 @@ class KoboUtilitiesAction(InterfaceAction):
             )
             URL_UNSAFE = [ASCII_CHARS - URL_SAFE, UNIBYTE_CHARS - URL_SAFE]
             result = []
-            unsafe = 1 if isinstance(shelf_name, unicode) else 0
+            unsafe = 1 if isinstance(shelf_name, str) else 0
             unsafe = URL_UNSAFE[unsafe]
             for char in shelf_name:
                 try:
@@ -4527,7 +4440,7 @@ class KoboUtilitiesAction(InterfaceAction):
                             "_order_series_shelves - cannot encode shelf name=",
                             shelf["name"],
                         )
-                        if isinstance(shelf["name"], unicode):
+                        if isinstance(shelf["name"], str):
                             debug_print("_order_series_shelves - is unicode")
                             shelf_key = urlquote(shelf["name"])
                             shelf_key = (
@@ -6004,13 +5917,7 @@ class KoboUtilitiesAction(InterfaceAction):
                         )
 
                         if value_changed(current_last_read, last_read):
-                            if hasattr(library_db, "new_api"):
-                                id_map_last_read[book.calibre_id] = last_read
-                            else:
-                                last_read_col["#value#"] = last_read
-                                mi.set_user_metadata(
-                                    last_read_column_name, last_read_col
-                                )
+                            id_map_last_read[book.calibre_id] = last_read
                             book_updated = True
                         else:
                             book_updated = book_updated or False
@@ -6054,14 +5961,7 @@ class KoboUtilitiesAction(InterfaceAction):
                         )["#value#"]
 
                         if value_changed(old_value, new_value):
-                            if hasattr(library_db, "new_api"):
-                                id_map_chapteridbookmarked[book.calibre_id] = new_value
-                            else:
-                                kobo_chapteridbookmarked_col["#value#"] = new_value
-                                mi.set_user_metadata(
-                                    kobo_chapteridbookmarked_column_name,
-                                    kobo_chapteridbookmarked_col,
-                                )
+                            id_map_chapteridbookmarked[book.calibre_id] = new_value
                             book_updated = True
                         else:
                             book_updated = book_updated or False
@@ -6080,13 +5980,7 @@ class KoboUtilitiesAction(InterfaceAction):
                         )
 
                         if value_changed(current_percentRead, kobo_percentRead):
-                            if hasattr(library_db, "new_api"):
-                                id_map_percentRead[book.calibre_id] = kobo_percentRead
-                            else:
-                                kobo_percentRead_col["#value#"] = kobo_percentRead
-                                mi.set_user_metadata(
-                                    kobo_percentRead_column_name, kobo_percentRead_col
-                                )
+                            id_map_percentRead[book.calibre_id] = kobo_percentRead
                             book_updated = True
                         else:
                             book_updated = book_updated or False
@@ -6118,14 +6012,7 @@ class KoboUtilitiesAction(InterfaceAction):
                                     commit=False,
                                 )
                         if value_changed(current_rating, kobo_rating):
-                            if hasattr(library_db, "new_api"):
-                                id_map_rating[book.calibre_id] = kobo_rating
-                            else:
-                                if rating_column_name == "rating":
-                                    mi.rating = kobo_rating
-                                else:
-                                    rating_col["#value#"] = kobo_rating
-                                    mi.set_user_metadata(rating_column_name, rating_col)
+                            id_map_rating[book.calibre_id] = kobo_rating
                             book_updated = True
                         else:
                             book_updated = book_updated or False
@@ -6137,49 +6024,42 @@ class KoboUtilitiesAction(InterfaceAction):
 
             cursor.close()
 
-            if hasattr(library_db, "new_api"):
-                debug_print("_store_current_bookmark - Updating GUI - new DB engine")
-                if (
-                    kobo_chapteridbookmarked_column_name
-                    and len(id_map_chapteridbookmarked) > 0
-                ):
-                    debug_print(
-                        "_store_current_bookmark - Updating metadata - for column: %s number of changes=%d"
-                        % (
-                            kobo_chapteridbookmarked_column_name,
-                            len(id_map_chapteridbookmarked),
-                        )
+            debug_print("_store_current_bookmark - Updating GUI - new DB engine")
+            if (
+                kobo_chapteridbookmarked_column_name
+                and len(id_map_chapteridbookmarked) > 0
+            ):
+                debug_print(
+                    "_store_current_bookmark - Updating metadata - for column: %s number of changes=%d"
+                    % (
+                        kobo_chapteridbookmarked_column_name,
+                        len(id_map_chapteridbookmarked),
                     )
-                    library_db.new_api.set_field(
-                        kobo_chapteridbookmarked_column_name, id_map_chapteridbookmarked
-                    )
-                if kobo_percentRead_column_name and len(id_map_percentRead) > 0:
-                    debug_print(
-                        "_store_current_bookmark - Updating metadata - for column: %s number of changes=%d"
-                        % (kobo_percentRead_column_name, len(id_map_percentRead))
-                    )
-                    library_db.new_api.set_field(
-                        kobo_percentRead_column_name, id_map_percentRead
-                    )
-                if rating_column_name and len(id_map_rating) > 0:
-                    debug_print(
-                        "_store_current_bookmark - Updating metadata - for column: %s number of changes=%d"
-                        % (rating_column_name, len(id_map_rating))
-                    )
-                    library_db.new_api.set_field(rating_column_name, id_map_rating)
-                if last_read_column_name and len(id_map_last_read) > 0:
-                    debug_print(
-                        "_store_current_bookmark - Updating metadata - for column: %s number of changes=%d"
-                        % (last_read_column_name, len(id_map_last_read))
-                    )
-                    library_db.new_api.set_field(
-                        last_read_column_name, id_map_last_read
-                    )
-                self.gui.iactions["Edit Metadata"].refresh_gui(list(id_map))
-            else:
-                edit_metadata_action = self.gui.iactions["Edit Metadata"]
-                debug_print("_store_current_bookmark - Updating GUI - old DB engine")
-                edit_metadata_action.apply_metadata_changes(id_map)
+                )
+                library_db.new_api.set_field(
+                    kobo_chapteridbookmarked_column_name, id_map_chapteridbookmarked
+                )
+            if kobo_percentRead_column_name and len(id_map_percentRead) > 0:
+                debug_print(
+                    "_store_current_bookmark - Updating metadata - for column: %s number of changes=%d"
+                    % (kobo_percentRead_column_name, len(id_map_percentRead))
+                )
+                library_db.new_api.set_field(
+                    kobo_percentRead_column_name, id_map_percentRead
+                )
+            if rating_column_name and len(id_map_rating) > 0:
+                debug_print(
+                    "_store_current_bookmark - Updating metadata - for column: %s number of changes=%d"
+                    % (rating_column_name, len(id_map_rating))
+                )
+                library_db.new_api.set_field(rating_column_name, id_map_rating)
+            if last_read_column_name and len(id_map_last_read) > 0:
+                debug_print(
+                    "_store_current_bookmark - Updating metadata - for column: %s number of changes=%d"
+                    % (last_read_column_name, len(id_map_last_read))
+                )
+                library_db.new_api.set_field(last_read_column_name, id_map_last_read)
+            self.gui.iactions["Edit Metadata"].refresh_gui(list(id_map))
 
             self.hide_progressbar()
             if len(id_map) > 0:
@@ -6878,7 +6758,7 @@ class KoboUtilitiesAction(InterfaceAction):
         config_file_path = self.device.normalize_path(
             self.device._main_prefix + ".kobo/Kobo/Kobo eReader.conf"
         )
-        koboConfig = SafeConfigParser(allow_no_value=True)
+        koboConfig = ConfigParser(allow_no_value=True)
         koboConfig.optionxform = str
         debug_print("get_config_file - config_file_path=", config_file_path)
         try:
@@ -7162,7 +7042,7 @@ class KoboUtilitiesAction(InterfaceAction):
                     )
                     d, p = os.path.splitdrive(backup_file)
                     debug_print("_backup_annotation_files - d='%s' p='%s'" % (d, p))
-                    backup_path = os.path.dirname(unicode(backup_file))
+                    backup_path = os.path.dirname(str(backup_file))
                     try:
                         os.makedirs(backup_path)
                     except OSError:

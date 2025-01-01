@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # vim:fileencoding=UTF-8:ts=4:sw=4:sta:et:sts=4:ai
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 __license__ = "GPL v3"
 __copyright__ = "2012-2022, David Forrester <davidfor@internode.on.net>"
@@ -10,59 +9,32 @@ import copy
 import traceback
 from functools import partial
 
-# calibre Python 3 compatibility.
-import six
-from six import text_type as unicode
-
-try:
-    from PyQt5.Qt import (
-        QAbstractItemView,
-        QCheckBox,
-        QComboBox,
-        QGridLayout,
-        QGroupBox,
-        QHBoxLayout,
-        QIcon,
-        QInputDialog,
-        QLabel,
-        QLineEdit,
-        QPushButton,
-        QSize,
-        QSpinBox,
-        Qt,
-        QTableWidget,
-        QTabWidget,
-        QToolButton,
-        QVBoxLayout,
-        QWidget,
-    )
-except ImportError:
-    from PyQt4.Qt import (
-        QAbstractItemView,
-        QCheckBox,
-        QComboBox,
-        QGridLayout,
-        QGroupBox,
-        QHBoxLayout,
-        QIcon,
-        QInputDialog,
-        QLabel,
-        QLineEdit,
-        QPushButton,
-        QSize,
-        QSpinBox,
-        Qt,
-        QTableWidget,
-        QTabWidget,
-        QToolButton,
-        QVBoxLayout,
-        QWidget,
-    )
-
 from calibre.constants import DEBUG as _DEBUG
 from calibre.gui2 import choose_dir, error_dialog, question_dialog
 from calibre.gui2.dialogs.confirm_delete import confirm
 from calibre.utils.config import JSONConfig
+from qt.core import (
+    QAbstractItemView,
+    QCheckBox,
+    QComboBox,
+    QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QIcon,
+    QInputDialog,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QSize,
+    QSpinBox,
+    Qt,
+    QTableWidget,
+    QTabWidget,
+    QToolButton,
+    QVBoxLayout,
+    QWidget,
+)
+
 from .common_utils import (
     CheckableTableWidgetItem,
     CustomColumnComboBox,
@@ -73,7 +45,6 @@ from .common_utils import (
     ReadOnlyTableWidgetItem,
     ReadOnlyTextIconWidgetItem,
     SimpleComboBox,
-    convert_qvariant,
     debug_print,
     get_icon,
     get_library_uuid,
@@ -473,14 +444,7 @@ plugin_prefs.defaults[READING_POSITION_CHANGES_STORE_NAME] = (
 )
 
 
-try:
-    debug_print("KoboUtilites::action.py - loading translations")
-    load_translations()
-except NameError:
-    debug_print("KoboUtilites::action.py - exception when loading translations")
-    pass  # load_translations() added in calibre 1.9
-
-#            update_prefs = get_plugin_pref(UPDATE_OPTIONS_STORE_NAME, UPDATE_OPTIONS_DEFAULTS)
+load_translations()
 
 
 def get_plugin_pref(store_name, option):
@@ -876,7 +840,7 @@ class ProfilesTab(QWidget):
         if not ok:
             # Operation cancelled
             return
-        new_profile_name = unicode(new_profile_name).strip()
+        new_profile_name = str(new_profile_name).strip()
         # Verify it does not clash with any other profiles in the profile
         for profile_name in self.profiles.keys():
             debug_print("ProfilesTab:add_profile - existing profile: ", profile_name)
@@ -914,7 +878,7 @@ class ProfilesTab(QWidget):
         if not ok:
             # Operation cancelled
             return
-        new_profile_name = unicode(new_profile_name).strip()
+        new_profile_name = str(new_profile_name).strip()
         if new_profile_name == old_profile_name:
             return
         # Verify it does not clash with any other profiles in the profile
@@ -968,7 +932,7 @@ class ProfilesTab(QWidget):
     def refresh_current_profile_info(self):
         debug_print("ProfilesTab:refresh_current_profile_info - Start")
         # Get configuration for the selected profile
-        self.profile_name = unicode(self.select_profile_combo.currentText()).strip()
+        self.profile_name = str(self.select_profile_combo.currentText()).strip()
         profile_map = get_profile_info(
             self.plugin_action.gui.current_db, self.profile_name
         )
@@ -1411,7 +1375,7 @@ class DevicesTab(QWidget):
         if not ok:
             # Operation cancelled
             return
-        new_device_name = unicode(new_device_name).strip()
+        new_device_name = str(new_device_name).strip()
         if new_device_name == old_name:
             return
         try:
@@ -1637,11 +1601,9 @@ class DevicesTab(QWidget):
         backup_prefs[KEY_BACKUP_ZIP_DATABASE] = (
             self.zip_database_checkbox.checkState() == Qt.Checked
         )
-        backup_prefs[KEY_BACKUP_DEST_DIRECTORY] = unicode(
-            self.dest_directory_edit.text()
-        )
+        backup_prefs[KEY_BACKUP_DEST_DIRECTORY] = str(self.dest_directory_edit.text())
         backup_prefs[KEY_BACKUP_COPIES_TO_KEEP] = (
-            int(unicode(self.copies_to_keep_spin.value()))
+            int(str(self.copies_to_keep_spin.value()))
             if self.copies_to_keep_checkbox.checkState() == Qt.Checked
             else -1
         )
@@ -1795,17 +1757,15 @@ class DevicesTableWidget(QTableWidget):
         debug_print("DevicesTableWidget::get_data - start")
         devices = {}
         for row in range(self.rowCount()):
-            (device_config, _is_connected) = convert_qvariant(
-                self.item(row, 1).data(Qt.UserRole)
-            )
+            (device_config, _is_connected) = self.item(row, 1).data(Qt.UserRole)
             device_config["active"] = self.item(row, 0).get_boolean_value()
             devices[device_config["uuid"]] = device_config
         return devices
 
     def get_selected_device_info(self):
         if self.currentRow() >= 0:
-            (device_config, is_connected) = convert_qvariant(
-                self.item(self.currentRow(), 1).data(Qt.UserRole)
+            (device_config, is_connected) = self.item(self.currentRow(), 1).data(
+                Qt.UserRole
             )
             return (device_config, is_connected)
         return None, None
@@ -1813,7 +1773,7 @@ class DevicesTableWidget(QTableWidget):
     def set_current_row_device_name(self, device_name):
         if self.currentRow() >= 0:
             widget = self.item(self.currentRow(), 1)
-            (device_config, is_connected) = convert_qvariant(widget.data(Qt.UserRole))
+            (device_config, is_connected) = widget.data(Qt.UserRole)
             device_config["name"] = device_name
             widget.setData(Qt.UserRole, (device_config, is_connected))
             widget.setText(device_name)
@@ -1844,9 +1804,7 @@ class OtherTab(QWidget):
         self.library_default_combo = SimpleComboBox(
             self,
             self.parent_dialog.plugin_action.library_actions_map,
-            unicode(
-                get_plugin_pref(COMMON_OPTIONS_STORE_NAME, KEY_BUTTON_ACTION_LIBRARY)
-            ),
+            str(get_plugin_pref(COMMON_OPTIONS_STORE_NAME, KEY_BUTTON_ACTION_LIBRARY)),
         )
         library_default_label.setBuddy(self.library_default_combo)
         options_layout.addWidget(library_default_label, 0, 0, 1, 1)
@@ -1861,9 +1819,7 @@ class OtherTab(QWidget):
         self.device_default_combo = SimpleComboBox(
             self,
             self.parent_dialog.plugin_action.device_actions_map,
-            unicode(
-                get_plugin_pref(COMMON_OPTIONS_STORE_NAME, KEY_BUTTON_ACTION_DEVICE)
-            ),
+            str(get_plugin_pref(COMMON_OPTIONS_STORE_NAME, KEY_BUTTON_ACTION_DEVICE)),
         )
         device_default_label.setBuddy(self.device_default_combo)
         options_layout.addWidget(device_default_label, 1, 0, 1, 1)
@@ -1887,10 +1843,10 @@ class OtherTab(QWidget):
 
     def persist_other_config(self):
         new_prefs = get_plugin_prefs(COMMON_OPTIONS_STORE_NAME)
-        new_prefs[KEY_BUTTON_ACTION_DEVICE] = unicode(
+        new_prefs[KEY_BUTTON_ACTION_DEVICE] = str(
             self.device_default_combo.currentText()
         )
-        new_prefs[KEY_BUTTON_ACTION_LIBRARY] = unicode(
+        new_prefs[KEY_BUTTON_ACTION_LIBRARY] = str(
             self.library_default_combo.currentText()
         )
         plugin_prefs[COMMON_OPTIONS_STORE_NAME] = new_prefs

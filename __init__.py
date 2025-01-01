@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # vim:fileencoding=UTF-8:ts=4:sw=4:sta:et:sts=4:ai
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 __license__ = "GPL v3"
 __copyright__ = "2013-2020, David Forrester <davidfor@internode.on.net>"
@@ -26,7 +25,9 @@ class ActionKoboUtilities(InterfaceActionBase):
     supported_platforms = ["windows", "osx", "linux"]
     author = "David Forrester"
     version = (2, 16, 13)
-    minimum_calibre_version = (0, 9, 20)
+    # Calibre 5.13.0: Python 3.8.5
+    # Calibre 6.0.0: Python 3.10.1
+    minimum_calibre_version = (5, 13, 0)
 
     #: This field defines the GUI plugin class that contains all the code
     #: that actually does something. Its format is module_path:class_name

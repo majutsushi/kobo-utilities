@@ -63,7 +63,7 @@ from calibre.constants import DEBUG as _DEBUG
 from calibre.gui2 import choose_dir, error_dialog, question_dialog
 from calibre.gui2.dialogs.confirm_delete import confirm
 from calibre.utils.config import JSONConfig
-from calibre_plugins.koboutilities.common_utils import (
+from .common_utils import (
     CheckableTableWidgetItem,
     CustomColumnComboBox,
     ImageTitleLayout,

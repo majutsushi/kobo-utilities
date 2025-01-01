@@ -59,7 +59,7 @@ class ActionKoboUtilities(InterfaceActionBase):
         so by default no user configuration is possible.
         """
         if self.actual_plugin_:
-            from calibre_plugins.koboutilities.config import ConfigWidget
+            from .config import ConfigWidget
 
             return ConfigWidget(self.actual_plugin_)
 

@@ -21,7 +21,6 @@ except ImportError:
 
 from contextlib import closing
 
-import calibre_plugins.koboutilities.config as cfg
 from calibre import prints
 from calibre.constants import DEBUG
 from calibre.ebooks.BeautifulSoup import BeautifulStoneSoup
@@ -29,6 +28,8 @@ from calibre.utils.ipc.job import ParallelJob
 from calibre.utils.ipc.server import Server
 from calibre.utils.logging import Log
 from calibre.utils.zipfile import ZipFile
+
+from . import config as cfg
 from .common_utils import (
     BOOKMARK_SEPARATOR,
     MIMETYPE_KOBO,

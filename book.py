@@ -11,7 +11,8 @@ import re
 from calibre.ebooks.metadata import fmt_sidx
 from calibre.ebooks.metadata.book.base import Metadata
 from calibre.utils.date import format_date
-from calibre_plugins.koboutilities.common_utils import debug_print
+
+from .common_utils import debug_print
 
 
 def get_indent_for_index(series_index):

@@ -54,7 +54,6 @@ except:
     qFileDialog_FileMode_AnyFile = QFileDialog.AnyFile
 
 # For Python 3 migration
-import calibre_plugins.koboutilities.config as cfg
 from calibre import strftime
 from calibre.constants import numeric_version as calibre_version
 from calibre.devices.kobo.books import Book
@@ -81,9 +80,10 @@ from calibre.utils.config import config_dir
 from calibre.utils.date import parse_date
 from calibre.utils.icu import sort_key
 from calibre.utils.logging import default_log
-from calibre_plugins.koboutilities import ActionKoboUtilities
-from calibre_plugins.koboutilities.book import SeriesBook
-from calibre_plugins.koboutilities.common_utils import (
+from . import ActionKoboUtilities
+from . import config as cfg
+from .book import SeriesBook
+from .common_utils import (
     BOOKMARK_SEPARATOR,
     MIMETYPE_KOBO,
     ProgressBar,
@@ -96,7 +96,7 @@ from calibre_plugins.koboutilities.common_utils import (
     row_factory,
     set_plugin_icon_resources,
 )
-from calibre_plugins.koboutilities.dialogs import (
+from .dialogs import (
     AboutDialog,
     BackupAnnotationsOptionsDialog,
     BlockAnalyticsOptionsDialog,
@@ -3061,7 +3061,7 @@ class KoboUtilitiesAction(InterfaceAction):
             return
 
         cpus = 1  # self.gui.device_manager.server.pool_size
-        from calibre_plugins.koboutilities.jobs import do_store_locations
+        from .jobs import do_store_locations
 
         args = [books_to_modify, options, cpus]
         desc = _("Storing reading positions for {0} books").format(len(books_to_modify))
@@ -3156,7 +3156,7 @@ class KoboUtilitiesAction(InterfaceAction):
         debug_print("KoboUtilitiesAction::_firmware_update")
 
         cpus = 1  # self.gui.device_manager.server.pool_size
-        from calibre_plugins.koboutilities.jobs import do_check_firmware_update
+        from .jobs import do_check_firmware_update
 
         args = [
             update_data,
@@ -3232,7 +3232,7 @@ class KoboUtilitiesAction(InterfaceAction):
         debug_print("KoboUtilitiesAction::_firmware_update")
 
         cpus = 1  # self.gui.device_manager.server.pool_size
-        from calibre_plugins.koboutilities.jobs import do_device_database_backup
+        from .jobs import do_device_database_backup
 
         args = [backup_options, cpus]
         desc = _("Backing up Kobo device database")

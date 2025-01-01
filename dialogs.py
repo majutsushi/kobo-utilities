@@ -16,7 +16,6 @@ from datetime import datetime
 
 # calibre Python 3 compatibility.
 import six
-from calibre_plugins.koboutilities.common_utils import debug_print
 from six import text_type as unicode
 
 try:
@@ -87,7 +86,6 @@ except ImportError as e:
 
 from functools import partial
 
-import calibre_plugins.koboutilities.config as cfg
 import six
 from calibre.ebooks.metadata import authors_to_string
 from calibre.gui2 import (
@@ -105,8 +103,9 @@ from calibre.gui2.widgets2 import ColorButton
 from calibre.utils.config import JSONConfig, tweaks
 from calibre.utils.date import qt_to_dt, utc_tz
 from calibre.utils.icu import sort_key
-from calibre_plugins.koboutilities.book import SeriesBook
-from calibre_plugins.koboutilities.common_utils import (
+from . import config as cfg
+from .book import SeriesBook
+from .common_utils import (
     CheckableTableWidgetItem,
     CustomColumnComboBox,
     DateDelegate,
@@ -118,6 +117,7 @@ from calibre_plugins.koboutilities.common_utils import (
     ReadOnlyTextIconWidgetItem,
     SizePersistedDialog,
     convert_qvariant,
+    debug_print,
     get_icon,
     get_library_uuid,
 )

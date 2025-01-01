@@ -32,14 +32,14 @@ Added clean title of series info for Kobo books
 [B]Version 0.0.10[/B] - 5 December 2012
 Added option to refresh the books from the device
 After managing series, force a write of the metadata.calibre.
-Fix: Published date was being updated when it hadn't changed. 
+Fix: Published date was being updated when it hadn't changed.
 
 [B]Version 0.0.11[/B] - 10 December 2012
 Added button to get reader settings for a single book from device database.
 Fixed setting of reader settings from options and config file.
 New: support for storing and restoring current reading location
 New: Backup database
-Fixed: Handling multiple copies of book on device. 
+Fixed: Handling multiple copies of book on device.
 New: Backup annot file
 
 [B]Version 0.0.12[/B]
@@ -83,12 +83,12 @@ New: Run 'PRAGMA integrity_check' on the database
 Fix: Debug error if no last read column
 
 [B]Version 0.0.25[/B] - 07 May 2013
-Fix: Manage Series needed update to latest calibre code 
+Fix: Manage Series needed update to latest calibre code
 Fix: Fixed remove cover
 Fix: Upload covers sent covers to main memory for books on SD card
 
 [B]Version 0.0.26[/B] - 27 May 2013
-Fix: Annotations wasn't starting 
+Fix: Annotations wasn't starting
 Fix: Upload covers if no books on device selected
 Fix: Upload covers didn't check if Kobo kepub was on SD card for skipping upload
 
@@ -104,7 +104,7 @@ Update: Dismiss tiles menu option
 Update: More help written
 Update: Added anchors for all help. Will only be used on Linux
 Fix: When restoring reading position, could set percent read to null and DateLastRead format was not same as device uses.
-Fix: If last read date was empty in calibre, don't set it in the database on restore. 
+Fix: If last read date was empty in calibre, don't set it in the database on restore.
 
 [B]Version 1.0.0[/B] - 09 June 2013
 Initial release
@@ -209,13 +209,13 @@ New: After batch reading position store, display list of changes.
 Changed: Added options for using sort versions of title and author or the plugboard when updating metadata.
 New: Spanish translation.
 Fix: Clean images directory handles new images storage in FW2.9.0 and later
- 
+
 [B]Version 1.6.1[/B] - 22 March 2014
 Fix: Left a debug line in for backup file name.
- 
+
 [B]Version 1.6.2[/B] - 28 March 2014
 Fix: Older devices had the MAC address in the serial number field of the version file. Strip the colons from this so it can be used in the backup file name.
- 
+
 [B]Version 1.6.3[/B] - 12 April 2014
 Fix: Setting reading status from device list was not updated for new options in metadata updating.
 
@@ -263,8 +263,8 @@ Change: Qt5 changes
 Fix: Wasn't correctly removing old backup files.
 
 [B]Version 1.8.0[/B] - 5 October 2014
-New: Copy shelves from device to one column 
-Change: Backup config, affiliate.conf and version files and ADE registration 
+New: Copy shelves from device to one column
+Change: Backup config, affiliate.conf and version files and ADE registration
 
 [B]Version 1.8.1[/B] - 9 November 2014
 Fix: Added trigger for UPDATE to the Activity table
@@ -331,7 +331,7 @@ Fix: Opening the configuration shortly after ejecting the device gave an error
 [B]Version 2.0.3[/B] - 20 January 2015
 Fix:  Error if iOS device plugged in and iOS reader applications and Marvin plugins are active.
 Change: Updated way backup files were deleted to handle when setting for putting database in the zip file is changed.
-Change: Turn on debug logging for backup job. 
+Change: Turn on debug logging for backup job.
 
 [B]Version 2.0.4[/B] - 21 January 2015
 Fix: Wasn't correctly doing the daily backup if the database in the zip file option was selected.
@@ -392,7 +392,7 @@ Fix: Exception during backup as WinError is not on non-Windows machines.
 Update: Latest Spanish translations from Terisa
 
 [B]Version 2.5.1[/B] - 9 January 2017
-Fix: Reenable "About Plugin" 
+Fix: Reenable "About Plugin"
 New: French translation from Eric (Infernoweb) and Alain (FrenchDummy)
 
 [B]Version 2.5.2[/B] - 10 January 2017
@@ -401,7 +401,7 @@ Fix: Button wasn't opening driver configuration if device wasn't connected.
 [B]Version 2.6.0[/B] - 6 September 2017
 New: Add setting sync date from calibre added or modified dates, or published date.
 New: Add French translation of help. Thanks to Frenchdummy.
-Fix: Error opening configuration if no devices and backup is set to individual configuration. 
+Fix: Error opening configuration if no devices and backup is set to individual configuration.
 
 [B]Version 2.7.0[/B] - 28 March 2019
 New: Option to open cover image directory.
@@ -412,12 +412,12 @@ Fix: Change annotation builder to handle recent change in BeautifulSoup.
 Fix: Missed a change in the annotation builder to handle recent change in BeautifulSoup in calibre.
 Fix: Improve layout of results when displaying annotations.
 Update: Add new font "AR UDJingxihei" to font settings dialog.
- 
+
 [B]Version 2.9.0[/B] - 13 October 2019
 Update: Set "get_cover" to as appropriate when getting metadata. This should improve performance in some places.
 Update: Handle changed reading location for epub starting with 4.17.13651. Should be backwardly compatible with currently stored locations and older firmware.
 New: Add options to cover updating for dithering, letterboxing and PNGs to match the driver change. Based on work from @NiLuJe.
-New: Add option to remove the full sized cover image. 
+New: Add option to remove the full sized cover image.
 
 [B]Version 2.10.0[/B] - 08 February 2020
 Update: Changes for Python 3 support in calibre.
@@ -431,8 +431,8 @@ New: Set SeriesID and SeriesNumberFloat for Series Tab support in 4.20.x.
 
 [B]Version 2.11.4[/B] - 17 July 2020
 Fix: Updating parsing of firmware update file name to get the version number.
-Change: Display lookup name for columns in Date added choice in Update metadata dialog. 
-Change: Add custom date columns and file timestamp option to Date added choices in Update metadata dialog. 
+Change: Display lookup name for columns in Date added choice in Update metadata dialog.
+Change: Add custom date columns and file timestamp option to Date added choices in Update metadata dialog.
 Fix: More fixes for Python 3.
 Fix: Error if setting font in config file if no "Reading" section.
 
@@ -454,7 +454,7 @@ Fix: Handle when percent read column doesn't exist when storing the bookmark.
 Fix: Update code in store bookmark when not run in background.
 Fix: Python 3 error slipped through when updating the foreground store bookmark.
 Fix: Fix handling when location is null on device but not in library.
-New: Add function to set the time on the device. 
+New: Add function to set the time on the device.
 Fix: Disable "Clear if unread" if "Not if finished in library" is selected.
 Fix: Another change to the handling when book is finished.
 
@@ -467,7 +467,7 @@ Change: Only show menu items that will might do something in current view.
 [B]Version 2.13.0[/B] - 19 March 2021
 Change: Change how books are queued when automatically fetching reading locations.
 Change: Sort the results when getting the reading locations.
-New: Choose colour used for letterboxing in covers. 
+New: Choose colour used for letterboxing in covers.
 Fix: Fix handling of epub locations for recent firmware.
 Fix: Error in Manage series on device.
 
@@ -523,3 +523,27 @@ Fix: Qt6 compatiblility - Prefs viewer tab stops and file chooser for database b
 
 [B]Version 2.16.6[/B] - 01 August 2022
 Fix: Qt6 compatiblility - Connecting actions to Radio buttons works differently.
+
+[B]Version 2.16.7[/B] - 11 May 2023 (by @chaley)
+Fix: Problem when updating the ToC.
+
+[B]Version 2.16.8[/B] - 4 July 2023 (changes by @Terisa de morgan, release by @chaley)
+Fix: Error when checking for firmware updates.
+
+[B]Version 2.16.9[/B] - 4 July 2023 (changes by @ownedbycats, release by @chaley)
+Added Rakuten Sans/Serif support for the fonts dialog
+
+[B]Version 2.16.10[/B] - 12 July 2023 (changes & release by chaley)
+Fix help file not displaying on Windows.
+
+[B]Version 2.16.11[/B] - 08 Nov 2023 (changes by @ownedbycats, release by @chaley)
+Support for long-text/comment-type columns for storing reading position.
+
+[B]Version 2.16.12[/B] - 06 Dec 2023 (changes by @ownedbycats, release by @chaley)
+Improvement of help string for storing bookmarks
+
+[B]Version 2.16.13[/B] - 11 Dec 2023 (changes and release by @chaley)
+Fix rare error where the Kobo database contains invalid dates or times
+
+[B]Version 2.17.1[/B] - 12 July 2024 (changes and release by @chaley)
+Remove the non-working firmware update check

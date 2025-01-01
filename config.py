@@ -1271,6 +1271,8 @@ class DevicesTab(QWidget):
         )
         options_layout.addWidget(self.zip_database_checkbox, 2, 0, 1, 3)
 
+        layout.addLayout(options_layout)
+
         self.toggle_backup_options_state(False)
 
         layout.insertStretch(-1)
@@ -1627,7 +1629,7 @@ class DevicesTableWidget(QTableWidget):
             _("Name"),
             _("Model"),
             _("Serial Number"),
-            _("Version"),
+            _("FW Version"),
             _("Status"),
         ]
         self.setColumnCount(len(header_labels))

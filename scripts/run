@@ -24,8 +24,14 @@ from zipfile import ZIP_DEFLATED, ZipFile
 import requests
 
 PLUGIN_NAME = "KoboUtilities"
-CALIBRE_LATEST_URL = "https://api.github.com/repos/kovidgoyal/calibre/releases/latest"
-CALIBRE_BIN_PATH = Path.cwd() / "calibre-latest"
+CALIBRE_MINIMUM_URL = (
+    "https://download.calibre-ebook.com/5.13.0/calibre-5.13.0-x86_64.txz"
+)
+CALIBRE_LATEST_METADATA_URL = (
+    "https://api.github.com/repos/kovidgoyal/calibre/releases/latest"
+)
+CALIBRE_MINIMUM_BIN_PATH = Path.cwd() / "calibre-v5.13.0"
+CALIBRE_LATEST_BIN_PATH = Path.cwd() / "calibre-latest"
 
 logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -79,9 +85,16 @@ def build() -> Path:
 
 
 def run_tests(plugin_zip: Path) -> bool:
-    if not CALIBRE_BIN_PATH.exists():
-        update_calibre()
+    failed_tests = False
+    for bin_path in [CALIBRE_MINIMUM_BIN_PATH, CALIBRE_LATEST_BIN_PATH]:
+        if not bin_path.exists():
+            update_calibre()
+        failed_tests |= run_tests_(plugin_zip, bin_path)
+    return failed_tests
 
+
+def run_tests_(plugin_zip: Path, bin_path: Path) -> bool:
+    log.info("Running tests with Calibre %s", bin_path.name)
     with TemporaryDirectory(prefix="calibre.user.") as userdir:
         userdir_path = Path(userdir)
         user_config_path = userdir_path / "config"
@@ -97,13 +110,13 @@ def run_tests(plugin_zip: Path) -> bool:
 
         log.info("Installing plugin %s to %s", plugin_zip, user_config_path)
         subprocess.run(
-            [CALIBRE_BIN_PATH / "calibre-customize", "-a", plugin_zip],
+            [bin_path / "calibre-customize", "-a", plugin_zip],
             check=True,
             env={**os.environ, **test_env},
         )
         subprocess.run(
             [
-                CALIBRE_BIN_PATH / "calibre-customize",
+                bin_path / "calibre-customize",
                 "--enable-plugin",
                 plugin_zip.stem,
             ],
@@ -117,7 +130,7 @@ def run_tests(plugin_zip: Path) -> bool:
             log.info("Running test: %s", test)
             try:
                 subprocess.run(
-                    [CALIBRE_BIN_PATH / "calibre-debug", test],
+                    [bin_path / "calibre-debug", test],
                     check=True,
                     env={**os.environ, **test_env},
                 )
@@ -128,25 +141,33 @@ def run_tests(plugin_zip: Path) -> bool:
 
 
 def update_calibre() -> None:
-    r = requests.get(CALIBRE_LATEST_URL, timeout=20)
+    pkg_suffix = "-x86_64.txz"
+
+    # Download minimum version
+    if not CALIBRE_MINIMUM_BIN_PATH.exists():
+        download(CALIBRE_MINIMUM_URL, pkg_suffix, CALIBRE_MINIMUM_BIN_PATH)
+
+    # Download latest version
+    r = requests.get(CALIBRE_LATEST_METADATA_URL, timeout=20)
     r.raise_for_status()
     release_json = r.json()
-
-    pkg_suffix = "-x86_64.txz"
     for asset in release_json["assets"]:
         if asset["name"].endswith(pkg_suffix):
             log.info("Found Calibre asset %s", asset["name"])
-            shutil.rmtree(CALIBRE_BIN_PATH, ignore_errors=True)
-            with requests.get(
-                asset["browser_download_url"], stream=True, timeout=60
-            ) as r:
-                r.raise_for_status()
-                with NamedTemporaryFile(suffix=pkg_suffix) as temp_file:
-                    tar_file = Path(temp_file.name)
-                    with tar_file.open("wb") as t:
-                        for chunk in r.iter_content(chunk_size=8192):
-                            t.write(chunk)
-                    shutil.unpack_archive(tar_file, CALIBRE_BIN_PATH)
+            download(asset["browser_download_url"], pkg_suffix, CALIBRE_LATEST_BIN_PATH)
+
+
+def download(url: str, pkg_suffix: str, bin_path: Path) -> None:
+    log.info("Downloading %s", url)
+    shutil.rmtree(bin_path, ignore_errors=True)
+    with requests.get(url, stream=True, timeout=60) as r:
+        r.raise_for_status()
+        with NamedTemporaryFile(suffix=pkg_suffix) as temp_file:
+            tar_file = Path(temp_file.name)
+            with tar_file.open("wb") as t:
+                for chunk in r.iter_content(chunk_size=8192):
+                    t.write(chunk)
+            shutil.unpack_archive(tar_file, bin_path)
 
 
 def parse_args() -> argparse.Namespace:

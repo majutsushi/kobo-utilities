@@ -26,6 +26,8 @@ class ActionKoboUtilities(InterfaceActionBase):
     version = (2, 17, 2)
     # Calibre 5.13.0: Python 3.8.5
     # Calibre 6.0.0: Python 3.10.1
+    # Maintenance note: if you update the minimum version here,
+    # make sure to also update it in scripts/run
     minimum_calibre_version = (5, 13, 0)
 
     #: This field defines the GUI plugin class that contains all the code

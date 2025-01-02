@@ -1,4 +1,5 @@
 calibre-latest
+calibre-v*
 *.zip
 .env
 .python-version

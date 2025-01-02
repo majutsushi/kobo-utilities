@@ -1,2 +1,43 @@
 [tool.ruff]
 line-length = 88
+builtins = ["_", "I", "P", "load_translations", "get_resources", "get_icons"]
+
+[tool.ruff.lint]
+ignore = [
+  # Disable some rules that conflict with the formatter
+  # https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
+  "W191",
+  "E111",
+  "E114",
+  "E117",
+  "E501",
+  "D206",
+  "D300",
+  "Q000",
+  "Q001",
+  "Q002",
+  "Q003",
+  "COM812",
+  "COM819",
+  "ISC001",
+  "ISC002",
+]
+
+unfixable = [
+  # unused-variable: Local variable {name} is assigned to but never used
+  # This can be undesirable if the file is saved before adding the code that
+  # uses a variable.
+  "F841",
+]
+
+# https://github.com/microsoft/pyright/blob/main/docs/configuration.md
+[tool.pyright]
+typeCheckingMode = "standard"
+exclude = ["**/__pycache__"]
+extraPaths = ["../calibre/src"]
+ignore = ["../calibre/src"]
+pythonVersion = "3.8"
+reportDuplicateImport = "error"
+reportImportCycles = "warning"
+reportUnusedFunction = "warning"
+reportUnusedVariable = "warning"

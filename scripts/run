@@ -1,0 +1,170 @@
+#!/usr/bin/env -S pipx run  # noqa: EXE003
+# Author: Jan Larres <jan@majutsushi.net>
+# License: MIT/X11
+#
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#   "requests"
+# ]
+# ///
+#
+# ruff: noqa: S603, S607
+
+import argparse
+import logging
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+from tempfile import NamedTemporaryFile, TemporaryDirectory
+from zipfile import ZIP_DEFLATED, ZipFile
+
+import requests
+
+PLUGIN_NAME = "KoboUtilities"
+CALIBRE_LATEST_URL = "https://api.github.com/repos/kovidgoyal/calibre/releases/latest"
+CALIBRE_BIN_PATH = Path.cwd() / "calibre-latest"
+
+logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
+log = logging.getLogger(__name__)
+
+
+def main(args: argparse.Namespace) -> int:
+    if args.verbose:
+        log.setLevel(logging.DEBUG)
+
+    if args.command == "build":
+        build()
+    elif args.command == "test":
+        plugin_zip = build()
+        return 1 if run_tests(plugin_zip) else 0
+    elif args.command == "update-calibre":
+        update_calibre()
+    else:
+        log.error("Unknown command: %s", args.command)
+        return 1
+
+    return 0
+
+
+def build() -> Path:
+    try:
+        version = subprocess.check_output(
+            ["git", "describe", "--tags", "--dirty"], text=True
+        )
+    except subprocess.CalledProcessError:
+        version = "unknown"
+    zip_name = f"{PLUGIN_NAME}-{version}.zip"
+
+    # Delete old zip files so they don't get updated accidentally
+    for path in Path.cwd().glob(f"{PLUGIN_NAME}-*.zip"):
+        path.unlink()
+
+    with ZipFile(zip_name, "w", ZIP_DEFLATED) as zip_file:
+        zip_file.write("about.txt")
+        zip_file.write("changelog.txt")
+        zip_file.write("plugin-import-name-koboutilities.txt")
+        for f in Path.cwd().glob("*.py"):
+            zip_file.write(f, arcname=f.name)
+        for f in Path("images").iterdir():
+            zip_file.write(f)
+        for f in Path("help").iterdir():
+            zip_file.write(f)
+        for f in Path("translations").iterdir():
+            zip_file.write(f)
+
+    return Path.cwd() / zip_name
+
+
+def run_tests(plugin_zip: Path) -> bool:
+    if not CALIBRE_BIN_PATH.exists():
+        update_calibre()
+
+    with TemporaryDirectory(prefix="calibre.user.") as userdir:
+        userdir_path = Path(userdir)
+        user_config_path = userdir_path / "config"
+        user_config_path.mkdir()
+        user_tmp_path = userdir_path / "tmp"
+        user_tmp_path.mkdir()
+
+        test_env = {
+            "CALIBRE_CONFIG_DIRECTORY": str(user_config_path),
+            "CALIBRE_TEMP_DIR": str(user_tmp_path),
+            "PYTHONDONTWRITEBYTECODE": "true",
+        }
+
+        log.info("Installing plugin %s to %s", plugin_zip, user_config_path)
+        subprocess.run(
+            [CALIBRE_BIN_PATH / "calibre-customize", "-a", plugin_zip],
+            check=True,
+            env={**os.environ, **test_env},
+        )
+        subprocess.run(
+            [
+                CALIBRE_BIN_PATH / "calibre-customize",
+                "--enable-plugin",
+                plugin_zip.stem,
+            ],
+            check=True,
+            env={**os.environ, **test_env},
+        )
+
+        # Run tests
+        failed_tests = False
+        for test in Path("tests").glob("test_*.py"):
+            log.info("Running test: %s", test)
+            try:
+                subprocess.run(
+                    [CALIBRE_BIN_PATH / "calibre-debug", test],
+                    check=True,
+                    env={**os.environ, **test_env},
+                )
+            except subprocess.CalledProcessError:
+                failed_tests = True
+
+    return failed_tests
+
+
+def update_calibre() -> None:
+    r = requests.get(CALIBRE_LATEST_URL, timeout=20)
+    r.raise_for_status()
+    release_json = r.json()
+
+    pkg_suffix = "-x86_64.txz"
+    for asset in release_json["assets"]:
+        if asset["name"].endswith(pkg_suffix):
+            log.info("Found Calibre asset %s", asset["name"])
+            shutil.rmtree(CALIBRE_BIN_PATH, ignore_errors=True)
+            with requests.get(
+                asset["browser_download_url"], stream=True, timeout=60
+            ) as r:
+                r.raise_for_status()
+                with NamedTemporaryFile(suffix=pkg_suffix) as temp_file:
+                    tar_file = Path(temp_file.name)
+                    with tar_file.open("wb") as t:
+                        for chunk in r.iter_content(chunk_size=8192):
+                            t.write(chunk)
+                    shutil.unpack_archive(tar_file, CALIBRE_BIN_PATH)
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Build and test plugin")
+    parser.add_argument(
+        "command",
+        choices=["build", "test", "update-calibre"],
+        help="the command to run",
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        default=False,
+        help="increase output verbosity",
+    )
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    sys.exit(main(parse_args()))

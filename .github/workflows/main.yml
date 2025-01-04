@@ -1,0 +1,31 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow
+name: CI
+
+# Controls when the action will run. Workflow runs when manually triggered
+# using the UI or API.
+'on':
+  push:
+    branches:
+      - '*'
+  pull_request:
+
+# A workflow run is made up of one or more jobs that can run sequentially or
+# in parallel
+jobs:
+  test:
+    runs-on: 'ubuntu-latest'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libegl1 libopengl0
+
+      - name: Run tests
+        run: ./scripts/run test

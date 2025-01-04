@@ -41,6 +41,8 @@ class TestKoboUtilities(unittest.TestCase):
         #         current_percentRead,
         #         current_rating,
         #         current_last_read,
+        #         current_time_spent_reading,
+        #         current_rest_of_book_estimate,
         #     )
         books_in_calibre = [
             (
@@ -52,6 +54,8 @@ class TestKoboUtilities(unittest.TestCase):
                 50,
                 0,
                 dt(2000, 1, 2, 12, 34, 56, tzinfo=timezone(timedelta(hours=0))),
+                100,
+                200,
             ),
             (
                 "2",
@@ -62,6 +66,8 @@ class TestKoboUtilities(unittest.TestCase):
                 25,
                 1,
                 dt(2000, 1, 2, 12, 34, 56, tzinfo=timezone(timedelta(hours=0))),
+                300,
+                400,
             ),
         ]
         cursor = conn.return_value.__enter__.return_value.cursor.return_value
@@ -77,6 +83,8 @@ class TestKoboUtilities(unittest.TestCase):
                 "MimeType": "foo/bar",
                 "Rating": 1,
                 "contentId": "a.kepub.epub",
+                "TimeSpentReading": 100,
+                "RestOfBookEstimate": 200,
             },
             {
                 "ChapterIDBookmarked": 2,
@@ -89,6 +97,8 @@ class TestKoboUtilities(unittest.TestCase):
                 "MimeType": "foo/bar",
                 "Rating": 2,
                 "contentId": "b.kepub.epub",
+                "TimeSpentReading": 450,
+                "RestOfBookEstimate": 250,
             },
         ]
         cursor.__next__ = MagicMock(side_effect=books_on_kobo)
@@ -100,6 +110,8 @@ class TestKoboUtilities(unittest.TestCase):
             config.KEY_PERCENT_READ_CUSTOM_COLUMN: "#percent_read",
             config.KEY_RATING_CUSTOM_COLUMN: None,
             config.KEY_LAST_READ_CUSTOM_COLUMN: "#last_read",
+            config.KEY_TIME_SPENT_READING_COLUMN: "#time_spent_reading",
+            config.KEY_REST_OF_BOOK_ESTIMATE_COLUMN: "#rest_of_book_estimate",
             "epub_location_like_kepub": True,
             "fetch_queries": {"kepub": "kepub_query", "epub": "epub_query"},
             "device_database_path": "db_path",
@@ -111,6 +123,8 @@ class TestKoboUtilities(unittest.TestCase):
         cursor.execute.assert_called_with("kepub_query", ("b.kepub.epub",))
         self.assertNotIn("1", stored_locations)
         self.assertEqual(stored_locations["2"]["___PercentRead"], 75)
+        self.assertEqual(stored_locations["2"]["TimeSpentReading"], 450)
+        self.assertEqual(stored_locations["2"]["RestOfBookEstimate"], 250)
 
 
 if __name__ == "__main__":

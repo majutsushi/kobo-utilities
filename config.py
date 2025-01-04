@@ -73,6 +73,8 @@ KEY_CURRENT_LOCATION_CUSTOM_COLUMN = "currentReadingLocationColumn"
 KEY_PERCENT_READ_CUSTOM_COLUMN = "percentReadColumn"
 KEY_RATING_CUSTOM_COLUMN = "ratingColumn"
 KEY_LAST_READ_CUSTOM_COLUMN = "lastReadColumn"
+KEY_TIME_SPENT_READING_COLUMN = "timeSpentReadingColumn"
+KEY_REST_OF_BOOK_ESTIMATE_COLUMN = "restOfBookEstimateColumn"
 KEY_STORE_ON_CONNECT = "storeOnConnect"
 KEY_PROMPT_TO_STORE = "promptToStore"
 KEY_STORE_IF_MORE_RECENT = "storeIfMoreRecent"
@@ -336,6 +338,8 @@ CUSTOM_COLUMNS_OPTIONS_DEFAULTS = {
     KEY_PERCENT_READ_CUSTOM_COLUMN: None,
     KEY_RATING_CUSTOM_COLUMN: None,
     KEY_LAST_READ_CUSTOM_COLUMN: None,
+    KEY_TIME_SPENT_READING_COLUMN: None,
+    KEY_REST_OF_BOOK_ESTIMATE_COLUMN: None,
 }
 
 DEFAULT_PROFILE_VALUES = {
@@ -356,6 +360,8 @@ CUSTOM_COLUMN_DEFAULT_LOOKUP_READING_LOCATION = "#kobo_reading_location"
 CUSTOM_COLUMN_DEFAULT_LOOKUP_LAST_READ = "#kobo_last_read"
 CUSTOM_COLUMN_DEFAULT_LOOKUP_RATING = "#kobo_rating"
 CUSTOM_COLUMN_DEFAULT_LOOKUP_PERCENT_READ = "#kobo_percent_read"
+CUSTOM_COLUMN_DEFAULT_LOOKUP_TIME_SPENT_READING = "#kobo_time_spent_reading"
+CUSTOM_COLUMN_DEFAULT_LOOKUP_REST_OF_BOOK_ESTIMATE = "#kobo_rest_of_book_estimate"
 CUSTOM_COLUMN_DEFAULTS = {
     CUSTOM_COLUMN_DEFAULT_LOOKUP_READING_LOCATION: {
         "column_heading": _("Kobo Reading Location"),
@@ -395,6 +401,26 @@ CUSTOM_COLUMN_DEFAULTS = {
         "config_label": _("Last Read Column:"),
         "config_tool_tip": _(
             "Column used to store when the book was last read. The column type must be a 'Date'. Leave this blank if you do not want to store the last read timestamp."
+        ),
+    },
+    CUSTOM_COLUMN_DEFAULT_LOOKUP_TIME_SPENT_READING: {
+        "column_heading": _("Kobo Time Spent Reading"),
+        "datatype": "int",
+        "description": _("The time already spent reading the book, in seconds."),
+        "columns_list": "avail_number_columns",
+        "config_label": _("Time Spent Reading Column:"),
+        "config_tool_tip": _(
+            "Column used to store how much time was spent reading the book, in seconds. The column type must be 'integer'. Leave this blank if you do not want to store the time spent reading the book."
+        ),
+    },
+    CUSTOM_COLUMN_DEFAULT_LOOKUP_REST_OF_BOOK_ESTIMATE: {
+        "column_heading": _("Kobo Rest of Book Estimate"),
+        "datatype": "int",
+        "description": _("The estimate of the time left to read the book, in seconds."),
+        "columns_list": "avail_number_columns",
+        "config_label": _("Rest of Book Estimate Column:"),
+        "config_tool_tip": _(
+            "Column used to store the estimate of how much time is left in the book, in seconds. The column type must be 'integer'. Leave this blank if you do not want to store the estimate of the time left."
         ),
     },
 }
@@ -712,6 +738,12 @@ class ProfilesTab(QWidget):
         self.custom_columns[CUSTOM_COLUMN_DEFAULT_LOOKUP_LAST_READ] = {
             "current_columns": self.get_date_custom_columns
         }
+        self.custom_columns[CUSTOM_COLUMN_DEFAULT_LOOKUP_TIME_SPENT_READING] = {
+            "current_columns": self.get_number_custom_columns
+        }
+        self.custom_columns[CUSTOM_COLUMN_DEFAULT_LOOKUP_REST_OF_BOOK_ESTIMATE] = {
+            "current_columns": self.get_number_custom_columns
+        }
 
         self.current_Location_combo = self.create_custom_column_controls(
             options_layout, CUSTOM_COLUMN_DEFAULT_LOOKUP_READING_LOCATION, 1
@@ -724,6 +756,12 @@ class ProfilesTab(QWidget):
         )
         self.last_read_combo = self.create_custom_column_controls(
             options_layout, CUSTOM_COLUMN_DEFAULT_LOOKUP_LAST_READ, 4
+        )
+        self.time_spent_reading_combo = self.create_custom_column_controls(
+            options_layout, CUSTOM_COLUMN_DEFAULT_LOOKUP_TIME_SPENT_READING, 5
+        )
+        self.rest_of_book_estimate_combo = self.create_custom_column_controls(
+            options_layout, CUSTOM_COLUMN_DEFAULT_LOOKUP_REST_OF_BOOK_ESTIMATE, 6
         )
 
         auto_store_group = QGroupBox(_("Store on connect"), self)
@@ -954,6 +992,16 @@ class ProfilesTab(QWidget):
         last_read_column = get_pref(
             column_prefs, CUSTOM_COLUMNS_STORE_NAME, KEY_LAST_READ_CUSTOM_COLUMN
         )
+        time_spent_reading_column = get_pref(
+            column_prefs,
+            CUSTOM_COLUMNS_STORE_NAME,
+            KEY_TIME_SPENT_READING_COLUMN,
+        )
+        rest_of_book_estimate_column = get_pref(
+            column_prefs,
+            CUSTOM_COLUMNS_STORE_NAME,
+            KEY_REST_OF_BOOK_ESTIMATE_COLUMN,
+        )
 
         store_prefs = profile_map.get(STORE_OPTIONS_STORE_NAME, STORE_OPTIONS_DEFAULTS)
         store_on_connect = get_pref(
@@ -993,6 +1041,20 @@ class ProfilesTab(QWidget):
                 "current_columns"
             ](),
             last_read_column,
+        )
+        self.time_spent_reading_combo.populate_combo(
+            self.custom_columns[CUSTOM_COLUMN_DEFAULT_LOOKUP_TIME_SPENT_READING][
+                "current_columns"
+            ](),
+            time_spent_reading_column if time_spent_reading_column is not None else "",
+        )
+        self.rest_of_book_estimate_combo.populate_combo(
+            self.custom_columns[CUSTOM_COLUMN_DEFAULT_LOOKUP_REST_OF_BOOK_ESTIMATE][
+                "current_columns"
+            ](),
+            rest_of_book_estimate_column
+            if rest_of_book_estimate_column is not None
+            else "",
         )
 
         self.device_combo.populate_combo(
@@ -1058,6 +1120,12 @@ class ProfilesTab(QWidget):
         column_prefs[KEY_RATING_CUSTOM_COLUMN] = self.rating_combo.get_selected_column()
         column_prefs[KEY_LAST_READ_CUSTOM_COLUMN] = (
             self.last_read_combo.get_selected_column()
+        )
+        column_prefs[KEY_TIME_SPENT_READING_COLUMN] = (
+            self.time_spent_reading_combo.get_selected_column()
+        )
+        column_prefs[KEY_REST_OF_BOOK_ESTIMATE_COLUMN] = (
+            self.rest_of_book_estimate_combo.get_selected_column()
         )
         profile_config[CUSTOM_COLUMNS_STORE_NAME] = column_prefs
 

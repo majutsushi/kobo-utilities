@@ -11,10 +11,9 @@ import shutil
 import threading
 import time
 from collections import OrderedDict, defaultdict
-from configparser import ConfigParser, NoOptionError
+from configparser import ConfigParser
 from datetime import datetime, timedelta
 from urllib.parse import quote
-from urllib.request import Request, urlopen
 
 from calibre import strftime
 from calibre.devices.kobo.books import Book
@@ -118,7 +117,9 @@ EPUB_FETCH_QUERY = (
     "c1.Title, "
     "c1.MimeType, "
     "r.rating, "
-    "c1.contentId "
+    "c1.contentId, "
+    "c1.TimeSpentReading, "
+    "c1.RestOfBookEstimate "
     "FROM content c1 LEFT OUTER JOIN content c2 ON c1.ChapterIDBookmarked = c2.ContentID "
     "LEFT OUTER JOIN ratings r ON c1.ContentID = r.ContentID "
     "WHERE c1.ContentID = ?"
@@ -134,7 +135,9 @@ EPUB_FETCH_QUERY_NORATING = (
     "c1.Title, "
     "c1.MimeType, "
     "NULL as rating, "
-    "c1.contentId "
+    "c1.contentId, "
+    "c1.TimeSpentReading, "
+    "c1.RestOfBookEstimate "
     "FROM content c1 LEFT OUTER JOIN content c2 ON c1.ChapterIDBookmarked = c2.ContentID "
     "WHERE c1.ContentID = ?"
 )
@@ -149,7 +152,9 @@ KEPUB_FETCH_QUERY = (
     "c1.Title, "
     "c1.MimeType, "
     "r.rating, "
-    "c1.contentId "
+    "c1.contentId, "
+    "c1.TimeSpentReading, "
+    "c1.RestOfBookEstimate "
     "FROM content c1 LEFT OUTER JOIN ratings r ON c1.ContentID = r.ContentID "
     "WHERE c1.ContentID = ?"
 )
@@ -164,7 +169,9 @@ KEPUB_FETCH_QUERY_NORATING = (
     "c1.Title, "
     "c1.MimeType, "
     "NULL as rating, "
-    "c1.contentId "
+    "c1.contentId, "
+    "c1.TimeSpentReading, "
+    "c1.RestOfBookEstimate "
     "FROM content c1 "
     "WHERE c1.ContentID = ?"
 )
@@ -1293,6 +1300,8 @@ class KoboUtilitiesAction(InterfaceAction):
             kobo_percentRead_column,
             rating_column,
             last_read_column,
+            time_spent_reading_column,
+            rest_of_book_estimate_column,
         ) = self.get_column_names()
         self.options[cfg.KEY_CURRENT_LOCATION_CUSTOM_COLUMN] = (
             kobo_chapteridbookmarked_column
@@ -1300,6 +1309,10 @@ class KoboUtilitiesAction(InterfaceAction):
         self.options[cfg.KEY_PERCENT_READ_CUSTOM_COLUMN] = kobo_percentRead_column
         self.options[cfg.KEY_RATING_CUSTOM_COLUMN] = rating_column
         self.options[cfg.KEY_LAST_READ_CUSTOM_COLUMN] = last_read_column
+        self.options[cfg.KEY_TIME_SPENT_READING_COLUMN] = time_spent_reading_column
+        self.options[cfg.KEY_REST_OF_BOOK_ESTIMATE_COLUMN] = (
+            rest_of_book_estimate_column
+        )
 
         self.options["device_database_path"] = self.device_database_path()
         self.options["job_function"] = "store_current_bookmark"
@@ -1361,6 +1374,8 @@ class KoboUtilitiesAction(InterfaceAction):
                 current_percentRead = None
                 current_rating = None
                 current_last_read = None
+                current_time_spent_reading = None
+                current_rest_of_book_estimate = None
                 if kobo_chapteridbookmarked_column is not None:
                     current_chapterid = book.get_user_metadata(
                         kobo_chapteridbookmarked_column, False
@@ -1380,6 +1395,14 @@ class KoboUtilitiesAction(InterfaceAction):
                     current_last_read = book.get_user_metadata(last_read_column, False)[
                         "#value#"
                     ]
+                if time_spent_reading_column is not None:
+                    current_time_spent_reading = book.get_user_metadata(
+                        time_spent_reading_column, False
+                    )["#value#"]
+                if rest_of_book_estimate_column is not None:
+                    current_rest_of_book_estimate = book.get_user_metadata(
+                        rest_of_book_estimate_column, False
+                    )["#value#"]
 
                 books_to_scan.append(
                     (
@@ -1391,6 +1414,8 @@ class KoboUtilitiesAction(InterfaceAction):
                         current_percentRead,
                         current_rating,
                         current_last_read,
+                        current_time_spent_reading,
+                        current_rest_of_book_estimate,
                     )
                 )
 
@@ -3166,7 +3191,7 @@ class KoboUtilitiesAction(InterfaceAction):
         elif self.current_device_profile:
             columns_config = self.current_device_profile[cfg.CUSTOM_COLUMNS_STORE_NAME]
         else:
-            return None, None, None, None
+            return None, None, None, None, None, None
 
         debug_print("get_column_names - columns_config:", columns_config)
         kobo_chapteridbookmarked_column = columns_config.get(
@@ -3185,6 +3210,14 @@ class KoboUtilitiesAction(InterfaceAction):
             cfg.KEY_LAST_READ_CUSTOM_COLUMN,
             cfg.CUSTOM_COLUMNS_OPTIONS_DEFAULTS[cfg.KEY_LAST_READ_CUSTOM_COLUMN],
         )
+        time_spent_reading_column = columns_config.get(
+            cfg.KEY_TIME_SPENT_READING_COLUMN,
+            cfg.CUSTOM_COLUMNS_OPTIONS_DEFAULTS[cfg.KEY_TIME_SPENT_READING_COLUMN],
+        )
+        rest_of_book_estimate_column = columns_config.get(
+            cfg.KEY_REST_OF_BOOK_ESTIMATE_COLUMN,
+            cfg.CUSTOM_COLUMNS_OPTIONS_DEFAULTS[cfg.KEY_REST_OF_BOOK_ESTIMATE_COLUMN],
+        )
 
         custom_cols = self.gui.current_db.field_metadata.custom_field_metadata(
             include_composites=False
@@ -3201,12 +3234,24 @@ class KoboUtilitiesAction(InterfaceAction):
             if rating_column != "rating":
                 rating_column = rating_column if rating_column in custom_cols else None
         last_read_column = last_read_column if last_read_column in custom_cols else None
+        time_spent_reading_column = (
+            time_spent_reading_column
+            if time_spent_reading_column in custom_cols
+            else None
+        )
+        rest_of_book_estimate_column = (
+            rest_of_book_estimate_column
+            if rest_of_book_estimate_column in custom_cols
+            else None
+        )
 
         return (
             kobo_chapteridbookmarked_column,
             kobo_percentRead_column,
             rating_column,
             last_read_column,
+            time_spent_reading_column,
+            rest_of_book_estimate_column,
         )
 
     def get_rating_column(self, profile_name=None):
@@ -3215,6 +3260,8 @@ class KoboUtilitiesAction(InterfaceAction):
             kobo_percentRead_column,
             rating_column,
             last_read_column,
+            _time_spent_reading_column,
+            _rest_of_book_estimate_column,
         ) = self.get_column_names()
         return rating_column
 
@@ -3244,6 +3291,8 @@ class KoboUtilitiesAction(InterfaceAction):
             kobo_percentRead_column_name,
             rating_column_name,
             last_read_column_name,
+            time_spent_reading_column_name,
+            rest_of_book_estimate_column_name,
         ) = self.get_column_names()
 
         if kobo_chapteridbookmarked_column_name is not None:
@@ -3273,6 +3322,14 @@ class KoboUtilitiesAction(InterfaceAction):
         debug_print(
             "_update_database_columns - last_read_column_name=", last_read_column_name
         )
+        debug_print(
+            "_update_database_columns - time_spent_reading_column_name=",
+            time_spent_reading_column_name,
+        )
+        debug_print(
+            "_update_database_columns - rest_of_book_estimate_column_name=",
+            rest_of_book_estimate_column_name,
+        )
         # At this point we want to re-use code in edit_metadata to go ahead and
         # apply the changes. So we will create empty Metadata objects so only
         # the custom column field gets updated
@@ -3281,6 +3338,8 @@ class KoboUtilitiesAction(InterfaceAction):
         id_map_chapteridbookmarked = {}
         id_map_rating = {}
         id_map_last_read = {}
+        id_map_time_spent_reading = {}
+        id_map_rest_of_book_estimate = {}
         for book_id, reading_location in list(reading_locations.items()):
             mi = Metadata(_("Unknown"))
             book_mi = library_db.get_metadata(
@@ -3294,6 +3353,8 @@ class KoboUtilitiesAction(InterfaceAction):
             kobo_adobe_location = None
             kobo_percentRead = None
             last_read = None
+            time_spent_reading = None
+            rest_of_book_estimate = None
             if reading_location is not None:
                 debug_print(
                     "_update_database_columns - reading_location=", reading_location
@@ -3327,12 +3388,20 @@ class KoboUtilitiesAction(InterfaceAction):
                 if reading_location["DateLastRead"]:
                     last_read = convert_kobo_date(reading_location["DateLastRead"])
 
+                if reading_location["TimeSpentReading"]:
+                    time_spent_reading = reading_location["TimeSpentReading"]
+
+                if reading_location["RestOfBookEstimate"]:
+                    rest_of_book_estimate = reading_location["RestOfBookEstimate"]
+
             elif self.options[cfg.KEY_CLEAR_IF_UNREAD]:
                 kobo_chapteridbookmarked = None
                 kobo_adobe_location = None
                 kobo_percentRead = None
                 last_read = None
                 kobo_rating = 0
+                time_spent_reading = None
+                rest_of_book_estimate = None
             else:
                 continue
 
@@ -3452,6 +3521,52 @@ class KoboUtilitiesAction(InterfaceAction):
                 else:
                     book_updated = book_updated or False
 
+            if time_spent_reading_column_name is not None:
+                current_time_spent_reading = book.get_user_metadata(
+                    time_spent_reading_column_name, True
+                )["#value#"]
+                debug_print(
+                    "_update_database_columns - book.get_user_metadata(time_spent_reading_column_name, True)['#value#']=",
+                    current_time_spent_reading,
+                )
+                debug_print(
+                    "_update_database_columns - setting mi.time_spent_reading=",
+                    time_spent_reading,
+                )
+                debug_print(
+                    "_update_database_columns - current_time_spent_reading == time_spent_reading=",
+                    current_time_spent_reading == time_spent_reading,
+                )
+
+                if value_changed(current_time_spent_reading, time_spent_reading):
+                    id_map_time_spent_reading[book_id] = time_spent_reading
+                    book_updated = True
+                else:
+                    book_updated = book_updated or False
+
+            if rest_of_book_estimate_column_name is not None:
+                current_rest_of_book_estimate = book.get_user_metadata(
+                    rest_of_book_estimate_column_name, True
+                )["#value#"]
+                debug_print(
+                    "_update_database_columns - book.get_user_metadata(rest_of_book_estimate_column_name , True)['#value#']=",
+                    current_rest_of_book_estimate,
+                )
+                debug_print(
+                    "_update_database_columns - setting mi.rest_of_book_estimate=",
+                    rest_of_book_estimate,
+                )
+                debug_print(
+                    "_update_database_columns - current_rest_of_book_estimate == rest_of_book_estimate=",
+                    current_rest_of_book_estimate == rest_of_book_estimate,
+                )
+
+                if value_changed(current_rest_of_book_estimate, rest_of_book_estimate):
+                    id_map_rest_of_book_estimate[book_id] = rest_of_book_estimate
+                    book_updated = True
+                else:
+                    book_updated = book_updated or False
+
             id_map[book_id] = mi
 
         if kobo_chapteridbookmarked_column_name:
@@ -3485,6 +3600,25 @@ class KoboUtilitiesAction(InterfaceAction):
                 % (last_read_column_name, len(id_map_last_read))
             )
             library_db.new_api.set_field(last_read_column_name, id_map_last_read)
+        if time_spent_reading_column_name:
+            debug_print(
+                "_update_database_columns - Updating metadata - for column: %s number of changes=%d"
+                % (time_spent_reading_column_name, len(id_map_time_spent_reading))
+            )
+            library_db.new_api.set_field(
+                time_spent_reading_column_name, id_map_time_spent_reading
+            )
+        if rest_of_book_estimate_column_name:
+            debug_print(
+                "_update_database_columns - Updating metadata - for column: %s number of changes=%d"
+                % (
+                    rest_of_book_estimate_column_name,
+                    len(id_map_rest_of_book_estimate),
+                )
+            )
+            library_db.new_api.set_field(
+                rest_of_book_estimate_column_name, id_map_rest_of_book_estimate
+            )
 
         debug_print("_update_database_columns - Updating GUI - new DB engine")
         self.gui.iactions["Edit Metadata"].refresh_gui(list(reading_locations))
@@ -5390,6 +5524,8 @@ class KoboUtilitiesAction(InterfaceAction):
                 kobo_percentRead_column_name,
                 rating_column_name,
                 last_read_column_name,
+                _time_spent_reading_column,
+                _rest_of_book_estimate_column,
             ) = self.get_column_names(profileName)
             debug_print(
                 "_store_current_bookmark - kobo_chapteridbookmarked_column_name=",
@@ -5808,6 +5944,8 @@ class KoboUtilitiesAction(InterfaceAction):
             kobo_percentRead_column,
             rating_column,
             last_read_column,
+            _time_spent_reading_column,
+            _rest_of_book_estimate_column,
         ) = self.get_column_names(profileName)
         chapter_query = (
             "SELECT c1.ChapterIDBookmarked, "

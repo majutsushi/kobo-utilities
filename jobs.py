@@ -430,6 +430,8 @@ def _store_bookmarks(log, books, options):
             current_percentRead,
             current_rating,
             current_last_read,
+            current_time_spent_reading,
+            current_rest_of_book_estimate,
         ) in books:
             device_status = None
             debug_print("----------- _store_bookmarks - top of loop -----------")
@@ -549,12 +551,24 @@ def _store_bookmarks(log, books, options):
             else:
                 new_kobo_rating = 0
 
+            if device_status["TimeSpentReading"]:
+                new_time_spent_reading = device_status["TimeSpentReading"]
+            else:
+                new_time_spent_reading = None
+
+            if device_status["RestOfBookEstimate"]:
+                new_rest_of_book_estimate = device_status["RestOfBookEstimate"]
+            else:
+                new_rest_of_book_estimate = None
+
             reading_position_changed = False
             if device_status["ReadStatus"] == 0 and clear_if_unread:
                 reading_position_changed = True
                 new_chapterid = None
                 new_kobo_percentRead = 0
                 new_last_read = None
+                new_time_spent_reading = None
+                new_rest_of_book_estimate = None
             elif device_status["ReadStatus"] > 0:
                 try:
                     debug_print(
@@ -682,6 +696,30 @@ def _store_bookmarks(log, books, options):
                     reading_position_changed
                     or current_rating != new_kobo_rating
                     and new_kobo_rating > 0
+                )
+
+                debug_print(
+                    "_store_bookmarks - current_time_spent_reading=%s, new_time_spent_reading=%s"
+                    % (current_time_spent_reading, new_time_spent_reading)
+                )
+                debug_print(
+                    "_store_bookmarks - current_time_spent_reading != new_time_spent_reading=",
+                    current_time_spent_reading != new_time_spent_reading,
+                )
+                reading_position_changed = reading_position_changed or value_changed(
+                    current_time_spent_reading, new_time_spent_reading
+                )
+
+                debug_print(
+                    "_store_bookmarks - current_rest_of_book_estimate=%s, new_rest_of_book_estimate=%s"
+                    % (current_rest_of_book_estimate, new_rest_of_book_estimate)
+                )
+                debug_print(
+                    "_store_bookmarks - current_rest_of_book_estimate != new_rest_of_book_estimate=",
+                    current_rest_of_book_estimate != new_rest_of_book_estimate,
+                )
+                reading_position_changed = reading_position_changed or value_changed(
+                    current_rest_of_book_estimate, new_rest_of_book_estimate
                 )
 
             if reading_position_changed:

@@ -48,6 +48,15 @@ def main(args: argparse.Namespace) -> int:
         return 1 if run_tests(plugin_zip) else 0
     elif args.command == "update-calibre":
         update_calibre()
+    elif args.command == "install":
+        plugin_zip = build()
+        subprocess.run(["calibre-debug", "--shutdown-running-calibre"], check=True)
+        subprocess.run(["calibre-customize", "--add-plugin", plugin_zip], check=True)
+    elif args.command == "install-and-debug":
+        plugin_zip = build()
+        subprocess.run(["calibre-debug", "--shutdown-running-calibre"], check=True)
+        subprocess.run(["calibre-customize", "--add-plugin", plugin_zip], check=True)
+        subprocess.run(["calibre-debug", "--gui"], check=True)
     else:
         log.error("Unknown command: %s", args.command)
         return 1
@@ -174,7 +183,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build and test plugin")
     parser.add_argument(
         "command",
-        choices=["build", "test", "update-calibre"],
+        choices=["build", "test", "update-calibre", "install", "install-and-debug"],
         help="the command to run",
     )
     parser.add_argument(

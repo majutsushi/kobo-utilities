@@ -22,6 +22,10 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
+      - uses: astral-sh/ruff-action@v3
+        with:
+          args: "format --check"
+
       - name: Install dependencies
         run: |
           sudo apt-get update

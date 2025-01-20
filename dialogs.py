@@ -371,6 +371,8 @@ class QueueProgressDialog(QProgressDialog):
             kobo_percentRead_column,
             rating_column,
             last_read_column,
+            time_spent_reading_column,
+            rest_of_book_estimate_column,
         ) = self.plugin_action.get_column_names()
         self.options[cfg.KEY_CURRENT_LOCATION_CUSTOM_COLUMN] = (
             kobo_chapteridbookmarked_column
@@ -378,6 +380,10 @@ class QueueProgressDialog(QProgressDialog):
         self.options[cfg.KEY_PERCENT_READ_CUSTOM_COLUMN] = kobo_percentRead_column
         self.options[cfg.KEY_RATING_CUSTOM_COLUMN] = rating_column
         self.options[cfg.KEY_LAST_READ_CUSTOM_COLUMN] = last_read_column
+        self.options[cfg.KEY_TIME_SPENT_READING_COLUMN] = time_spent_reading_column
+        self.options[cfg.KEY_REST_OF_BOOK_ESTIMATE_COLUMN] = (
+            rest_of_book_estimate_column
+        )
 
         debug_print(
             "QueueProgressDialog::do_books - kobo_percentRead_column='%s'"
@@ -429,6 +435,8 @@ class QueueProgressDialog(QProgressDialog):
                 current_percentRead = None
                 current_rating = None
                 current_last_read = None
+                current_time_spent_reading = None
+                current_rest_of_book_estimate = None
                 if kobo_chapteridbookmarked_column:
                     current_chapterid = book.get_user_metadata(
                         kobo_chapteridbookmarked_column, True
@@ -448,6 +456,14 @@ class QueueProgressDialog(QProgressDialog):
                     current_last_read = book.get_user_metadata(last_read_column, True)[
                         "#value#"
                     ]
+                if time_spent_reading_column:
+                    current_time_spent_reading = book.get_user_metadata(
+                        time_spent_reading_column, True
+                    )["#value#"]
+                if rest_of_book_estimate_column:
+                    current_rest_of_book_estimate = book.get_user_metadata(
+                        rest_of_book_estimate_column, True
+                    )["#value#"]
 
                 self.books_to_scan.append(
                     (
@@ -459,6 +475,8 @@ class QueueProgressDialog(QProgressDialog):
                         current_percentRead,
                         current_rating,
                         current_last_read,
+                        current_time_spent_reading,
+                        current_rest_of_book_estimate,
                     )
                 )
             self.setValue(self.i)
@@ -3882,6 +3900,8 @@ class ShowReadingPositionChangesTableWidget(QTableWidget):
             self.kobo_percentRead_column,
             self.rating_column,
             self.last_read_column,
+            self.time_spent_reading_column,
+            self.rest_of_book_estimate_column,
         ) = self.parent().plugin_action.get_column_names()
 
     def populate_table(self, reading_positions):

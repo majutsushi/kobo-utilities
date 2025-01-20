@@ -2875,23 +2875,12 @@ class KoboUtilitiesAction(InterfaceAction):
 
         update_count = len(modified_epubs_map) if modified_epubs_map else 0
         if update_count == 0:
-            msg = _("No reading positions were found that need to be updated")
-            if options[cfg.KEY_PROMPT_TO_STORE]:
-                return info_dialog(
-                    self.gui,
-                    _("Kobo Utilities"),
-                    msg,
-                    show_copy_button=True,
-                    show=True,
-                    det_msg=job.details,
-                )
-            else:
-                self.gui.status_bar.show_message(
-                    _("Kobo Utilities")
-                    + " - "
-                    + _("Storing reading positions completed - No changes found"),
-                    3000,
-                )
+            self.gui.status_bar.show_message(
+                _("Kobo Utilities")
+                + " - "
+                + _("Storing reading positions completed - No changes found"),
+                3000,
+            )
         else:
             msg = _(
                 "Kobo Utilities stored reading locations for <b>{0} book(s)</b>"

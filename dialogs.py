@@ -3858,7 +3858,7 @@ class ShowReadingPositionChangesDialog(SizePersistedDialog):
 
         for i in range(len(self.reading_locations)):
             self.reading_locations_table.selectRow(i)
-            enabled = bool(self.reading_locations_table.item(i, 0).checkState())
+            enabled = self.reading_locations_table.item(i, 0).checkState() == Qt.Checked
             debug_print(
                 "ShowReadingPositionChangesDialog:_ok_clicked - row=%d, enabled=%s"
                 % (i, enabled)

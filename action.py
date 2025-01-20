@@ -3836,7 +3836,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 "FROM content "
                 "WHERE ContentType = ? "
                 "AND ContentId = ?"
-            )
+            )  # fmt: skip
             cursor = connection.cursor()
 
             for book in books:
@@ -3928,7 +3928,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 "FROM content "
                 "WHERE ContentType = ? "
                 "AND ContentId = ?"
-            )
+            )  # fmt: skip
             cursor = connection.cursor()
 
             for book in books:
@@ -4001,8 +4001,10 @@ class KoboUtilitiesAction(InterfaceAction):
     def _get_imageid_set(self):
         with self.device_database_connection(use_row_factory=True) as connection:
             imageId_query = (
-                "SELECT DISTINCT ImageId " "FROM content " "WHERE BookID IS NULL"
-            )
+                "SELECT DISTINCT ImageId "
+                "FROM content "
+                "WHERE BookID IS NULL"
+            )  # fmt: skip
             cursor = connection.cursor()
 
             cursor.execute(imageId_query)
@@ -4017,8 +4019,11 @@ class KoboUtilitiesAction(InterfaceAction):
             not_on_device_books = []
 
             imageId_query = (
-                "SELECT 1 " "FROM content " "WHERE BookID is NULL " "AND ContentId = ?"
-            )
+                "SELECT 1 "
+                "FROM content "
+                "WHERE BookID is NULL "
+                "AND ContentId = ?"
+            )  # fmt: skip
             cursor = connection.cursor()
 
             for book in books:
@@ -4135,7 +4140,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 "abcdefghijklmnopqrstuvwxyz"
                 "0123456789"
                 "_.-/~"
-            )
+            )  # fmt: skip
             URL_UNSAFE = [ASCII_CHARS - URL_SAFE, UNIBYTE_CHARS - URL_SAFE]
             result = []
             unsafe = 1 if isinstance(shelf_name, str) else 0
@@ -4760,7 +4765,7 @@ class KoboUtilitiesAction(InterfaceAction):
             "SET Rating = ?, "
             "DateModified = ? "
             "WHERE ContentID  = ?"
-        )
+        )  # fmt: skip
         rating_insert = (
             "INSERT INTO ratings ("
             "Rating, "
@@ -4768,7 +4773,7 @@ class KoboUtilitiesAction(InterfaceAction):
             "ContentID "
             ")"
             "VALUES (?, ?, ?)"
-        )
+        )  # fmt: skip
         rating_delete = "DELETE FROM ratings WHERE ContentID = ?"
 
         series_id_query = (
@@ -5992,7 +5997,7 @@ class KoboUtilitiesAction(InterfaceAction):
             "SET Rating = ?, "
             "DateModified = ? "
             "WHERE ContentID  = ?"
-        )
+        )  # fmt: skip
         rating_insert = (
             "INSERT INTO ratings ("
             "Rating, "
@@ -6000,7 +6005,7 @@ class KoboUtilitiesAction(InterfaceAction):
             "ContentID "
             ")"
             "VALUES (?, ?, ?)"
-        )
+        )  # fmt: skip
         rating_delete = "DELETE FROM ratings WHERE ContentID = ?"
 
         with self.device_database_connection(use_row_factory=True) as connection:
@@ -6514,13 +6519,13 @@ class KoboUtilitiesAction(InterfaceAction):
                 "FROM content_settings "
                 "WHERE ContentType = ? "
                 "AND ContentId = ?"
-            )
+            )  # fmt: skip
             delete_query = (
                 "DELETE "
                 "FROM content_settings "
                 "WHERE ContentType = ? "
                 "AND ContentId = ?"
-            )
+            )  # fmt: skip
 
             if not delete:
                 font_face = self.options[cfg.KEY_READING_FONT_FAMILY]

@@ -5512,7 +5512,6 @@ class KoboUtilitiesAction(InterfaceAction):
             self.show_progressbar(len(books))
 
             library_db = self.gui.current_db
-            custom_cols = library_db.field_metadata.custom_field_metadata()
             (
                 kobo_chapteridbookmarked_column_name,
                 kobo_percentRead_column_name,
@@ -5537,37 +5536,8 @@ class KoboUtilitiesAction(InterfaceAction):
                 last_read_column_name,
             )
 
-            if kobo_chapteridbookmarked_column_name is not None:
-                debug_print(
-                    "_store_current_bookmark - kobo_chapteridbookmarked_column_name=",
-                    kobo_chapteridbookmarked_column_name,
-                )
-                kobo_chapteridbookmarked_col = custom_cols[
-                    kobo_chapteridbookmarked_column_name
-                ]
-                kobo_chapteridbookmarked_col_label = (
-                    library_db.field_metadata.key_to_label(
-                        kobo_chapteridbookmarked_column_name
-                    )
-                )
-                debug_print(
-                    "_store_current_bookmark - kobo_chapteridbookmarked_col_label=",
-                    kobo_chapteridbookmarked_col_label,
-                )
-
-            if kobo_percentRead_column_name is not None:
-                kobo_percentRead_col = custom_cols[kobo_percentRead_column_name]
-                kobo_percentRead_col_label = library_db.field_metadata.key_to_label(
-                    kobo_percentRead_column_name
-                )
-                debug_print(
-                    "_store_current_bookmark - kobo_percentRead_col_label=",
-                    kobo_percentRead_col_label,
-                )
-
             if rating_column_name is not None:
                 if not rating_column_name == "rating":
-                    rating_col = custom_cols[rating_column_name]
                     rating_col_label = (
                         library_db.field_metadata.key_to_label(rating_column_name)
                         if rating_column_name
@@ -5577,16 +5547,6 @@ class KoboUtilitiesAction(InterfaceAction):
                     rating_col_label = None
                 debug_print(
                     "_store_current_bookmark - rating_col_label=", rating_col_label
-                )
-
-            if last_read_column_name is not None:
-                last_read_col = custom_cols[last_read_column_name]
-                last_read_col_label = library_db.field_metadata.key_to_label(
-                    last_read_column_name
-                )
-                debug_print(
-                    "_store_current_bookmark - last_read_col_label=",
-                    last_read_col_label,
                 )
 
             id_map = {}

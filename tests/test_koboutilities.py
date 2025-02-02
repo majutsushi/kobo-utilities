@@ -12,9 +12,8 @@ from enum import Enum
 from pathlib import Path
 from pprint import pprint
 from queue import Queue
-from typing import TYPE_CHECKING, ClassVar, List, Optional
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional
 from unittest import mock
-from unittest.mock import MagicMock
 
 import apsw  # type: ignore
 from calibre.devices.kobo.books import Book
@@ -26,10 +25,10 @@ test_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path = [test_dir, *sys.path]
 
 if TYPE_CHECKING:
-    from .. import config, jobs
+    from .. import action, config, jobs
     from ..action import KoboUtilitiesAction
 else:
-    from calibre_plugins.koboutilities import config, jobs
+    from calibre_plugins.koboutilities import action, config, jobs
     from calibre_plugins.koboutilities.action import KoboUtilitiesAction
 
 TIMESTAMP_STRING = KOBOTOUCH.TIMESTAMP_STRING
@@ -83,6 +82,83 @@ class TestBook:
         return book
 
 
+class DeviceDb:
+    def __init__(self):
+        schema = Path(test_dir, "kobo-schema.sql").read_text()
+        self.db_conn = apsw.Connection(":memory:")
+        self.db_conn.setrowtrace(row_factory)
+        self.cursor = self.db_conn.cursor()
+        self.cursor.execute(schema)
+
+        self.sync_time = dt(
+            2002, 9, 9, 12, 0, 0, tzinfo=timezone(timedelta(hours=0))
+        ).strftime(TIMESTAMP_STRING)
+
+    def insert_books(self, *books: TestBook) -> None:
+        for book in books:
+            self.cursor.execute(
+                """
+                    INSERT INTO content (
+                        ContentID,
+                        ContentType,
+                        MimeType,
+                        ___SyncTime,
+                        ___UserID,
+                        Title,
+                        ChapterIDBookmarked,
+                        ReadStatus,
+                        ___PercentRead,
+                        DateLastRead,
+                        TimeSpentReading,
+                        RestOfBookEstimate
+                    ) VALUES (
+                        :contentID,
+                        :content_type,
+                        :mime_type,
+                        :sync_time,
+                        :user_id,
+                        :title,
+                        :chapter_id,
+                        :read_status,
+                        :percent_read,
+                        :last_read,
+                        :time_spent_reading,
+                        :rest_of_book_estimate
+                    )
+                """,
+                {
+                    **dataclasses.asdict(book),
+                    "content_type": "6",
+                    "sync_time": self.sync_time,
+                    "user_id": "",
+                    "read_status": book.read_status.value,
+                    "last_read": book.last_read.strftime(TIMESTAMP_STRING)
+                    if book.last_read is not None
+                    else None,
+                },
+            )
+            self.cursor.execute(
+                "INSERT INTO ratings (ContentID, Rating, DateModified) VALUES (?, ?, ?)",
+                (
+                    book.contentID,
+                    book.rating,
+                    dt(
+                        2002, 1, 1, 12, 0, 0, tzinfo=timezone(timedelta(hours=0))
+                    ).strftime(TIMESTAMP_STRING),
+                ),
+            )
+
+    def query_books(self) -> Dict[str, Dict[str, Any]]:
+        test_query = """
+            SELECT content.*, ratings.Rating FROM content
+            LEFT OUTER JOIN ratings ON content.ContentID = ratings.ContentID
+        """
+        return {
+            book["ContentID"]: book
+            for book in self.cursor.execute(test_query).fetchall()
+        }
+
+
 @mock.patch.object(
     KoboUtilitiesAction,
     "device_fwversion",
@@ -102,79 +178,90 @@ class TestKoboUtilities(unittest.TestCase):
         self.plugin.epub_location_like_kepub = True
         self.plugin.log = default_log
         self.queue = Queue()
+        self.maxDiff = None
 
-    @mock.patch.object(jobs, "device_database_connection")
-    def test_store_bookmarks(self, conn: MagicMock, _fwversion, _timestamp):
-        #     (
-        #         book.calibre_id,
-        #         book.contentIDs,
-        #         title,
-        #         authors,
-        #         current_chapterid,
-        #         current_percentRead,
-        #         current_rating,
-        #         current_last_read,
-        #         current_time_spent_reading,
-        #         current_rest_of_book_estimate,
-        #     )
+    def test_store_bookmarks(self, _fwversion, _timestamp):
+        book1 = TestBook(
+            title="Title 1",
+            authors=["Author 1"],
+            rating=0,
+            chapter_id="chapter1",
+            read_status=ReadStatus.READING,
+            percent_read=50,
+            last_read=dt(2000, 1, 2, 12, 34, 56, tzinfo=timezone(timedelta(hours=0))),
+            time_spent_reading=100,
+            rest_of_book_estimate=200,
+            is_kepub=True,
+        )
+        book2 = TestBook(
+            title="Title 2",
+            authors=["Author 2"],
+            rating=0,
+            chapter_id="chapter2",
+            read_status=ReadStatus.READING,
+            percent_read=25,
+            last_read=dt(2000, 1, 2, 12, 34, 56, tzinfo=timezone(timedelta(hours=0))),
+            time_spent_reading=300,
+            rest_of_book_estimate=400,
+            is_kepub=True,
+        )
         books_in_calibre = [
             (
-                "1",
-                ["a.kepub.epub"],
-                "Title 1",
-                ["Author 1"],
-                1,
-                50,
-                0,
-                dt(2000, 1, 2, 12, 34, 56, tzinfo=timezone(timedelta(hours=0))),
-                100,
-                200,
+                book1.calibre_id,
+                [book1.contentID],
+                book1.title,
+                book1.authors,
+                book1.chapter_id,
+                book1.percent_read,
+                book1.rating,
+                book1.last_read,
+                book1.time_spent_reading,
+                book1.rest_of_book_estimate,
             ),
             (
-                "2",
-                ["b.kepub.epub"],
-                "Title 2",
-                ["Author 2"],
-                2,
-                25,
-                1,
-                dt(2000, 1, 2, 12, 34, 56, tzinfo=timezone(timedelta(hours=0))),
-                300,
-                400,
+                book2.calibre_id,
+                [book2.contentID],
+                book2.title,
+                book2.authors,
+                book2.chapter_id,
+                book2.percent_read,
+                book2.rating,
+                book2.last_read,
+                book2.time_spent_reading,
+                book2.rest_of_book_estimate,
             ),
         ]
-        cursor = conn.return_value.__enter__.return_value.cursor.return_value
-        books_on_kobo = [
-            {
-                "ChapterIDBookmarked": 1,
-                "adobe_location": None,
-                "ReadStatus": 1,
-                "___PercentRead": 90,
-                "Attribution": None,
-                "DateLastRead": "2000-01-02T12:34:56Z",
-                "Title": "Title 1",
-                "MimeType": "foo/bar",
-                "Rating": 1,
-                "contentId": "a.kepub.epub",
-                "TimeSpentReading": 100,
-                "RestOfBookEstimate": 200,
-            },
-            {
-                "ChapterIDBookmarked": 2,
-                "adobe_location": None,
-                "ReadStatus": 1,
-                "___PercentRead": 75,
-                "Attribution": None,
-                "DateLastRead": "2001-01-02T12:34:56Z",
-                "Title": "Title 2",
-                "MimeType": "foo/bar",
-                "Rating": 2,
-                "contentId": "b.kepub.epub",
-                "TimeSpentReading": 450,
-                "RestOfBookEstimate": 250,
-            },
-        ]
-        cursor.__next__ = MagicMock(side_effect=books_on_kobo)
+
+        device_db = DeviceDb()
+        device_db.insert_books(book1, book2)
+
+        # Update reading progress on the device
+        # Don't update DateLastRead for first book to test STORE_IF_MORE_RECENT option
+        device_db.cursor.execute(
+            """
+                UPDATE content
+                SET ___PercentRead = 90
+                WHERE ContentID = ?
+            """,
+            (book1.contentID,),
+        )
+        device_db.cursor.execute(
+            """
+                UPDATE content
+                SET ___PercentRead = 75,
+                    DateLastRead = ?,
+                    TimeSpentReading = 450,
+                    RestOfBookEstimate = 250
+                WHERE ContentID = ?
+            """,
+            (
+                dt(
+                    2001, 1, 2, 12, 34, 56, tzinfo=timezone(timedelta(hours=0))
+                ).strftime(TIMESTAMP_STRING),
+                book2.contentID,
+            ),
+        )
+
         cfg = {
             config.KEY_CLEAR_IF_UNREAD: False,
             config.KEY_STORE_IF_MORE_RECENT: True,
@@ -186,18 +273,26 @@ class TestKoboUtilities(unittest.TestCase):
             config.KEY_TIME_SPENT_READING_COLUMN: "#time_spent_reading",
             config.KEY_REST_OF_BOOK_ESTIMATE_COLUMN: "#rest_of_book_estimate",
             "epub_location_like_kepub": True,
-            "fetch_queries": {"kepub": "kepub_query", "epub": "epub_query"},
-            "device_database_path": "db_path",
+            "fetch_queries": {
+                "kepub": action.KEPUB_FETCH_QUERY,
+                "epub": action.EPUB_FETCH_QUERY,
+            },
+            "device_database_path": "unused",
         }
 
-        stored_locations = jobs._store_bookmarks(None, books_in_calibre, cfg)
+        # Run tested function
+        with mock.patch.object(
+            jobs,
+            "device_database_connection",
+            return_value=device_db.db_conn,
+        ):
+            stored_locations = jobs._store_bookmarks(None, books_in_calibre, cfg)
+
         pprint(stored_locations)
-        conn.assert_called_with("db_path", use_row_factory=True)
-        cursor.execute.assert_called_with("kepub_query", ("b.kepub.epub",))
-        self.assertNotIn("1", stored_locations)
-        self.assertEqual(stored_locations["2"]["___PercentRead"], 75)
-        self.assertEqual(stored_locations["2"]["TimeSpentReading"], 450)
-        self.assertEqual(stored_locations["2"]["RestOfBookEstimate"], 250)
+        self.assertNotIn(book1.calibre_id, stored_locations)
+        self.assertEqual(stored_locations[book2.calibre_id]["___PercentRead"], 75)
+        self.assertEqual(stored_locations[book2.calibre_id]["TimeSpentReading"], 450)
+        self.assertEqual(stored_locations[book2.calibre_id]["RestOfBookEstimate"], 250)
 
     def test_restore_current_bookmark(self, _fwversion, _timestamp):
         book1 = TestBook(
@@ -243,74 +338,9 @@ class TestKoboUtilities(unittest.TestCase):
             "#rest_of_book_estimate",
         )
 
-        sync_time = dt(
-            2002, 9, 9, 12, 0, 0, tzinfo=timezone(timedelta(hours=0))
-        ).strftime(TIMESTAMP_STRING)
-        schema = Path(test_dir, "kobo-schema.sql").read_text()
-        db_conn = apsw.Connection(":memory:")
-        db_conn.setrowtrace(row_factory)
-        cursor = db_conn.cursor()
-        cursor.execute(schema)
-        for book in books:
-            cursor.execute(
-                """
-                    INSERT INTO content (
-                        ContentID,
-                        ContentType,
-                        MimeType,
-                        ___SyncTime,
-                        ___UserID,
-                        Title,
-                        ChapterIDBookmarked,
-                        ReadStatus,
-                        ___PercentRead,
-                        DateLastRead,
-                        TimeSpentReading,
-                        RestOfBookEstimate
-                    ) VALUES (
-                        :contentID,
-                        :content_type,
-                        :mime_type,
-                        :sync_time,
-                        :user_id,
-                        :title,
-                        :chapter_id,
-                        :read_status,
-                        :percent_read,
-                        :last_read,
-                        :time_spent_reading,
-                        :rest_of_book_estimate
-                    )
-                """,
-                {
-                    **dataclasses.asdict(book),
-                    "content_type": "6",
-                    "sync_time": sync_time,
-                    "user_id": "",
-                    "read_status": book.read_status.value,
-                    "last_read": book.last_read.strftime(TIMESTAMP_STRING)
-                    if book.last_read is not None
-                    else None,
-                },
-            )
-            cursor.execute(
-                "INSERT INTO ratings (ContentID, Rating, DateModified) VALUES (?, ?, ?)",
-                (
-                    book.contentID,
-                    book.rating,
-                    dt(
-                        2002, 1, 1, 12, 0, 0, tzinfo=timezone(timedelta(hours=0))
-                    ).strftime(TIMESTAMP_STRING),
-                ),
-            )
-
-        test_query = """
-            SELECT content.*, ratings.Rating FROM content
-            LEFT OUTER JOIN ratings ON content.ContentID = ratings.ContentID
-        """
-        db_books_before = {
-            book["ContentID"]: book for book in cursor.execute(test_query).fetchall()
-        }
+        device_db = DeviceDb()
+        device_db.insert_books(*books)
+        db_books_before = device_db.query_books()
 
         # Simulate changing the books in Calibre
         book1.rating = 4
@@ -352,15 +382,12 @@ class TestKoboUtilities(unittest.TestCase):
             )
             stack.enter_context(
                 mock.patch.object(
-                    plugin, "device_database_connection", return_value=db_conn
+                    plugin, "device_database_connection", return_value=device_db.db_conn
                 )
             )
             plugin._restore_current_bookmark([book.to_calibre_book() for book in books])
 
-        db_books_after = {
-            book["ContentID"]: book for book in cursor.execute(test_query).fetchall()
-        }
-        self.maxDiff = None
+        db_books_after = device_db.query_books()
         self.assertDictEqual(db_books_before, db_books_after)
 
 

@@ -9,7 +9,7 @@ import traceback
 from functools import partial
 
 from calibre.constants import DEBUG as _DEBUG
-from calibre.gui2 import choose_dir, error_dialog, question_dialog
+from calibre.gui2 import choose_dir, error_dialog, open_url, question_dialog
 from calibre.gui2.dialogs.confirm_delete import confirm
 from calibre.utils.config import JSONConfig
 from qt.core import (
@@ -817,10 +817,12 @@ class ProfilesTab(QWidget):
                 )
             )
         )
-        fwsite = QLabel("https://pgaskin.net/KoboStuff/kobofirmware.html")
+        fwurl = "https://pgaskin.net/KoboStuff/kobofirmware.html"
+        fwsite = QLabel(f'<a href="{fwurl}">{fwurl}</a>')
         fwsite.setTextInteractionFlags(
-            Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard
+            Qt.LinksAccessibleByMouse | Qt.LinksAccessibleByKeyboard
         )
+        fwsite.linkActivated.connect(open_url)
         layout.addWidget(fwsite)
 
         layout.addStretch(1)

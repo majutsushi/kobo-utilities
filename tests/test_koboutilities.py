@@ -49,8 +49,8 @@ class TestBook:
     read_status: ReadStatus
     percent_read: int
     last_read: Optional[dt]
-    time_spent_reading: int
-    rest_of_book_estimate: int
+    time_spent_reading: Optional[int]
+    rest_of_book_estimate: Optional[int]
     is_kepub: bool
     contentID: str = dataclasses.field(init=False)
     mime_type: str = dataclasses.field(init=False)
@@ -76,6 +76,14 @@ class TestBook:
                 "#chapter_id": {"datatype": "text", "#value#": self.chapter_id},
                 "#percent_read": {"datatype": "int", "#value#": self.percent_read},
                 "#last_read": {"datatype": "datetime", "#value#": self.last_read},
+                "#time_spent_reading": {
+                    "datatype": "int",
+                    "#value#": self.time_spent_reading,
+                },
+                "#rest_of_book_estimate": {
+                    "datatype": "int",
+                    "#value#": self.rest_of_book_estimate,
+                },
             }
         )
 
@@ -319,7 +327,19 @@ class TestKoboUtilities(unittest.TestCase):
             rest_of_book_estimate=200,
             is_kepub=True,
         )
-        books = [book1, book2]
+        book3 = TestBook(
+            title="Title C",
+            authors=["Author C"],
+            rating=0,
+            chapter_id="chapter1",
+            read_status=ReadStatus.UNREAD,
+            percent_read=0,
+            last_read=None,
+            time_spent_reading=100,
+            rest_of_book_estimate=200,
+            is_kepub=True,
+        )
+        books = [book1, book2, book3]
 
         plugin = self.plugin
         plugin.options = {
@@ -340,7 +360,7 @@ class TestKoboUtilities(unittest.TestCase):
 
         device_db = DeviceDb()
         device_db.insert_books(*books)
-        db_books_before = device_db.query_books()
+        device_books_before = device_db.query_books()
 
         # Simulate changing the books in Calibre
         book1.rating = 4
@@ -357,24 +377,35 @@ class TestKoboUtilities(unittest.TestCase):
         book2.last_read = dt(2001, 2, 27, 12, 0, 0, tzinfo=timezone(timedelta(hours=0)))
         book2.time_spent_reading = 555
         book2.rest_of_book_estimate = 0
+        book3.time_spent_reading = 0
+        book3.rest_of_book_estimate = None
 
         # Update expected DB values
-        db_book1 = db_books_before[book1.contentID]
+        db_book1 = device_books_before[book1.contentID]
         db_book1["ChapterIDBookmarked"] = book1.chapter_id
         db_book1["ReadStatus"] = book1.read_status.value
         db_book1["___PercentRead"] = book1.percent_read
         db_book1["DateLastRead"] = book1.last_read.strftime(TIMESTAMP_STRING)
+        db_book1["TimeSpentReading"] = book1.time_spent_reading
+        db_book1["RestOfBookEstimate"] = book1.rest_of_book_estimate
         db_book1["___SyncTime"] = book1.last_read.strftime(TIMESTAMP_STRING)
         db_book1["FirstTimeReading"] = "false"
         db_book1["Rating"] = int(book1.rating / 2)
-        db_book2 = db_books_before[book2.contentID]
+        db_book2 = device_books_before[book2.contentID]
         db_book2["ChapterIDBookmarked"] = book2.chapter_id
         db_book2["ReadStatus"] = book2.read_status.value
         db_book2["___PercentRead"] = book2.percent_read
         db_book2["DateLastRead"] = book2.last_read.strftime(TIMESTAMP_STRING)
+        db_book2["TimeSpentReading"] = book2.time_spent_reading
+        db_book2["RestOfBookEstimate"] = book2.rest_of_book_estimate
         db_book2["___SyncTime"] = book2.last_read.strftime(TIMESTAMP_STRING)
         db_book2["Rating"] = int(book2.rating / 2)
         db_book2["FirstTimeReading"] = "false"
+        db_book3 = device_books_before[book3.contentID]
+        db_book3["DateLastRead"] = None
+        db_book3["TimeSpentReading"] = 0
+        db_book3["RestOfBookEstimate"] = 0
+        db_book3["Rating"] = None
 
         with ExitStack() as stack:
             stack.enter_context(
@@ -388,7 +419,7 @@ class TestKoboUtilities(unittest.TestCase):
             plugin._restore_current_bookmark([book.to_calibre_book() for book in books])
 
         db_books_after = device_db.query_books()
-        self.assertDictEqual(db_books_before, db_books_after)
+        self.assertDictEqual(device_books_before, db_books_after)
 
 
 def row_factory(cursor, row):

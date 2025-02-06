@@ -5993,8 +5993,8 @@ class KoboUtilitiesAction(InterfaceAction):
             kobo_percentRead_column,
             rating_column,
             last_read_column,
-            _time_spent_reading_column,
-            _rest_of_book_estimate_column,
+            time_spent_reading_column,
+            rest_of_book_estimate_column,
         ) = self.get_column_names(profileName)
         chapter_query = (
             "SELECT c1.ChapterIDBookmarked, "
@@ -6005,6 +6005,8 @@ class KoboUtilitiesAction(InterfaceAction):
             "c1.___SyncTime, "
             "c1.Title, "
             "c1.MimeType, "
+            "c1.TimeSpentReading, "
+            "c1.RestOfBookEstimate, "
         )
         if self.supports_ratings:
             chapter_query += " r.Rating, r.DateModified "
@@ -6027,6 +6029,8 @@ class KoboUtilitiesAction(InterfaceAction):
             "  , ReadStatus = ? "
             "  , ___PercentRead = ? "
             "  , DateLastRead = ? "
+            "  , TimeSpentReading = ? "
+            "  , RestOfBookEstimate = ? "
             "WHERE BookID IS NULL "
             "AND ContentID = ?"
         )
@@ -6079,6 +6083,8 @@ class KoboUtilitiesAction(InterfaceAction):
                         kobo_chapteridbookmarked = None
                         kobo_adobe_location = None
                         kobo_percentRead = None
+                        kobo_time_spent_reading = None
+                        kobo_rest_of_book_estimate = None
 
                         if kobo_chapteridbookmarked_column:
                             reading_location_string = book.get_user_metadata(
@@ -6270,6 +6276,30 @@ class KoboUtilitiesAction(InterfaceAction):
                             else:
                                 rating_change_query = rating_update
 
+                        if time_spent_reading_column:
+                            kobo_time_spent_reading = book.get_user_metadata(
+                                time_spent_reading_column, True
+                            )["#value#"]
+                            kobo_time_spent_reading = (
+                                kobo_time_spent_reading
+                                if kobo_time_spent_reading is not None
+                                else 0
+                            )
+                            chapter_values.append(kobo_time_spent_reading)
+                            chapter_set_clause += ", TimeSpentReading = ? "
+
+                        if rest_of_book_estimate_column:
+                            kobo_rest_of_book_estimate = book.get_user_metadata(
+                                rest_of_book_estimate_column, True
+                            )["#value#"]
+                            kobo_rest_of_book_estimate = (
+                                kobo_rest_of_book_estimate
+                                if kobo_rest_of_book_estimate is not None
+                                else 0
+                            )
+                            chapter_values.append(kobo_rest_of_book_estimate)
+                            chapter_set_clause += ", RestOfBookEstimate = ? "
+
                         debug_print(
                             "_restore_current_bookmark - found contentId='%s'"
                             % (contentID)
@@ -6288,6 +6318,14 @@ class KoboUtilitiesAction(InterfaceAction):
                         )
                         debug_print("_restore_current_bookmark - rating=", rating)
                         debug_print("_restore_current_bookmark - last_read=", last_read)
+                        debug_print(
+                            "_restore_current_bookmark - kobo_time_spent_reading=",
+                            kobo_time_spent_reading,
+                        )
+                        debug_print(
+                            "_restore_current_bookmark - kobo_rest_of_book_estimate=",
+                            kobo_rest_of_book_estimate,
+                        )
 
                         if len(chapter_set_clause) > 0:
                             chapter_update += chapter_set_clause[1:]

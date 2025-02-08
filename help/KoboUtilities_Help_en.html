@@ -8,6 +8,14 @@
                 margin: 0 auto;
                 max-width: 36em;
             }
+            code {
+                background-color: ghostwhite;
+            }
+            pre {
+                border: 1px solid darkgrey;
+                background-color: ghostwhite;
+                padding: 1em;
+            }
         </style>
     </head>
 
@@ -262,6 +270,18 @@
                 Last Read Timestamp: This is the date the book was last read.
                 This must be a "Date" type column.
             </li>
+
+            <li>
+                Time Spent Reading: This is the amount of time that was spent
+                reading the book so far, in seconds. This must be an "Integers"
+                column.
+            </li>
+
+            <li>
+                Rest of Book Estimate: The amount of time that the device
+                estimates that reading the rest of the book will take, in
+                seconds. This must be an "Integers" column.
+            </li>
         </ul>
 
         <p>To add a custom column to calibre:</p>
@@ -296,6 +316,50 @@
                 When you have finished adding columns, press the "Apply" button
                 to save the changes. You will be prompted to restart calibre.
                 You must do this before the columns can be used.
+            </li>
+        </ol>
+
+        <p>
+            If you want to show the "Time Spent Reading" and "Rest of Book
+            Estimate" values in anything other than seconds, you will have to
+            create two new columns that are based on the "seconds" columns and
+            format the value differently.
+        </p>
+
+        <p>Here is how you can do this:</p>
+        <ol>
+            <li>
+                Follow the first four steps above to open the dialog for
+                creating a new column.
+            </li>
+            <li>For column type, choose "Column built from other columns".</li>
+            <li>
+                Right-click in the "Template" entry field and click "Open
+                template editor".
+            </li>
+            <li>
+                Enter the code to format the seconds to something else.<br />
+                Here is an example:
+                <pre>
+program:
+
+total = $#kobo_time_spent_reading;
+hours = floor(total/3600);
+minutes = round((total-hours*3600)/60);
+
+def format(v, str):
+    if v == 0 then return '' fi;
+    return v & ' ' & str & ' '
+fed;
+format(hours, 'hr') & format(minutes, 'min')</pre
+                >
+                This will format the time as something like "3 hr 27 min".<br />
+                Make sure to replace <code>#kobo_time_spent_reading</code> with
+                the actual lookup name of the seconds column you want to
+                reference.
+            </li>
+            <li>
+                Press "OK"/"Apply" to close all the dialogs and restart Calibre.
             </li>
         </ol>
 
@@ -848,12 +912,11 @@
 
         <ul>
             <li>The current chapter and the position in the chapter.</li>
-
             <li>The percentage read of the book</li>
-
             <li>The reading status: Unread, Read and Finished</li>
-
             <li>When the book was last read.</li>
+            <li>How long the book has been read for.</li>
+            <li>The estimated time left in the book.</li>
         </ul>
 
         <p>

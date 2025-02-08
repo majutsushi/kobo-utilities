@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 2.17.2 - 18 Oct 2024 (changes by @ownedbycats, release by @chaley)
+
+- Minor tooltip correction
+
 ## Version 2.17.1 - 12 July 2024 (changes and release by @chaley)
 
 - Remove the non-working firmware update check

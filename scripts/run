@@ -68,7 +68,7 @@ def build() -> Path:
     try:
         version = subprocess.check_output(
             ["git", "describe", "--tags", "--dirty"], text=True
-        )
+        ).strip()
     except subprocess.CalledProcessError:
         version = "unknown"
     zip_name = f"{PLUGIN_NAME}-{version}.zip"

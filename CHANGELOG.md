@@ -1,5 +1,13 @@
 # Changelog
 
+## Version 2.18.0 - 8 Feb 2025
+
+- Add two new syncable columns: "Time Spent Reading" and "Rest of Book Estimate"
+- Fix bug that prevented books from being deselected in reading position dialog
+- A few minor fixes
+- Various internal cleanups that raise the minimum supported Calibre version to 5.13.0
+- Update maintainer information
+
 ## Version 2.17.2 - 18 Oct 2024 (changes by @ownedbycats, release by @chaley)
 
 - Minor tooltip correction

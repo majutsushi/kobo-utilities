@@ -667,7 +667,7 @@ class ProfilesTab(QWidget):
         QWidget.__init__(self)
 
         self.plugin_action = plugin_action
-        self.help_anchor = "configuration"
+        self.help_anchor = "ConfigurationDialog"
         self.library_config = get_library_config(self.plugin_action.gui.current_db)
         debug_print("ProfilesTab.__init__ - self.library_config", self.library_config)
         self.profiles = self.library_config.get(KEY_PROFILES, {})
@@ -1872,7 +1872,7 @@ class ConfigWidget(QWidget):
         self.plugin_action = plugin_action
         layout = QVBoxLayout(self)
         self.setLayout(layout)
-        self.help_anchor = "configuration"
+        self.help_anchor = "ConfigurationDialog"
 
         self.must_restart = False
         self._get_create_new_custom_column_instance = None
@@ -1947,7 +1947,7 @@ class ConfigWidget(QWidget):
         d.exec_()
 
     def help_link_activated(self, url):
-        self.plugin_action.show_help(anchor="configuration")
+        self.plugin_action.show_help(anchor="ConfigurationDialog")
 
     @property
     def get_create_new_custom_column_instance(self):

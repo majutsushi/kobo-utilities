@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 2.18.1 - 12 Feb 2025
+
+- Fix error when compressing the device database
+
 ## Version 2.18.0 - 8 Feb 2025
 
 - Add two new syncable columns: "Time Spent Reading" and "Rest of Book Estimate"

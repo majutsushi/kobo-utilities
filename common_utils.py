@@ -311,8 +311,6 @@ def check_device_database(database_path):
         else:
             check_result = _("Execution of '%s' failed") % check_query
 
-        cursor.close()
-
     return check_result
 
 

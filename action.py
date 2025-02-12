@@ -3810,310 +3810,291 @@ class KoboUtilitiesAction(InterfaceAction):
         return total_books, uploaded_covers, not_on_device_books
 
     def _remove_covers(self, books):
-        with self.device_database_connection() as connection:
-            total_books = 0
-            removed_covers = 0
-            not_on_device_books = 0
+        connection = self.device_database_connection()
+        total_books = 0
+        removed_covers = 0
+        not_on_device_books = 0
 
-            remove_fullsize_covers = self.options[cfg.KEY_REMOVE_FULLSIZE_COVERS]
-            debug_print(
-                "_remove_covers - remove_fullsize_covers=", remove_fullsize_covers
+        remove_fullsize_covers = self.options[cfg.KEY_REMOVE_FULLSIZE_COVERS]
+        debug_print("_remove_covers - remove_fullsize_covers=", remove_fullsize_covers)
+
+        imageId_query = (
+            "SELECT ImageId "
+            "FROM content "
+            "WHERE ContentType = ? "
+            "AND ContentId = ?"
+        )  # fmt: skip
+        cursor = connection.cursor()
+
+        for book in books:
+            debug_print("_remove_covers - book=", book)
+            debug_print("_remove_covers - book.__class__=", book.__class__)
+            debug_print("_remove_covers - book.contentID=", book.contentID)
+            debug_print("_remove_covers - book.lpath=", book.lpath)
+            debug_print("_remove_covers - book.path=", book.path)
+            contentIDs = (
+                [book.contentID]
+                if book.contentID is not None
+                else self.get_contentIDs_from_id(book.calibre_id)
             )
+            debug_print("_remove_covers - contentIDs=", contentIDs)
+            for contentID in contentIDs:
+                debug_print("_remove_covers - contentID=", contentID)
+                if (
+                    not contentID
+                    or "file:///" not in contentID
+                    and not self.options[cfg.KEY_COVERS_UPDLOAD_KEPUB]
+                ):
+                    continue
 
-            imageId_query = (
-                "SELECT ImageId "
-                "FROM content "
-                "WHERE ContentType = ? "
-                "AND ContentId = ?"
-            )  # fmt: skip
-            cursor = connection.cursor()
+                if contentID.startswith("file:///mnt/sd/"):
+                    path = self.device._card_a_prefix
+                else:
+                    path = self.device._main_prefix
 
-            for book in books:
-                debug_print("_remove_covers - book=", book)
-                debug_print("_remove_covers - book.__class__=", book.__class__)
-                debug_print("_remove_covers - book.contentID=", book.contentID)
-                debug_print("_remove_covers - book.lpath=", book.lpath)
-                debug_print("_remove_covers - book.path=", book.path)
-                contentIDs = (
-                    [book.contentID]
-                    if book.contentID is not None
-                    else self.get_contentIDs_from_id(book.calibre_id)
+                query_values = (
+                    self.CONTENTTYPE,
+                    contentID,
                 )
-                debug_print("_remove_covers - contentIDs=", contentIDs)
-                for contentID in contentIDs:
-                    debug_print("_remove_covers - contentID=", contentID)
-                    if (
-                        not contentID
-                        or "file:///" not in contentID
-                        and not self.options[cfg.KEY_COVERS_UPDLOAD_KEPUB]
-                    ):
-                        continue
-
-                    if contentID.startswith("file:///mnt/sd/"):
-                        path = self.device._card_a_prefix
-                    else:
-                        path = self.device._main_prefix
-
-                    query_values = (
-                        self.CONTENTTYPE,
-                        contentID,
+                cursor.execute(imageId_query, query_values)
+                try:
+                    result = next(cursor)
+                    debug_print(
+                        "_remove_covers - contentId='%s', imageId='%s'"
+                        % (contentID, result[0])
                     )
-                    cursor.execute(imageId_query, query_values)
-                    try:
-                        result = next(cursor)
-                        debug_print(
-                            "_remove_covers - contentId='%s', imageId='%s'"
-                            % (contentID, result[0])
-                        )
-                        image_id = result[0]
-                        debug_print("_remove_covers - image_id=", image_id)
-                        if image_id is not None:
-                            image_path = self.device.images_path(path, image_id)
-                            debug_print("_remove_covers - image_path=%s" % image_path)
+                    image_id = result[0]
+                    debug_print("_remove_covers - image_id=", image_id)
+                    if image_id is not None:
+                        image_path = self.device.images_path(path, image_id)
+                        debug_print("_remove_covers - image_path=%s" % image_path)
 
-                            for ending in list(self.device.cover_file_endings().keys()):
-                                debug_print("_remove_covers - ending='%s'" % ending)
-                                if (
-                                    remove_fullsize_covers
-                                    and not ending == " - N3_FULL.parsed"
-                                ):
-                                    debug_print(
-                                        "_remove_covers - not the full sized cover. Skipping"
-                                    )
-                                    continue
-                                fpath = image_path + ending
-                                fpath = self.device.normalize_path(fpath)
-                                debug_print("_remove_covers - fpath=%s" % fpath)
+                        for ending in list(self.device.cover_file_endings().keys()):
+                            debug_print("_remove_covers - ending='%s'" % ending)
+                            if (
+                                remove_fullsize_covers
+                                and not ending == " - N3_FULL.parsed"
+                            ):
+                                debug_print(
+                                    "_remove_covers - not the full sized cover. Skipping"
+                                )
+                                continue
+                            fpath = image_path + ending
+                            fpath = self.device.normalize_path(fpath)
+                            debug_print("_remove_covers - fpath=%s" % fpath)
 
-                                if os.path.exists(fpath):
-                                    debug_print("_remove_covers - Image File Exists")
-                                    os.unlink(fpath)
+                            if os.path.exists(fpath):
+                                debug_print("_remove_covers - Image File Exists")
+                                os.unlink(fpath)
 
-                            try:
-                                os.removedirs(os.path.dirname(image_path))
-                            except Exception:
-                                pass
-                        removed_covers += 1
-                    except StopIteration:
-                        debug_print(
-                            "_remove_covers - no match for contentId='%s'"
-                            % (contentID,)
-                        )
-                        not_on_device_books += 1
-                    total_books += 1
-
-            cursor.close()
+                        try:
+                            os.removedirs(os.path.dirname(image_path))
+                        except Exception:
+                            pass
+                    removed_covers += 1
+                except StopIteration:
+                    debug_print(
+                        "_remove_covers - no match for contentId='%s'" % (contentID,)
+                    )
+                    not_on_device_books += 1
+                total_books += 1
 
         return removed_covers, not_on_device_books, total_books
 
     def _open_cover_image_directory(self, books):
-        with self.device_database_connection(use_row_factory=True) as connection:
-            total_books = 0
-            removed_covers = 0
-            not_on_device_books = 0
+        connection = self.device_database_connection(use_row_factory=True)
+        total_books = 0
+        removed_covers = 0
+        not_on_device_books = 0
 
-            imageId_query = (
-                "SELECT ImageId "
-                "FROM content "
-                "WHERE ContentType = ? "
-                "AND ContentId = ?"
-            )  # fmt: skip
-            cursor = connection.cursor()
+        imageId_query = (
+            "SELECT ImageId "
+            "FROM content "
+            "WHERE ContentType = ? "
+            "AND ContentId = ?"
+        )  # fmt: skip
+        cursor = connection.cursor()
 
-            for book in books:
-                debug_print("_open_cover_image_directory - book=", book)
-                debug_print(
-                    "_open_cover_image_directory - book.__class__=", book.__class__
-                )
-                debug_print(
-                    "_open_cover_image_directory - book.contentID=", book.contentID
-                )
-                debug_print("_open_cover_image_directory - book.lpath=", book.lpath)
-                debug_print("_open_cover_image_directory - book.path=", book.path)
-                contentIDs = (
-                    [book.contentID]
-                    if book.contentID is not None
-                    else self.get_contentIDs_from_id(book.calibre_id)
-                )
-                debug_print("_open_cover_image_directory - contentIDs=", contentIDs)
-                for contentID in contentIDs:
-                    debug_print("_open_cover_image_directory - contentID=", contentID)
+        for book in books:
+            debug_print("_open_cover_image_directory - book=", book)
+            debug_print("_open_cover_image_directory - book.__class__=", book.__class__)
+            debug_print("_open_cover_image_directory - book.contentID=", book.contentID)
+            debug_print("_open_cover_image_directory - book.lpath=", book.lpath)
+            debug_print("_open_cover_image_directory - book.path=", book.path)
+            contentIDs = (
+                [book.contentID]
+                if book.contentID is not None
+                else self.get_contentIDs_from_id(book.calibre_id)
+            )
+            debug_print("_open_cover_image_directory - contentIDs=", contentIDs)
+            for contentID in contentIDs:
+                debug_print("_open_cover_image_directory - contentID=", contentID)
 
-                    if contentID is None:
-                        debug_print(
-                            "_open_cover_image_directory - Book does not have a content id."
-                        )
-                        continue
-                    elif contentID.startswith("file:///mnt/sd/"):
-                        path = self.device._card_a_prefix
-                    else:
-                        path = self.device._main_prefix
-
-                    query_values = (
-                        self.CONTENTTYPE,
-                        contentID,
+                if contentID is None:
+                    debug_print(
+                        "_open_cover_image_directory - Book does not have a content id."
                     )
-                    cursor.execute(imageId_query, query_values)
-                    image_id = None
-                    try:
-                        result = next(cursor)
-                        debug_print(
-                            "_open_cover_image_directory - contentId='%s', imageId='%s'"
-                            % (contentID, result["ImageId"])
-                        )
-                        image_id = result["ImageId"]
-                    except StopIteration:
-                        debug_print(
-                            "_open_cover_image_directory - no match for contentId='%s'"
-                            % (contentID,)
-                        )
-                        image_id = self.device.imageid_from_contentid(contentID)
+                    continue
+                elif contentID.startswith("file:///mnt/sd/"):
+                    path = self.device._card_a_prefix
+                else:
+                    path = self.device._main_prefix
 
-                    if image_id:
-                        cover_image_file = self.device.images_path(path, image_id)
-                        debug_print(
-                            "_open_cover_image_directory - cover_image_file='%s'"
-                            % (cover_image_file)
-                        )
-                        cover_dir = os.path.dirname(os.path.abspath(cover_image_file))
-                        debug_print(
-                            "_open_cover_image_directory - cover_dir='%s'" % (cover_dir)
-                        )
-                        if os.path.exists(cover_dir):
-                            open_local_file(cover_dir)
-                    total_books += 1
+                query_values = (
+                    self.CONTENTTYPE,
+                    contentID,
+                )
+                cursor.execute(imageId_query, query_values)
+                image_id = None
+                try:
+                    result = next(cursor)
+                    debug_print(
+                        "_open_cover_image_directory - contentId='%s', imageId='%s'"
+                        % (contentID, result["ImageId"])
+                    )
+                    image_id = result["ImageId"]
+                except StopIteration:
+                    debug_print(
+                        "_open_cover_image_directory - no match for contentId='%s'"
+                        % (contentID,)
+                    )
+                    image_id = self.device.imageid_from_contentid(contentID)
 
-            cursor.close()
+                if image_id:
+                    cover_image_file = self.device.images_path(path, image_id)
+                    debug_print(
+                        "_open_cover_image_directory - cover_image_file='%s'"
+                        % (cover_image_file)
+                    )
+                    cover_dir = os.path.dirname(os.path.abspath(cover_image_file))
+                    debug_print(
+                        "_open_cover_image_directory - cover_dir='%s'" % (cover_dir)
+                    )
+                    if os.path.exists(cover_dir):
+                        open_local_file(cover_dir)
+                total_books += 1
 
         return removed_covers, not_on_device_books, total_books
 
     def _get_imageid_set(self):
-        with self.device_database_connection(use_row_factory=True) as connection:
-            imageId_query = (
-                "SELECT DISTINCT ImageId "
-                "FROM content "
-                "WHERE BookID IS NULL"
-            )  # fmt: skip
-            cursor = connection.cursor()
+        connection = self.device_database_connection(use_row_factory=True)
+        imageId_query = (
+            "SELECT DISTINCT ImageId "
+            "FROM content "
+            "WHERE BookID IS NULL"
+        )  # fmt: skip
+        cursor = connection.cursor()
 
-            cursor.execute(imageId_query)
-            imageIDs = {row["ImageId"] for row in cursor}
-
-            cursor.close()
+        cursor.execute(imageId_query)
+        imageIDs = {row["ImageId"] for row in cursor}
 
         return imageIDs
 
     def _check_book_in_database(self, books):
-        with self.device_database_connection() as connection:
-            not_on_device_books = []
+        connection = self.device_database_connection()
+        not_on_device_books = []
 
-            imageId_query = (
-                "SELECT 1 "
-                "FROM content "
-                "WHERE BookID is NULL "
-                "AND ContentId = ?"
-            )  # fmt: skip
-            cursor = connection.cursor()
+        imageId_query = (
+            "SELECT 1 "
+            "FROM content "
+            "WHERE BookID is NULL "
+            "AND ContentId = ?"
+        )  # fmt: skip
+        cursor = connection.cursor()
 
-            for book in books:
-                if not book.contentID:
-                    book.contentID = self.contentid_from_path(
-                        book.path, self.CONTENTTYPE
-                    )
+        for book in books:
+            if not book.contentID:
+                book.contentID = self.contentid_from_path(book.path, self.CONTENTTYPE)
 
-                query_values = (book.contentID,)
-                cursor.execute(imageId_query, query_values)
-                try:
-                    next(cursor)
-                except StopIteration:
-                    debug_print(
-                        "_check_book_in_database - no match for contentId='%s'"
-                        % (book.contentID,)
-                    )
-                    not_on_device_books.append(book)
-
-            cursor.close()
+            query_values = (book.contentID,)
+            cursor.execute(imageId_query, query_values)
+            try:
+                next(cursor)
+            except StopIteration:
+                debug_print(
+                    "_check_book_in_database - no match for contentId='%s'"
+                    % (book.contentID,)
+                )
+                not_on_device_books.append(book)
 
         return not_on_device_books
 
     def _get_shelf_count(self):
-        with self.device_database_connection() as connection:
-            shelves = []
+        connection = self.device_database_connection()
+        shelves = []
 
-            shelves_query = (
-                "SELECT Name, MIN(CreationDate), MAX(CreationDate), COUNT(*), MAX(Id) "
-                "FROM Shelf "
-                "WHERE _IsDeleted = 'false' "
-                "GROUP BY Name"
+        shelves_query = (
+            "SELECT Name, MIN(CreationDate), MAX(CreationDate), COUNT(*), MAX(Id) "
+            "FROM Shelf "
+            "WHERE _IsDeleted = 'false' "
+            "GROUP BY Name"
+        )
+
+        cursor = connection.cursor()
+        cursor.execute(shelves_query)
+        for i, row in enumerate(cursor):
+            debug_print(
+                "_get_shelf_count - row:", i, row[0], row[1], row[2], row[3], row[4]
+            )
+            shelves.append(
+                [
+                    row[0],
+                    convert_kobo_date(row[1]),
+                    convert_kobo_date(row[2]),
+                    int(row[3]),
+                    row[4],
+                ]
             )
 
-            cursor = connection.cursor()
-            cursor.execute(shelves_query)
-            for i, row in enumerate(cursor):
-                debug_print(
-                    "_get_shelf_count - row:", i, row[0], row[1], row[2], row[3], row[4]
-                )
-                shelves.append(
-                    [
-                        row[0],
-                        convert_kobo_date(row[1]),
-                        convert_kobo_date(row[2]),
-                        int(row[3]),
-                        row[4],
-                    ]
-                )
-
-            cursor.close()
         return shelves
 
     def _get_series_shelf_count(self, order_shelf_type):
         debug_print("_get_series_shelf_count - order_shelf_type:", order_shelf_type)
-        with self.device_database_connection() as connection:
-            shelves = []
+        connection = self.device_database_connection()
+        shelves = []
 
-            series_query = (
-                "SELECT s.InternalName, count(sc.ShelfName) "
-                "FROM Shelf s LEFT OUTER JOIN ShelfContent sc on s.InternalName = sc.ShelfName "
-                "WHERE s._IsDeleted = 'false' "
-                "AND EXISTS (SELECT 1 FROM content c WHERE s.InternalName = c.Series ) "
-                "GROUP BY s.InternalName"
-            )
-            authors_query = (
-                "SELECT s.InternalName, count(sc.ShelfName) "
-                "FROM Shelf s LEFT OUTER JOIN ShelfContent sc on s.InternalName = sc.ShelfName "
-                "WHERE s._IsDeleted = 'false' "
-                "AND EXISTS (SELECT 1 FROM content c WHERE s.InternalName = c.Attribution ) "
-                "GROUP BY s.InternalName"
-            )
-            other_query = (
-                "SELECT s.InternalName, count(sc.ShelfName) "
-                "FROM Shelf s LEFT OUTER JOIN ShelfContent sc on name = sc.ShelfName "
-                "WHERE s._IsDeleted = 'false' "
-                "AND NOT EXISTS (SELECT 1 FROM content c WHERE s.InternalName = c.Attribution ) "
-                "AND NOT EXISTS (SELECT 1 FROM content c WHERE s.InternalName = c.Series ) "
-                "GROUP BY s.InternalName"
-            )
-            all_query = (
-                "SELECT s.InternalName, count(sc.ShelfName) "
-                "FROM Shelf s LEFT OUTER JOIN ShelfContent sc on s.InternalName = sc.ShelfName "
-                "WHERE s._IsDeleted = 'false' "
-                "GROUP BY s.InternalName"
-            )
+        series_query = (
+            "SELECT s.InternalName, count(sc.ShelfName) "
+            "FROM Shelf s LEFT OUTER JOIN ShelfContent sc on s.InternalName = sc.ShelfName "
+            "WHERE s._IsDeleted = 'false' "
+            "AND EXISTS (SELECT 1 FROM content c WHERE s.InternalName = c.Series ) "
+            "GROUP BY s.InternalName"
+        )
+        authors_query = (
+            "SELECT s.InternalName, count(sc.ShelfName) "
+            "FROM Shelf s LEFT OUTER JOIN ShelfContent sc on s.InternalName = sc.ShelfName "
+            "WHERE s._IsDeleted = 'false' "
+            "AND EXISTS (SELECT 1 FROM content c WHERE s.InternalName = c.Attribution ) "
+            "GROUP BY s.InternalName"
+        )
+        other_query = (
+            "SELECT s.InternalName, count(sc.ShelfName) "
+            "FROM Shelf s LEFT OUTER JOIN ShelfContent sc on name = sc.ShelfName "
+            "WHERE s._IsDeleted = 'false' "
+            "AND NOT EXISTS (SELECT 1 FROM content c WHERE s.InternalName = c.Attribution ) "
+            "AND NOT EXISTS (SELECT 1 FROM content c WHERE s.InternalName = c.Series ) "
+            "GROUP BY s.InternalName"
+        )
+        all_query = (
+            "SELECT s.InternalName, count(sc.ShelfName) "
+            "FROM Shelf s LEFT OUTER JOIN ShelfContent sc on s.InternalName = sc.ShelfName "
+            "WHERE s._IsDeleted = 'false' "
+            "GROUP BY s.InternalName"
+        )
 
-            shelves_queries = [series_query, authors_query, other_query, all_query]
-            shelves_query = shelves_queries[order_shelf_type]
-            debug_print("_get_series_shelf_count - shelves_query:", shelves_query)
+        shelves_queries = [series_query, authors_query, other_query, all_query]
+        shelves_query = shelves_queries[order_shelf_type]
+        debug_print("_get_series_shelf_count - shelves_query:", shelves_query)
 
-            cursor = connection.cursor()
-            cursor.execute(shelves_query)
-            for i, row in enumerate(cursor):
-                debug_print("_get_series_shelf_count - row:", i, row[0], row[1])
-                shelf = {}
-                shelf["name"] = row[0]
-                shelf["count"] = int(row[1])
-                shelves.append(shelf)
+        cursor = connection.cursor()
+        cursor.execute(shelves_query)
+        for i, row in enumerate(cursor):
+            debug_print("_get_series_shelf_count - row:", i, row[0], row[1])
+            shelf = {}
+            shelf["name"] = row[0]
+            shelf["count"] = int(row[1])
+            shelves.append(shelf)
 
-            cursor.close()
         debug_print("_get_series_shelf_count - shelves:", shelves)
         return shelves
 
@@ -4167,209 +4148,206 @@ class KoboUtilitiesAction(InterfaceAction):
                     )
                 )
 
-        with self.device_database_connection(use_row_factory=True) as connection:
-            shelves_query = (
-                "SELECT sc.ShelfName, c.ContentId, c.Title, c.DateCreated, sc.DateModified, c.Series, c.SeriesNumber "
-                "FROM ShelfContent sc JOIN content c on sc.ContentId= c.ContentId "
-                "WHERE sc._IsDeleted = 'false' "
-                "AND sc.ShelfName = ? "
-                "ORDER BY sc.ShelfName, c.SeriesNumber"
-            )
-            update_query = (
-                "UPDATE ShelfContent "
-                "SET DateModified = ? "
-                "WHERE ShelfName = ? "
-                "AND ContentID = ? "
-            )
+        connection = self.device_database_connection(use_row_factory=True)
+        shelves_query = (
+            "SELECT sc.ShelfName, c.ContentId, c.Title, c.DateCreated, sc.DateModified, c.Series, c.SeriesNumber "
+            "FROM ShelfContent sc JOIN content c on sc.ContentId= c.ContentId "
+            "WHERE sc._IsDeleted = 'false' "
+            "AND sc.ShelfName = ? "
+            "ORDER BY sc.ShelfName, c.SeriesNumber"
+        )
+        update_query = (
+            "UPDATE ShelfContent "
+            "SET DateModified = ? "
+            "WHERE ShelfName = ? "
+            "AND ContentID = ? "
+        )
 
-            cursor = connection.cursor()
-            for shelf in shelves:
-                starting_shelves += 1
+        cursor = connection.cursor()
+        for shelf in shelves:
+            starting_shelves += 1
+            debug_print(
+                "_order_series_shelves - shelf=%s, count=%d"
+                % (shelf["name"], shelf["count"])
+            )
+            self.set_progressbar_label(_("Updating shelf: {0}").format(shelf["name"]))
+            self.increment_progressbar()
+            if shelf["count"] <= 1:
+                continue
+            shelves_ordered += 1
+            shelf_data = (shelf["name"],)
+            debug_print("_order_series_shelves - shelf_data:", shelf_data)
+            cursor.execute(shelves_query, shelf_data)
+            shelf_dict = {}
+            for i, row in enumerate(cursor):
+                debug_print("_order_series_shelves - row:", i, row)
                 debug_print(
-                    "_order_series_shelves - shelf=%s, count=%d"
-                    % (shelf["name"], shelf["count"])
+                    "_order_series_shelves - row:",
+                    i,
+                    row["ShelfName"],
+                    row["ContentID"],
+                    row["Series"],
+                    row["SeriesNumber"],
                 )
-                self.set_progressbar_label(
-                    _("Updating shelf: {0}").format(shelf["name"])
-                )
-                self.increment_progressbar()
-                if shelf["count"] <= 1:
-                    continue
-                shelves_ordered += 1
-                shelf_data = (shelf["name"],)
-                debug_print("_order_series_shelves - shelf_data:", shelf_data)
-                cursor.execute(shelves_query, shelf_data)
-                shelf_dict = {}
-                for i, row in enumerate(cursor):
-                    debug_print("_order_series_shelves - row:", i, row)
-                    debug_print(
-                        "_order_series_shelves - row:",
-                        i,
-                        row["ShelfName"],
-                        row["ContentID"],
-                        row["Series"],
-                        row["SeriesNumber"],
+                series_name = row["Series"] if row["Series"] else ""
+                try:
+                    series_index = (
+                        float(row["SeriesNumber"])
+                        if row["SeriesNumber"] is not None
+                        else 0
                     )
-                    series_name = row["Series"] if row["Series"] else ""
-                    try:
-                        series_index = (
-                            float(row["SeriesNumber"])
-                            if row["SeriesNumber"] is not None
-                            else 0
+                except:
+                    debug_print("_order_series_shelves - non numeric number")
+                    numbers = re.findall(r"\d*\.?\d+", row["SeriesNumber"])
+                    if len(numbers) > 0:
+                        series_index = float(numbers[0])
+                debug_print("_order_series_shelves - series_index=", series_index)
+                if order_by == cfg.KEY_ORDER_SHELVES_PUBLISHED:
+                    date_created = row["DateCreated"]
+                    if date_created is None:
+                        date_created = datetime.fromtimestamp(
+                            time.mktime(time.gmtime())
                         )
-                    except:
-                        debug_print("_order_series_shelves - non numeric number")
-                        numbers = re.findall(r"\d*\.?\d+", row["SeriesNumber"])
-                        if len(numbers) > 0:
-                            series_index = float(numbers[0])
-                    debug_print("_order_series_shelves - series_index=", series_index)
-                    if order_by == cfg.KEY_ORDER_SHELVES_PUBLISHED:
-                        date_created = row["DateCreated"]
-                        if date_created is None:
-                            date_created = datetime.fromtimestamp(
-                                time.mktime(time.gmtime())
-                            )
-                            date_created = strftime(
-                                self.device_timestamp_string, date_created
-                            )
-                        sort_key = (date_created, row["Title"])
-                    else:
-                        sort_key = (
-                            (series_name, series_index, row["Title"])
-                            if not series_name == ""
-                            else (row["Title"], -1, "")
+                        date_created = strftime(
+                            self.device_timestamp_string, date_created
                         )
-                    debug_print("_order_series_shelves - sort_key:", sort_key)
-                    current_list = shelf_dict.get(sort_key, None)
-                    current_list = shelf_dict.get(sort_key, [])
-                    current_list.append(row["ContentID"])
-                    shelf_dict[sort_key] = current_list
-                debug_print("_order_series_shelves - shelf_dict:", shelf_dict)
+                    sort_key = (date_created, row["Title"])
+                else:
+                    sort_key = (
+                        (series_name, series_index, row["Title"])
+                        if not series_name == ""
+                        else (row["Title"], -1, "")
+                    )
+                debug_print("_order_series_shelves - sort_key:", sort_key)
+                current_list = shelf_dict.get(sort_key, None)
+                current_list = shelf_dict.get(sort_key, [])
+                current_list.append(row["ContentID"])
+                shelf_dict[sort_key] = current_list
+            debug_print("_order_series_shelves - shelf_dict:", shelf_dict)
 
-                debug_print(
-                    "_order_series_shelves - sorted shelf_dict:", sorted(shelf_dict)
-                )
+            debug_print(
+                "_order_series_shelves - sorted shelf_dict:", sorted(shelf_dict)
+            )
 
-                lastModifiedTime = datetime.fromtimestamp(time.mktime(time.gmtime()))
+            lastModifiedTime = datetime.fromtimestamp(time.mktime(time.gmtime()))
 
-                debug_print(
-                    "_order_series_shelves - lastModifiedTime=",
-                    lastModifiedTime,
-                    " timeDiff:",
-                    timeDiff,
-                )
-                for sort_key in sorted(shelf_dict, reverse=sort_descending):
-                    for contentId in shelf_dict[sort_key]:
-                        update_data = (
-                            strftime(
-                                self.device_timestamp_string,
-                                lastModifiedTime.timetuple(),
-                            ),
-                            shelf["name"],
-                            contentId,
+            debug_print(
+                "_order_series_shelves - lastModifiedTime=",
+                lastModifiedTime,
+                " timeDiff:",
+                timeDiff,
+            )
+            for sort_key in sorted(shelf_dict, reverse=sort_descending):
+                for contentId in shelf_dict[sort_key]:
+                    update_data = (
+                        strftime(
+                            self.device_timestamp_string,
+                            lastModifiedTime.timetuple(),
+                        ),
+                        shelf["name"],
+                        contentId,
+                    )
+                    debug_print(
+                        "_order_series_shelves - sort_key: ",
+                        sort_key,
+                        " update_data:",
+                        update_data,
+                    )
+                    cursor.execute(update_query, update_data)
+                    lastModifiedTime += timeDiff
+            if update_config:
+                try:
+                    shelf_key = quote(
+                        "LastLibrarySorter_shelf_filterByBookshelf("
+                        + shelf["name"]
+                        + ")"
+                    )
+                    shelf_key = quote(
+                        "LastLibrarySorter_shelf_filterByBookshelf({0})".format(
+                            shelf["name"]
                         )
-                        debug_print(
-                            "_order_series_shelves - sort_key: ",
-                            sort_key,
-                            " update_data:",
-                            update_data,
+                    )
+                except:
+                    debug_print(
+                        "_order_series_shelves - cannot encode shelf name=",
+                        shelf["name"],
+                    )
+                    if isinstance(shelf["name"], str):
+                        debug_print("_order_series_shelves - is unicode")
+                        shelf_key = urlquote(shelf["name"])
+                        shelf_key = (
+                            quote("LastLibrarySorter_shelf_filterByBookshelf(")
+                            + shelf_key
+                            + quote(")")
                         )
-                        cursor.execute(update_query, update_data)
-                        lastModifiedTime += timeDiff
-                if update_config:
-                    try:
                         shelf_key = quote(
+                            "LastLibrarySorter_shelf_filterByBookshelf({0})".format(
+                                shelf_key
+                            )
+                        )
+                    else:
+                        debug_print("_order_series_shelves - not unicode")
+                        shelf_key = (
                             "LastLibrarySorter_shelf_filterByBookshelf("
                             + shelf["name"]
                             + ")"
                         )
-                        shelf_key = quote(
-                            "LastLibrarySorter_shelf_filterByBookshelf({0})".format(
+                        shelf_key = (
+                            "LastLibrarySorter_shelf_filterByBookshelf({0}".format(
                                 shelf["name"]
                             )
                         )
-                    except:
-                        debug_print(
-                            "_order_series_shelves - cannot encode shelf name=",
-                            shelf["name"],
-                        )
-                        if isinstance(shelf["name"], str):
-                            debug_print("_order_series_shelves - is unicode")
-                            shelf_key = urlquote(shelf["name"])
-                            shelf_key = (
-                                quote("LastLibrarySorter_shelf_filterByBookshelf(")
-                                + shelf_key
-                                + quote(")")
-                            )
-                            shelf_key = quote(
-                                "LastLibrarySorter_shelf_filterByBookshelf({0})".format(
-                                    shelf_key
-                                )
-                            )
-                        else:
-                            debug_print("_order_series_shelves - not unicode")
-                            shelf_key = (
-                                "LastLibrarySorter_shelf_filterByBookshelf("
-                                + shelf["name"]
-                                + ")"
-                            )
-                            shelf_key = (
-                                "LastLibrarySorter_shelf_filterByBookshelf({0}".format(
-                                    shelf["name"]
-                                )
-                            )
-                    koboConfig.set(
-                        "ApplicationPreferences", shelf_key, "sortByDateAddedToShelf()"
-                    )
-                    debug_print("_order_series_shelves - koboConfig=", koboConfig)
+                koboConfig.set(
+                    "ApplicationPreferences", shelf_key, "sortByDateAddedToShelf()"
+                )
+                debug_print("_order_series_shelves - koboConfig=", koboConfig)
 
-            cursor.close()
-            if update_config:
-                with open(config_file_path, "w") as config_file:
-                    debug_print("_order_series_shelves - writing config file")
-                    koboConfig.write(config_file)
+        if update_config:
+            with open(config_file_path, "w") as config_file:
+                debug_print("_order_series_shelves - writing config file")
+                koboConfig.write(config_file)
+
         self.hide_progressbar()
         debug_print("_order_series_shelves - end")
         return starting_shelves, shelves_ordered
 
     def _get_related_books_count(self, related_category):
         debug_print("_get_related_books_count - order_shelf_type:", related_category)
-        with self.device_database_connection() as connection:
-            related_books = []
+        connection = self.device_database_connection()
+        related_books = []
 
-            series_query = (
-                "SELECT Series, count(*) "
-                "FROM content c "
-                "WHERE c.ContentType = 6 "
-                "AND c.ContentID LIKE 'file%' "
-                "AND c.Series IS NOT NULL "
-                "GROUP BY Series"
-            )
-            authors_query = (
-                "SELECT Attribution, count(*) "
-                "FROM content c "
-                "WHERE c.ContentType = 6 "
-                "AND c.ContentID LIKE 'file%' "
-                "GROUP BY Attribution"
-            )
+        series_query = (
+            "SELECT Series, count(*) "
+            "FROM content c "
+            "WHERE c.ContentType = 6 "
+            "AND c.ContentID LIKE 'file%' "
+            "AND c.Series IS NOT NULL "
+            "GROUP BY Series"
+        )
+        authors_query = (
+            "SELECT Attribution, count(*) "
+            "FROM content c "
+            "WHERE c.ContentType = 6 "
+            "AND c.ContentID LIKE 'file%' "
+            "GROUP BY Attribution"
+        )
 
-            related_books_queries = [series_query, authors_query]
-            related_books_query = related_books_queries[related_category]
-            debug_print(
-                "_get_related_books_count - related_books_query:", related_books_query
-            )
+        related_books_queries = [series_query, authors_query]
+        related_books_query = related_books_queries[related_category]
+        debug_print(
+            "_get_related_books_count - related_books_query:", related_books_query
+        )
 
-            cursor = connection.cursor()
-            cursor.execute(related_books_query)
+        cursor = connection.cursor()
+        cursor.execute(related_books_query)
 
-            for i, row in enumerate(cursor):
-                debug_print("_get_related_books_count - row:", i, row[0], row[1])
-                shelf = {}
-                shelf["name"] = row[0]
-                shelf["count"] = int(row[1])
-                related_books.append(shelf)
+        for i, row in enumerate(cursor):
+            debug_print("_get_related_books_count - row:", i, row[0], row[1])
+            shelf = {}
+            shelf["name"] = row[0]
+            shelf["count"] = int(row[1])
+            related_books.append(shelf)
 
-            cursor.close()
         debug_print("_get_related_books_count - related_books:", related_books)
         return related_books
 
@@ -4386,74 +4364,68 @@ class KoboUtilitiesAction(InterfaceAction):
         self.show_progressbar(total_related_books)
         self.pb.left_align_label()
 
-        with self.device_database_connection(use_row_factory=True) as connection:
-            series_query = (
-                "SELECT c.ContentID, c.Title, c.Attribution, Series, SeriesNumber "
-                "FROM content c "
-                "WHERE c.ContentType = 6 "
-                "AND Series = ? "
-                "AND ContentID LIKE 'file%' "
+        connection = self.device_database_connection(use_row_factory=True)
+        series_query = (
+            "SELECT c.ContentID, c.Title, c.Attribution, Series, SeriesNumber "
+            "FROM content c "
+            "WHERE c.ContentType = 6 "
+            "AND Series = ? "
+            "AND ContentID LIKE 'file%' "
+        )
+        author_query = (
+            "SELECT c.ContentID, c.Title, c.Attribution, Series, SeriesNumber "
+            "FROM content c "
+            "WHERE c.ContentType = 6 "
+            "AND Attribution = ? "
+            "AND ContentID LIKE 'file%' "
+        )
+        get_queries = [series_query, author_query]
+        get_query = get_queries[options[cfg.KEY_RELATED_BOOKS_TYPE]]
+        insert_query = "INSERT INTO volume_tabs VALUES ( ?, ? )"
+        delete_query = "DELETE FROM volume_tabs WHERE tabId = ? "
+
+        cursor = connection.cursor()
+        for related_type in related_books:
+            self.set_progressbar_label(
+                _("Setting related books for ") + related_type["name"]
             )
-            author_query = (
-                "SELECT c.ContentID, c.Title, c.Attribution, Series, SeriesNumber "
-                "FROM content c "
-                "WHERE c.ContentType = 6 "
-                "AND Attribution = ? "
-                "AND ContentID LIKE 'file%' "
+            self.increment_progressbar()
+
+            categories_count += 1
+            debug_print(
+                "_set_related_books - related_type=%s, count=%d"
+                % (related_type["name"], related_type["count"])
             )
-            get_queries = [series_query, author_query]
-            get_query = get_queries[options[cfg.KEY_RELATED_BOOKS_TYPE]]
-            insert_query = "INSERT INTO volume_tabs VALUES ( ?, ? )"
-            delete_query = "DELETE FROM volume_tabs WHERE tabId = ? "
-
-            cursor = connection.cursor()
-            for related_type in related_books:
-                self.set_progressbar_label(
-                    _("Setting related books for ") + related_type["name"]
-                )
-                self.increment_progressbar()
-
-                categories_count += 1
+            if related_type["count"] <= 1:
+                continue
+            related_type_data = (related_type["name"],)
+            debug_print("_set_related_books - related_type_data:", related_type_data)
+            cursor.execute(get_query, related_type_data)
+            related_type_contentIds = []
+            for i, row in enumerate(cursor):
                 debug_print(
-                    "_set_related_books - related_type=%s, count=%d"
-                    % (related_type["name"], related_type["count"])
+                    "_set_related_books - row:",
+                    i,
+                    row["ContentID"],
+                    row["Title"],
+                    row["Attribution"],
+                    row["Series"],
+                    row["SeriesNumber"],
                 )
-                if related_type["count"] <= 1:
-                    continue
-                related_type_data = (related_type["name"],)
-                debug_print(
-                    "_set_related_books - related_type_data:", related_type_data
-                )
-                cursor.execute(get_query, related_type_data)
-                related_type_contentIds = []
-                for i, row in enumerate(cursor):
-                    debug_print(
-                        "_set_related_books - row:",
-                        i,
-                        row["ContentID"],
-                        row["Title"],
-                        row["Attribution"],
-                        row["Series"],
-                        row["SeriesNumber"],
-                    )
-                    related_type_contentIds.append(row["ContentID"])
+                related_type_contentIds.append(row["ContentID"])
 
-                debug_print(
-                    "_set_related_books - related_type_contentIds:",
-                    related_type_contentIds,
-                )
-                for tab_contentId in related_type_contentIds:
-                    cursor.execute(delete_query, (tab_contentId,))
-                    books_count += 1
-                    for volume_contentId in related_type_contentIds:
-                        if not tab_contentId == volume_contentId:
-                            insert_data = (volume_contentId, tab_contentId)
-                            debug_print(
-                                "_set_related_books - insert_data:", insert_data
-                            )
-                            cursor.execute(insert_query, insert_data)
-
-            cursor.close()
+            debug_print(
+                "_set_related_books - related_type_contentIds:",
+                related_type_contentIds,
+            )
+            for tab_contentId in related_type_contentIds:
+                cursor.execute(delete_query, (tab_contentId,))
+                books_count += 1
+                for volume_contentId in related_type_contentIds:
+                    if not tab_contentId == volume_contentId:
+                        insert_data = (volume_contentId, tab_contentId)
+                        debug_print("_set_related_books - insert_data:", insert_data)
+                        cursor.execute(insert_query, insert_data)
 
         self.hide_progressbar()
         debug_print("_set_related_books - end")
@@ -4466,20 +4438,18 @@ class KoboUtilitiesAction(InterfaceAction):
         self.show_progressbar(100)
         self.pb.left_align_label()
 
-        with self.device_database_connection() as connection:
-            delete_query = (
-                "DELETE FROM volume_tabs  "
-                "WHERE tabId LIKE 'file%' "
-                "OR volumeId LIKE 'file%' "
-            )
+        connection = self.device_database_connection()
+        delete_query = (
+            "DELETE FROM volume_tabs  "
+            "WHERE tabId LIKE 'file%' "
+            "OR volumeId LIKE 'file%' "
+        )
 
-            cursor = connection.cursor()
-            self.set_progressbar_label(_("Delete Related Books"))
-            self.increment_progressbar()
+        cursor = connection.cursor()
+        self.set_progressbar_label(_("Delete Related Books"))
+        self.increment_progressbar()
 
-            cursor.execute(delete_query)
-
-            cursor.close()
+        cursor.execute(delete_query)
 
         self.hide_progressbar()
         debug_print("_delete_related_books - end")
@@ -4490,180 +4460,173 @@ class KoboUtilitiesAction(InterfaceAction):
             "_remove_duplicate_shelves - total shelves=%d: options=%s"
             % (len(shelves), options)
         )
-        with self.device_database_connection() as connection:
-            starting_shelves = 0
-            shelves_removed = 0
-            finished_shelves = 0
-            self.progressbar(_("Duplicate Shelves in Device Database"), on_top=False)
-            total_shelves = len(shelves)
-            self.show_progressbar(total_shelves)
-            self.pb.left_align_label()
+        connection = self.device_database_connection()
+        starting_shelves = 0
+        shelves_removed = 0
+        finished_shelves = 0
+        self.progressbar(_("Duplicate Shelves in Device Database"), on_top=False)
+        total_shelves = len(shelves)
+        self.show_progressbar(total_shelves)
+        self.pb.left_align_label()
 
-            shelves_update_timestamp = (
-                "UPDATE Shelf "
-                "SET _IsDeleted = 'true', "
-                "LastModified = ? "
-                "WHERE _IsSynced = 'true' "
-                "AND Name = ? "
-                "AND CreationDate <> ?"
-            )
-            shelves_update_id = (
-                "UPDATE Shelf "
-                "SET _IsDeleted = 'true', "
-                "LastModified = ? "
-                "WHERE _IsSynced = 'true' "
-                "AND Name = ? "
-                "AND id <> ?"
-            )
-            shelves_query = (
-                "SELECT * FROM Shelf "
-                "WHERE _IsSynced = 'true' "
-                "AND Name = ? "
-                "AND CreationDate = ?"
-            )
+        shelves_update_timestamp = (
+            "UPDATE Shelf "
+            "SET _IsDeleted = 'true', "
+            "LastModified = ? "
+            "WHERE _IsSynced = 'true' "
+            "AND Name = ? "
+            "AND CreationDate <> ?"
+        )
+        shelves_update_id = (
+            "UPDATE Shelf "
+            "SET _IsDeleted = 'true', "
+            "LastModified = ? "
+            "WHERE _IsSynced = 'true' "
+            "AND Name = ? "
+            "AND id <> ?"
+        )
+        shelves_query = (
+            "SELECT * FROM Shelf "
+            "WHERE _IsSynced = 'true' "
+            "AND Name = ? "
+            "AND CreationDate = ?"
+        )
 
-            shelves_delete_timestamp = (
-                "DELETE FROM Shelf "
-                "WHERE _IsSynced = 'false' "
-                "AND Name = ? "
-                "AND CreationDate <> ? "
-                "AND _IsDeleted = 'true'"
-            )
-            shelves_delete_id = (
-                "DELETE FROM Shelf "
-                "WHERE _IsSynced = 'false' "
-                "AND Name = ? "
-                "AND id <> ?"
-                "AND _IsDeleted = 'true'"
-            )
+        shelves_delete_timestamp = (
+            "DELETE FROM Shelf "
+            "WHERE _IsSynced = 'false' "
+            "AND Name = ? "
+            "AND CreationDate <> ? "
+            "AND _IsDeleted = 'true'"
+        )
+        shelves_delete_id = (
+            "DELETE FROM Shelf "
+            "WHERE _IsSynced = 'false' "
+            "AND Name = ? "
+            "AND id <> ?"
+            "AND _IsDeleted = 'true'"
+        )
 
-            shelves_purge = "DELETE FROM Shelf WHERE _IsDeleted = 'true'"
+        shelves_purge = "DELETE FROM Shelf WHERE _IsDeleted = 'true'"
 
-            purge_shelves = options[cfg.KEY_PURGE_SHELVES]
-            keep_newest = options[cfg.KEY_KEEP_NEWEST_SHELF]
+        purge_shelves = options[cfg.KEY_PURGE_SHELVES]
+        keep_newest = options[cfg.KEY_KEEP_NEWEST_SHELF]
 
-            cursor = connection.cursor()
-            for shelf in shelves:
-                starting_shelves += shelf[3]
-                finished_shelves += 1
-                self.set_progressbar_label(
-                    _("Removing duplicates of shelf ") + shelf[0]
+        cursor = connection.cursor()
+        for shelf in shelves:
+            starting_shelves += shelf[3]
+            finished_shelves += 1
+            self.set_progressbar_label(_("Removing duplicates of shelf ") + shelf[0])
+            self.increment_progressbar()
+
+            if shelf[3] > 1:
+                debug_print(
+                    "_remove_duplicate_shelves - shelf: %s, '%s', '%s', '%s', '%s'"
+                    % (shelf[0], shelf[1], shelf[2], shelf[3], shelf[4])
                 )
-                self.increment_progressbar()
+                timestamp = shelf[2] if keep_newest else shelf[1]
+                shelf_id = shelf[4] if shelf[1] == shelf[2] else None
+                shelves_values = (
+                    shelf[0],
+                    timestamp.strftime(self.device_timestamp_string),
+                )
 
-                if shelf[3] > 1:
-                    debug_print(
-                        "_remove_duplicate_shelves - shelf: %s, '%s', '%s', '%s', '%s'"
-                        % (shelf[0], shelf[1], shelf[2], shelf[3], shelf[4])
+                if shelf_id:
+                    shelves_update_query = shelves_update_id
+                    shelves_delete_query = shelves_delete_id
+                    shelves_update_values = (
+                        strftime(self.device_timestamp_string, time.gmtime()),
+                        shelf[0],
+                        shelf_id,
                     )
-                    timestamp = shelf[2] if keep_newest else shelf[1]
-                    shelf_id = shelf[4] if shelf[1] == shelf[2] else None
-                    shelves_values = (
+                    shelves_delete_values = (shelf[0], shelf_id)
+                else:
+                    shelves_update_query = shelves_update_timestamp
+                    shelves_delete_query = shelves_delete_timestamp
+                    shelves_update_values = (
+                        strftime(self.device_timestamp_string, time.gmtime()),
                         shelf[0],
                         timestamp.strftime(self.device_timestamp_string),
                     )
-
-                    if shelf_id:
-                        shelves_update_query = shelves_update_id
-                        shelves_delete_query = shelves_delete_id
-                        shelves_update_values = (
-                            strftime(self.device_timestamp_string, time.gmtime()),
-                            shelf[0],
-                            shelf_id,
-                        )
-                        shelves_delete_values = (shelf[0], shelf_id)
-                    else:
-                        shelves_update_query = shelves_update_timestamp
-                        shelves_delete_query = shelves_delete_timestamp
-                        shelves_update_values = (
-                            strftime(self.device_timestamp_string, time.gmtime()),
-                            shelf[0],
-                            timestamp.strftime(self.device_timestamp_string),
-                        )
-                        shelves_delete_values = shelves_values
-                    debug_print(
-                        "_remove_duplicate_shelves - marking as deleted:",
-                        shelves_update_values,
-                    )
-                    debug_print(
-                        "_remove_duplicate_shelves - shelves_update_query:",
-                        shelves_update_query,
-                    )
-                    debug_print(
-                        "_remove_duplicate_shelves - shelves_delete_query:",
-                        shelves_delete_query,
-                    )
-                    debug_print(
-                        "_remove_duplicate_shelves - shelves_delete_values:",
-                        shelves_delete_values,
-                    )
-                    cursor.execute(shelves_update_query, shelves_update_values)
-                    cursor.execute(shelves_delete_query, shelves_delete_values)
-                    shelves_removed += shelf[3] - 1
-
-            if purge_shelves:
+                    shelves_delete_values = shelves_values
                 debug_print(
-                    "_remove_duplicate_shelves - purging all shelves marked as deleted"
+                    "_remove_duplicate_shelves - marking as deleted:",
+                    shelves_update_values,
                 )
-                cursor.execute(shelves_purge)
+                debug_print(
+                    "_remove_duplicate_shelves - shelves_update_query:",
+                    shelves_update_query,
+                )
+                debug_print(
+                    "_remove_duplicate_shelves - shelves_delete_query:",
+                    shelves_delete_query,
+                )
+                debug_print(
+                    "_remove_duplicate_shelves - shelves_delete_values:",
+                    shelves_delete_values,
+                )
+                cursor.execute(shelves_update_query, shelves_update_values)
+                cursor.execute(shelves_delete_query, shelves_delete_values)
+                shelves_removed += shelf[3] - 1
 
-            cursor.close()
+        if purge_shelves:
+            debug_print(
+                "_remove_duplicate_shelves - purging all shelves marked as deleted"
+            )
+            cursor.execute(shelves_purge)
 
-            self.hide_progressbar()
+        self.hide_progressbar()
         return starting_shelves, shelves_removed, finished_shelves
 
     def _check_device_database(self):
         return check_device_database(self.device_database_path())
 
     def _block_analytics(self):
-        with self.device_database_connection() as connection:
-            block_result = "The trigger on the AnalyticsEvents table has been removed."
+        connection = self.device_database_connection()
+        block_result = "The trigger on the AnalyticsEvents table has been removed."
 
-            cursor = connection.cursor()
+        cursor = connection.cursor()
 
-            cursor.execute("DROP TRIGGER IF EXISTS BlockAnalyticsEvents")
-            # Delete the Extended drvier version if it is there.
-            cursor.execute("DROP TRIGGER IF EXISTS KTE_BlockAnalyticsEvents")
+        cursor.execute("DROP TRIGGER IF EXISTS BlockAnalyticsEvents")
+        # Delete the Extended drvier version if it is there.
+        cursor.execute("DROP TRIGGER IF EXISTS KTE_BlockAnalyticsEvents")
 
-            if self.options[cfg.KEY_CREATE_ANALYTICSEVENTS_TRIGGER]:
-                cursor.execute("DELETE FROM AnalyticsEvents")
-                debug_print("KoboUtilities:_block_analytics - creating trigger.")
-                trigger_query = (
-                    "CREATE TRIGGER IF NOT EXISTS BlockAnalyticsEvents "
-                    "AFTER INSERT ON AnalyticsEvents "
-                    "BEGIN "
-                    "DELETE FROM AnalyticsEvents; "
-                    "END"
-                )
-                cursor.execute(trigger_query)
-                result = cursor.fetchall()
+        if self.options[cfg.KEY_CREATE_ANALYTICSEVENTS_TRIGGER]:
+            cursor.execute("DELETE FROM AnalyticsEvents")
+            debug_print("KoboUtilities:_block_analytics - creating trigger.")
+            trigger_query = (
+                "CREATE TRIGGER IF NOT EXISTS BlockAnalyticsEvents "
+                "AFTER INSERT ON AnalyticsEvents "
+                "BEGIN "
+                "DELETE FROM AnalyticsEvents; "
+                "END"
+            )
+            cursor.execute(trigger_query)
+            result = cursor.fetchall()
 
-                if result is None:
-                    block_result = None
-                else:
-                    debug_print("_block_analytics - result=", result)
-                    block_result = "AnalyticsEvents have been blocked in the database."
+            if result is None:
+                block_result = None
+            else:
+                debug_print("_block_analytics - result=", result)
+                block_result = "AnalyticsEvents have been blocked in the database."
 
-            cursor.close()
         return block_result
 
     def _vacuum_device_database(self):
-        with self.device_database_connection() as connection:
-            compress_query = "VACUUM"
-            cursor = connection.cursor()
+        connection = self.device_database_connection()
+        compress_query = "VACUUM"
+        cursor = connection.cursor()
 
-            compress_result = ""
-            cursor.execute(compress_query)
-            result = cursor.fetchall()
-            if result is not None:
-                debug_print("_vacuum_device_database - result=", result)
-                for line in result:
-                    compress_result += "\n" + line[0]
-                    debug_print("_vacuum_device_database - result line=", line[0])
-            else:
-                compress_result = _("Execution of '%s' failed") % compress_query
-
-            cursor.close()
+        compress_result = ""
+        cursor.execute(compress_query)
+        result = cursor.fetchall()
+        if result is not None:
+            debug_print("_vacuum_device_database - result=", result)
+            for line in result:
+                compress_result += "\n" + line[0]
+                debug_print("_vacuum_device_database - result line=", line[0])
+        else:
+            compress_result = _("Execution of '%s' failed") % compress_query
 
         return compress_result
 
@@ -4774,580 +4737,545 @@ class KoboUtilitiesAction(InterfaceAction):
             "AND seriesid IS NOT NULL "
         )
 
-        with self.device_database_connection(use_row_factory=True) as connection:
-            test_query = self.generate_metadata_query()
-            cursor = connection.cursor()
-            kobo_series_dict = {}
-            if self.supports_series_list:
-                cursor.execute(series_id_query)
-                rows = list(cursor)
-                debug_print("_update_metadata: series_id_query result=", rows)
-                for row in rows:
-                    kobo_series_dict[row["Series"]] = row["SeriesID"]
-                debug_print("_update_metadata: kobo_series_list=", kobo_series_dict)
+        connection = self.device_database_connection(use_row_factory=True)
+        test_query = self.generate_metadata_query()
+        cursor = connection.cursor()
+        kobo_series_dict = {}
+        if self.supports_series_list:
+            cursor.execute(series_id_query)
+            rows = list(cursor)
+            debug_print("_update_metadata: series_id_query result=", rows)
+            for row in rows:
+                kobo_series_dict[row["Series"]] = row["SeriesID"]
+            debug_print("_update_metadata: kobo_series_list=", kobo_series_dict)
 
-            for book in books:
-                self.set_progressbar_label(_("Updating metadata for ") + book.title)
-                self.increment_progressbar()
+        for book in books:
+            self.set_progressbar_label(_("Updating metadata for ") + book.title)
+            self.increment_progressbar()
 
-                for contentID in book.contentIDs:
+            for contentID in book.contentIDs:
+                debug_print(
+                    "_update_metadata: searching for contentId='%s'" % (contentID)
+                )
+                if not contentID:
+                    contentID = self.contentid_from_path(book.path, self.CONTENTTYPE)
+                debug_print(
+                    "_update_metadata: self.options[cfg.KEY_UDPATE_KOBO_EPUBS]=",
+                    self.options[cfg.KEY_UDPATE_KOBO_EPUBS],
+                )
+                debug_print(
+                    "_update_metadata: contentID.startswith('file')=",
+                    contentID.startswith("file"),
+                )
+                if not self.options[
+                    cfg.KEY_UDPATE_KOBO_EPUBS
+                ] and not contentID.startswith("file"):
+                    debug_print("_update_metadata: skipping book")
+                    continue
+
+                count_books += 1
+                query_values = (contentID,)
+                cursor.execute(test_query, query_values)
+                try:
+                    result = next(cursor)
+                except StopIteration:
+                    result = None
+                if result is not None:
+                    debug_print("_update_metadata: found contentId='%s'" % (contentID))
+                    debug_print("    result=", result)
+                    debug_print("    result['Title']='%s'" % (result["Title"]))
                     debug_print(
-                        "_update_metadata: searching for contentId='%s'" % (contentID)
+                        "    result['Attribution']='%s'" % (result["Attribution"])
                     )
-                    if not contentID:
-                        contentID = self.contentid_from_path(
-                            book.path, self.CONTENTTYPE
+
+                    title_string = None
+                    authors_string = None
+                    newmi = book.deepcopy_metadata()
+                    if self.options[cfg.KEY_USE_PLUGBOARD] and plugboards is not None:
+                        book_format = os.path.splitext(contentID)[1][1:]
+                        debug_print("_update_metadata: format='%s'" % (book_format))
+                        plugboard = find_plugboard(
+                            self.device.__class__.__name__, book_format, plugboards
                         )
-                    debug_print(
-                        "_update_metadata: self.options[cfg.KEY_UDPATE_KOBO_EPUBS]=",
-                        self.options[cfg.KEY_UDPATE_KOBO_EPUBS],
-                    )
-                    debug_print(
-                        "_update_metadata: contentID.startswith('file')=",
-                        contentID.startswith("file"),
-                    )
-                    if not self.options[
-                        cfg.KEY_UDPATE_KOBO_EPUBS
-                    ] and not contentID.startswith("file"):
-                        debug_print("_update_metadata: skipping book")
-                        continue
+                        debug_print("_update_metadata: plugboard=", plugboard)
 
-                    count_books += 1
-                    query_values = (contentID,)
-                    cursor.execute(test_query, query_values)
-                    try:
-                        result = next(cursor)
-                    except StopIteration:
-                        result = None
-                    if result is not None:
+                        if plugboard is not None:
+                            debug_print("_update_metadata: applying plugboard")
+                            newmi.template_to_attribute(book, plugboard)
+                        debug_print("_update_metadata: newmi.title=", newmi.title)
+                        debug_print("_update_metadata: newmi.authors=", newmi.authors)
+                        debug_print("_update_metadata: newmi.comments=", newmi.comments)
+                    else:
+                        if self.options[cfg.KEY_USE_TITLE_SORT]:
+                            title_string = newmi.title_sort
+                        if self.options[cfg.KEY_USE_AUTHOR_SORT]:
+                            debug_print("_update_metadata: author=", newmi.authors)
+                            debug_print(
+                                "_update_metadata: using author_sort=",
+                                newmi.author_sort,
+                            )
+                            debug_print(
+                                "_update_metadata: using author_sort - author=",
+                                newmi.authors,
+                            )
+                            authors_string = newmi.author_sort
+                    debug_print("_update_metadata: title_string=", title_string)
+                    title_string = newmi.title if title_string is None else title_string
+                    debug_print("_update_metadata: title_string=", title_string)
+                    debug_print("_update_metadata: authors_string=", authors_string)
+                    authors_string = (
+                        authors_to_string(newmi.authors)
+                        if authors_string is None
+                        else authors_string
+                    )
+                    debug_print("_update_metadata: authors_string=", authors_string)
+                    newmi.series_index_string = getattr(
+                        book, "series_index_string", None
+                    )
+
+                    update_query = "UPDATE content SET "
+                    update_values = []
+                    set_clause_columns = []
+                    changes_found = False
+                    rating_values = []
+                    rating_change_query = None
+
+                    if (
+                        self.options[cfg.KEY_SET_TITLE]
+                        and not result["Title"] == title_string
+                    ):
+                        set_clause_columns.append("Title=?")
+                        debug_print("_update_metadata: set_clause=", set_clause_columns)
+                        update_values.append(title_string)
+
+                    if (
+                        self.options[cfg.KEY_SET_AUTHOR]
+                        and not result["Attribution"] == authors_string
+                    ):
+                        set_clause_columns.append("Attribution=?")
                         debug_print(
-                            "_update_metadata: found contentId='%s'" % (contentID)
+                            "_update_metadata: set_clause_columns=",
+                            set_clause_columns,
                         )
-                        debug_print("    result=", result)
-                        debug_print("    result['Title']='%s'" % (result["Title"]))
-                        debug_print(
-                            "    result['Attribution']='%s'" % (result["Attribution"])
-                        )
+                        update_values.append(authors_string)
 
-                        title_string = None
-                        authors_string = None
-                        newmi = book.deepcopy_metadata()
+                    if self.options[cfg.KEY_SET_DESCRIPTION]:
+                        new_comments = library_comments = newmi.comments
+                        if self.options[cfg.KEY_DESCRIPTION_USE_TEMPLATE]:
+                            new_comments = self._render_synopsis(
+                                newmi,
+                                book,
+                                template=self.options[cfg.KEY_DESCRIPTION_TEMPLATE],
+                            )
+                            if len(new_comments) == 0:
+                                new_comments = library_comments
                         if (
-                            self.options[cfg.KEY_USE_PLUGBOARD]
-                            and plugboards is not None
+                            new_comments
+                            and len(new_comments) > 0
+                            and not result["Description"] == new_comments
                         ):
-                            book_format = os.path.splitext(contentID)[1][1:]
-                            debug_print("_update_metadata: format='%s'" % (book_format))
-                            plugboard = find_plugboard(
-                                self.device.__class__.__name__, book_format, plugboards
-                            )
-                            debug_print("_update_metadata: plugboard=", plugboard)
-
-                            if plugboard is not None:
-                                debug_print("_update_metadata: applying plugboard")
-                                newmi.template_to_attribute(book, plugboard)
-                            debug_print("_update_metadata: newmi.title=", newmi.title)
-                            debug_print(
-                                "_update_metadata: newmi.authors=", newmi.authors
-                            )
-                            debug_print(
-                                "_update_metadata: newmi.comments=", newmi.comments
-                            )
+                            set_clause_columns.append("Description=?")
+                            update_values.append(new_comments)
                         else:
-                            if self.options[cfg.KEY_USE_TITLE_SORT]:
-                                title_string = newmi.title_sort
-                            if self.options[cfg.KEY_USE_AUTHOR_SORT]:
-                                debug_print("_update_metadata: author=", newmi.authors)
-                                debug_print(
-                                    "_update_metadata: using author_sort=",
-                                    newmi.author_sort,
-                                )
-                                debug_print(
-                                    "_update_metadata: using author_sort - author=",
-                                    newmi.authors,
-                                )
-                                authors_string = newmi.author_sort
-                        debug_print("_update_metadata: title_string=", title_string)
-                        title_string = (
-                            newmi.title if title_string is None else title_string
+                            debug_print(
+                                "_update_metadata: Description not changed - not updating."
+                            )
+
+                    if (
+                        self.options[cfg.KEY_SET_PUBLISHER]
+                        and not result["Publisher"] == newmi.publisher
+                    ):
+                        set_clause_columns.append("Publisher=?")
+                        update_values.append(newmi.publisher)
+
+                    if self.options[cfg.KEY_SET_PUBLISHED_DATE]:
+                        pubdate_string = strftime(
+                            self.device_timestamp_string, newmi.pubdate
                         )
-                        debug_print("_update_metadata: title_string=", title_string)
-                        debug_print("_update_metadata: authors_string=", authors_string)
-                        authors_string = (
-                            authors_to_string(newmi.authors)
-                            if authors_string is None
-                            else authors_string
-                        )
-                        debug_print("_update_metadata: authors_string=", authors_string)
-                        newmi.series_index_string = getattr(
-                            book, "series_index_string", None
-                        )
-
-                        update_query = "UPDATE content SET "
-                        update_values = []
-                        set_clause_columns = []
-                        changes_found = False
-                        rating_values = []
-                        rating_change_query = None
-
-                        if (
-                            self.options[cfg.KEY_SET_TITLE]
-                            and not result["Title"] == title_string
-                        ):
-                            set_clause_columns.append("Title=?")
+                        if not (result["DateCreated"] == pubdate_string):
+                            set_clause_columns.append("DateCreated=?")
                             debug_print(
-                                "_update_metadata: set_clause=", set_clause_columns
-                            )
-                            update_values.append(title_string)
-
-                        if (
-                            self.options[cfg.KEY_SET_AUTHOR]
-                            and not result["Attribution"] == authors_string
-                        ):
-                            set_clause_columns.append("Attribution=?")
-                            debug_print(
-                                "_update_metadata: set_clause_columns=",
-                                set_clause_columns,
-                            )
-                            update_values.append(authors_string)
-
-                        if self.options[cfg.KEY_SET_DESCRIPTION]:
-                            new_comments = library_comments = newmi.comments
-                            if self.options[cfg.KEY_DESCRIPTION_USE_TEMPLATE]:
-                                new_comments = self._render_synopsis(
-                                    newmi,
-                                    book,
-                                    template=self.options[cfg.KEY_DESCRIPTION_TEMPLATE],
-                                )
-                                if len(new_comments) == 0:
-                                    new_comments = library_comments
-                            if (
-                                new_comments
-                                and len(new_comments) > 0
-                                and not result["Description"] == new_comments
-                            ):
-                                set_clause_columns.append("Description=?")
-                                update_values.append(new_comments)
-                            else:
-                                debug_print(
-                                    "_update_metadata: Description not changed - not updating."
-                                )
-
-                        if (
-                            self.options[cfg.KEY_SET_PUBLISHER]
-                            and not result["Publisher"] == newmi.publisher
-                        ):
-                            set_clause_columns.append("Publisher=?")
-                            update_values.append(newmi.publisher)
-
-                        if self.options[cfg.KEY_SET_PUBLISHED_DATE]:
-                            pubdate_string = strftime(
-                                self.device_timestamp_string, newmi.pubdate
-                            )
-                            if not (result["DateCreated"] == pubdate_string):
-                                set_clause_columns.append("DateCreated=?")
-                                debug_print(
-                                    "_update_metadata: convert_kobo_date(result['DateCreated'])=",
-                                    convert_kobo_date(result["DateCreated"]),
-                                )
-                                debug_print(
-                                    "_update_metadata: convert_kobo_date(result['DateCreated']).__class__=",
-                                    convert_kobo_date(result["DateCreated"]).__class__,
-                                )
-                                debug_print(
-                                    "_update_metadata: newmi.pubdate  =", newmi.pubdate
-                                )
-                                debug_print(
-                                    "_update_metadata: result['DateCreated']     =",
-                                    result["DateCreated"],
-                                )
-                                debug_print(
-                                    "_update_metadata: pubdate_string=", pubdate_string
-                                )
-                                debug_print(
-                                    "_update_metadata: newmi.pubdate.__class__=",
-                                    newmi.pubdate.__class__,
-                                )
-                                update_values.append(pubdate_string)
-
-                        if (
-                            self.options[cfg.KEY_SET_ISBN]
-                            and not result["ISBN"] == newmi.isbn
-                        ):
-                            set_clause_columns.append("ISBN=?")
-                            update_values.append(newmi.isbn)
-
-                        if self.options[cfg.KEY_SET_LANGUAGE] and not result[
-                            "Language"
-                        ] == lang_as_iso639_1(newmi.language):
-                            debug_print(
-                                "_update_metadata: newmi.language =", newmi.language
+                                "_update_metadata: convert_kobo_date(result['DateCreated'])=",
+                                convert_kobo_date(result["DateCreated"]),
                             )
                             debug_print(
-                                "_update_metadata: lang_as_iso639_1(newmi.language)=",
-                                lang_as_iso639_1(newmi.language),
+                                "_update_metadata: convert_kobo_date(result['DateCreated']).__class__=",
+                                convert_kobo_date(result["DateCreated"]).__class__,
                             )
                             debug_print(
-                                "_update_metadata: canonicalize_lang(newmi.language)=",
-                                canonicalize_lang(newmi.language),
+                                "_update_metadata: newmi.pubdate  =", newmi.pubdate
                             )
+                            debug_print(
+                                "_update_metadata: result['DateCreated']     =",
+                                result["DateCreated"],
+                            )
+                            debug_print(
+                                "_update_metadata: pubdate_string=", pubdate_string
+                            )
+                            debug_print(
+                                "_update_metadata: newmi.pubdate.__class__=",
+                                newmi.pubdate.__class__,
+                            )
+                            update_values.append(pubdate_string)
 
+                    if (
+                        self.options[cfg.KEY_SET_ISBN]
+                        and not result["ISBN"] == newmi.isbn
+                    ):
+                        set_clause_columns.append("ISBN=?")
+                        update_values.append(newmi.isbn)
+
+                    if self.options[cfg.KEY_SET_LANGUAGE] and not result[
+                        "Language"
+                    ] == lang_as_iso639_1(newmi.language):
                         debug_print(
-                            "_update_metadata: self.options[cfg.KEY_SET_RATING]= ",
-                            self.options[cfg.KEY_SET_RATING],
+                            "_update_metadata: newmi.language =", newmi.language
                         )
-                        if self.options[cfg.KEY_SET_RATING]:
-                            rating_column = self.get_rating_column()
+                        debug_print(
+                            "_update_metadata: lang_as_iso639_1(newmi.language)=",
+                            lang_as_iso639_1(newmi.language),
+                        )
+                        debug_print(
+                            "_update_metadata: canonicalize_lang(newmi.language)=",
+                            canonicalize_lang(newmi.language),
+                        )
 
-                            if rating_column:
-                                if rating_column == "rating":
-                                    rating = newmi.rating
-                                else:
-                                    rating = newmi.get_user_metadata(
-                                        rating_column, True
-                                    )["#value#"]
-                                debug_print(
-                                    "_update_metadata: rating=",
-                                    rating,
-                                    "result[Rating]=",
-                                    result["Rating"],
-                                )
-                                rating = (
-                                    None if not rating or rating == 0 else rating / 2
-                                )
-                                debug_print(
-                                    "_update_metadata: rating=",
-                                    rating,
-                                    "result[Rating]=",
-                                    result["Rating"],
-                                )
-                                rating_values.append(rating)
-                                rating_values.append(
-                                    strftime(
-                                        self.device_timestamp_string, time.gmtime()
-                                    )
-                                )
-                                rating_values.append(contentID)
-                                if not rating == result["Rating"]:
-                                    if not rating:
-                                        rating_change_query = rating_delete
-                                        rating_values = (contentID,)
-                                    elif (
-                                        result["DateModified"] is None
-                                    ):  # If the date modified column does not have a value, there is no rating column
-                                        rating_change_query = rating_insert
-                                    else:
-                                        rating_change_query = rating_update
+                    debug_print(
+                        "_update_metadata: self.options[cfg.KEY_SET_RATING]= ",
+                        self.options[cfg.KEY_SET_RATING],
+                    )
+                    if self.options[cfg.KEY_SET_RATING]:
+                        rating_column = self.get_rating_column()
 
-                        if self.supports_series and self.options["series"]:
-                            debug_print(
-                                "_update_metadata: self.options['series']",
-                                self.options["series"],
-                            )
-                            debug_print(
-                                "_update_metadata: newmi.series= ='%s' newmi.series_index='%s' newmi.series_index_string='%s'"
-                                % (
-                                    newmi.series,
-                                    newmi.series_index,
-                                    newmi.series_index_string,
-                                )
-                            )
-                            debug_print(
-                                "_update_metadata: result['Series'] ='%s' result['SeriesNumber'] =%s"
-                                % (result["Series"], result["SeriesNumber"])
-                            )
-                            debug_print(
-                                "_update_metadata: result['SeriesID'] ='%s' result['SeriesNumberFloat'] =%s"
-                                % (result["SeriesID"], result["SeriesNumberFloat"])
-                            )
-
-                            if newmi.series is not None:
-                                new_series = newmi.series
-                                try:
-                                    new_series_number = "%g" % newmi.series_index
-                                except:
-                                    new_series_number = None
+                        if rating_column:
+                            if rating_column == "rating":
+                                rating = newmi.rating
                             else:
-                                new_series = None
+                                rating = newmi.get_user_metadata(rating_column, True)[
+                                    "#value#"
+                                ]
+                            debug_print(
+                                "_update_metadata: rating=",
+                                rating,
+                                "result[Rating]=",
+                                result["Rating"],
+                            )
+                            rating = None if not rating or rating == 0 else rating / 2
+                            debug_print(
+                                "_update_metadata: rating=",
+                                rating,
+                                "result[Rating]=",
+                                result["Rating"],
+                            )
+                            rating_values.append(rating)
+                            rating_values.append(
+                                strftime(self.device_timestamp_string, time.gmtime())
+                            )
+                            rating_values.append(contentID)
+                            if not rating == result["Rating"]:
+                                if not rating:
+                                    rating_change_query = rating_delete
+                                    rating_values = (contentID,)
+                                elif (
+                                    result["DateModified"] is None
+                                ):  # If the date modified column does not have a value, there is no rating column
+                                    rating_change_query = rating_insert
+                                else:
+                                    rating_change_query = rating_update
+
+                    if self.supports_series and self.options["series"]:
+                        debug_print(
+                            "_update_metadata: self.options['series']",
+                            self.options["series"],
+                        )
+                        debug_print(
+                            "_update_metadata: newmi.series= ='%s' newmi.series_index='%s' newmi.series_index_string='%s'"
+                            % (
+                                newmi.series,
+                                newmi.series_index,
+                                newmi.series_index_string,
+                            )
+                        )
+                        debug_print(
+                            "_update_metadata: result['Series'] ='%s' result['SeriesNumber'] =%s"
+                            % (result["Series"], result["SeriesNumber"])
+                        )
+                        debug_print(
+                            "_update_metadata: result['SeriesID'] ='%s' result['SeriesNumberFloat'] =%s"
+                            % (result["SeriesID"], result["SeriesNumberFloat"])
+                        )
+
+                        if newmi.series is not None:
+                            new_series = newmi.series
+                            try:
+                                new_series_number = "%g" % newmi.series_index
+                            except:
                                 new_series_number = None
+                        else:
+                            new_series = None
+                            new_series_number = None
 
-                            series_changed = not (new_series == result["Series"])
-                            series_number_changed = not (
-                                new_series_number == result["SeriesNumber"]
-                            )
-                            debug_print(
-                                '_update_metadata: new_series="%s"' % (new_series,)
-                            )
-                            debug_print(
-                                '_update_metadata: new_series_number="%s"'
-                                % (new_series_number,)
-                            )
-                            debug_print(
-                                '_update_metadata: series_number_changed="%s"'
-                                % (series_number_changed,)
-                            )
-                            debug_print(
-                                '_update_metadata: series_changed="%s"'
-                                % (series_changed,)
-                            )
-                            if series_changed or series_number_changed:
-                                debug_print("_update_metadata: setting series")
-                                set_clause_columns.append("Series=?")
-                                update_values.append(new_series)
-                                set_clause_columns.append("SeriesNumber=?")
-                                update_values.append(new_series_number)
-                            debug_print(
-                                "_update_metadata: self.supports_series_list='%s'"
-                                % self.supports_series_list
-                            )
-                            if self.supports_series_list:
-                                debug_print("_update_metadata: supports_series_list")
-                                series_id = kobo_series_dict.get(
-                                    newmi.series, newmi.series
-                                )
-                                debug_print(
-                                    "_update_metadata: series_id='%s'" % series_id
-                                )
-                                if (
-                                    series_changed
-                                    or series_number_changed
-                                    or not (
-                                        result["SeriesID"] == series_id
-                                        and (
-                                            result["SeriesNumberFloat"]
-                                            == newmi.series_index
-                                        )
-                                    )
-                                ):
-                                    debug_print("_update_metadata: setting SeriesID")
-                                    set_clause_columns.append("SeriesID=?")
-                                    set_clause_columns.append("SeriesNumberFloat=?")
-                                    if series_id is None or series_id == "":
-                                        update_values.append(None)
-                                        update_values.append(None)
-                                    else:
-                                        update_values.append(series_id)
-                                        update_values.append(newmi.series_index)
-
-                        if self.options[
-                            cfg.KEY_SET_SUBTITLE
-                        ]:  # and self.options[cfg.KEY_SUBTITLE_TEMPLATE]:
-                            debug_print(
-                                "_update_metadata: setting subtitle - column name =",
-                                self.options[cfg.KEY_SUBTITLE_TEMPLATE],
-                            )
-                            subtitle_template = self.options[cfg.KEY_SUBTITLE_TEMPLATE]
+                        series_changed = not (new_series == result["Series"])
+                        series_number_changed = not (
+                            new_series_number == result["SeriesNumber"]
+                        )
+                        debug_print('_update_metadata: new_series="%s"' % (new_series,))
+                        debug_print(
+                            '_update_metadata: new_series_number="%s"'
+                            % (new_series_number,)
+                        )
+                        debug_print(
+                            '_update_metadata: series_number_changed="%s"'
+                            % (series_number_changed,)
+                        )
+                        debug_print(
+                            '_update_metadata: series_changed="%s"' % (series_changed,)
+                        )
+                        if series_changed or series_number_changed:
+                            debug_print("_update_metadata: setting series")
+                            set_clause_columns.append("Series=?")
+                            update_values.append(new_series)
+                            set_clause_columns.append("SeriesNumber=?")
+                            update_values.append(new_series_number)
+                        debug_print(
+                            "_update_metadata: self.supports_series_list='%s'"
+                            % self.supports_series_list
+                        )
+                        if self.supports_series_list:
+                            debug_print("_update_metadata: supports_series_list")
+                            series_id = kobo_series_dict.get(newmi.series, newmi.series)
+                            debug_print("_update_metadata: series_id='%s'" % series_id)
                             if (
-                                self.options[cfg.KEY_SUBTITLE_TEMPLATE]
-                                == cfg.TOKEN_CLEAR_SUBTITLE
+                                series_changed
+                                or series_number_changed
+                                or not (
+                                    result["SeriesID"] == series_id
+                                    and (
+                                        result["SeriesNumberFloat"]
+                                        == newmi.series_index
+                                    )
+                                )
+                            ):
+                                debug_print("_update_metadata: setting SeriesID")
+                                set_clause_columns.append("SeriesID=?")
+                                set_clause_columns.append("SeriesNumberFloat=?")
+                                if series_id is None or series_id == "":
+                                    update_values.append(None)
+                                    update_values.append(None)
+                                else:
+                                    update_values.append(series_id)
+                                    update_values.append(newmi.series_index)
+
+                    if self.options[
+                        cfg.KEY_SET_SUBTITLE
+                    ]:  # and self.options[cfg.KEY_SUBTITLE_TEMPLATE]:
+                        debug_print(
+                            "_update_metadata: setting subtitle - column name =",
+                            self.options[cfg.KEY_SUBTITLE_TEMPLATE],
+                        )
+                        subtitle_template = self.options[cfg.KEY_SUBTITLE_TEMPLATE]
+                        if (
+                            self.options[cfg.KEY_SUBTITLE_TEMPLATE]
+                            == cfg.TOKEN_CLEAR_SUBTITLE
+                        ):
+                            new_subtitle = None
+                        elif (
+                            subtitle_template
+                            and self.options[cfg.KEY_SUBTITLE_TEMPLATE][0] == "#"
+                        ):
+                            new_subtitle = newmi.get_user_metadata(
+                                self.options[cfg.KEY_SUBTITLE_TEMPLATE], True
+                            )["#value#"]
+                        else:
+                            pb = [
+                                (
+                                    self.options[cfg.KEY_SUBTITLE_TEMPLATE],
+                                    "subtitle",
+                                )
+                            ]
+                            book.template_to_attribute(book, pb)
+                            debug_print(
+                                "_render_synopsis: after - mi.subtitle=",
+                                book.subtitle,
+                            )
+                            new_subtitle = (
+                                book.subtitle if len(book.subtitle) > 0 else None
+                            )
+                            if (
+                                new_subtitle
+                                and self.options[cfg.KEY_SUBTITLE_TEMPLATE]
+                                == new_subtitle
                             ):
                                 new_subtitle = None
-                            elif (
-                                subtitle_template
-                                and self.options[cfg.KEY_SUBTITLE_TEMPLATE][0] == "#"
-                            ):
-                                new_subtitle = newmi.get_user_metadata(
-                                    self.options[cfg.KEY_SUBTITLE_TEMPLATE], True
-                                )["#value#"]
-                            else:
-                                pb = [
-                                    (
-                                        self.options[cfg.KEY_SUBTITLE_TEMPLATE],
-                                        "subtitle",
-                                    )
-                                ]
-                                book.template_to_attribute(book, pb)
-                                debug_print(
-                                    "_render_synopsis: after - mi.subtitle=",
-                                    book.subtitle,
-                                )
-                                new_subtitle = (
-                                    book.subtitle if len(book.subtitle) > 0 else None
-                                )
-                                if (
-                                    new_subtitle
-                                    and self.options[cfg.KEY_SUBTITLE_TEMPLATE]
-                                    == new_subtitle
-                                ):
-                                    new_subtitle = None
-                                debug_print(
-                                    '_update_metadata: setting subtitle - subtitle ="%s"'
-                                    % new_subtitle
-                                )
-                                debug_print(
-                                    '_update_metadata: setting subtitle - result["Subtitle"] = "%s"'
-                                    % result["Subtitle"]
-                                )
-                            if (
-                                not new_subtitle
-                                and (
-                                    not (
-                                        result["Subtitle"] is None
-                                        or result["Subtitle"] == ""
-                                    )
-                                )
-                            ) or (
-                                new_subtitle and not result["Subtitle"] == new_subtitle
-                            ):
-                                update_values.append(new_subtitle)
-                                set_clause_columns.append("Subtitle=?")
-
-                        debug_print(
-                            "_update_metadata: self.options[cfg.KEY_SET_READING_DIRECTION]",
-                            self.options[cfg.KEY_SET_READING_DIRECTION],
-                        )
-                        debug_print(
-                            "_update_metadata: self.options[cfg.KEY_READING_DIRECTION]",
-                            self.options[cfg.KEY_READING_DIRECTION],
-                        )
-                        if self.options[cfg.KEY_SET_READING_DIRECTION] and (
-                            not (
-                                result["PageProgressDirection"]
-                                == self.options[cfg.KEY_READING_DIRECTION]
-                            )
-                        ):
-                            set_clause_columns.append("PageProgressDirection=?")
-                            update_values.append(
-                                self.options[cfg.KEY_READING_DIRECTION]
-                            )
-
-                        debug_print(
-                            "_update_metadata: self.options[cfg.KEY_SYNC_DATE]",
-                            self.options[cfg.KEY_SYNC_DATE],
-                        )
-                        debug_print(
-                            "_update_metadata: self.options[cfg.KEY_SYNC_DATE_COLUMN]",
-                            self.options[cfg.KEY_SYNC_DATE_COLUMN],
-                        )
-                        new_timestamp = None
-                        if self.options[cfg.KEY_SYNC_DATE]:
-                            if self.options[cfg.KEY_SYNC_DATE_COLUMN] == "timestamp":
-                                new_timestamp = newmi.timestamp
-                            elif (
-                                self.options[cfg.KEY_SYNC_DATE_COLUMN]
-                                == "last_modified"
-                            ):
-                                new_timestamp = newmi.last_modified
-                            elif self.options[cfg.KEY_SYNC_DATE_COLUMN] == "pubdate":
-                                new_timestamp = newmi.pubdate
-                            elif self.options[cfg.KEY_SYNC_DATE_COLUMN][0] == "#":
-                                new_timestamp = newmi.get_user_metadata(
-                                    self.options[cfg.KEY_SYNC_DATE_COLUMN], True
-                                )["#value#"]
-                            elif (
-                                self.options[cfg.KEY_SYNC_DATE_COLUMN]
-                                == cfg.TOKEN_FILE_TIMESTAMP
-                            ):
-                                debug_print(
-                                    "_update_metadata: Using book file timestamp for Date Added sort."
-                                )
-                                debug_print("_update_metadata - book=", book)
-                                device_book_path = self.get_device_path_from_contentID(
-                                    contentID, result["MimeType"]
-                                )
-                                debug_print(
-                                    "_update_metadata: device_book_path=",
-                                    device_book_path,
-                                )
-                                new_timestamp = datetime.utcfromtimestamp(
-                                    os.path.getmtime(device_book_path)
-                                )
-                                debug_print(
-                                    "_update_metadata: new_timestamp=", new_timestamp
-                                )
-
-                            if new_timestamp is not None:
-                                synctime_string = strftime(
-                                    self.device_timestamp_string, new_timestamp
-                                )
-                            if new_timestamp is not None and not (
-                                result["___SyncTime"] == synctime_string
-                            ):
-                                set_clause_columns.append("___SyncTime=?")
-                                debug_print(
-                                    "_update_metadata: convert_kobo_date(result['___SyncTime'])=",
-                                    convert_kobo_date(result["___SyncTime"]),
-                                )
-                                debug_print(
-                                    "_update_metadata: convert_kobo_date(result['___SyncTime']).__class__=",
-                                    convert_kobo_date(result["___SyncTime"]).__class__,
-                                )
-                                debug_print(
-                                    "_update_metadata: new_timestamp  =", new_timestamp
-                                )
-                                debug_print(
-                                    "_update_metadata: result['___SyncTime']     =",
-                                    result["___SyncTime"],
-                                )
-                                debug_print(
-                                    "_update_metadata: synctime_string=",
-                                    synctime_string,
-                                )
-                                update_values.append(synctime_string)
-
-                        if self.options["setRreadingStatus"] and (
-                            not (result["ReadStatus"] == self.options["readingStatus"])
-                            or self.options["resetPosition"]
-                        ):
-                            set_clause_columns.append("ReadStatus=?")
-                            update_values.append(self.options["readingStatus"])
-                            if self.options["resetPosition"]:
-                                set_clause_columns.append("DateLastRead=?")
-                                update_values.append(None)
-                                set_clause_columns.append("ChapterIDBookmarked=?")
-                                update_values.append(None)
-                                set_clause_columns.append("___PercentRead=?")
-                                update_values.append(0)
-                                set_clause_columns.append("FirstTimeReading=?")
-                                update_values.append(self.options["readingStatus"] < 2)
-
-                        if len(set_clause_columns) > 0:
-                            update_query += ",".join(set_clause_columns)
-                            changes_found = True
-
-                        if not (changes_found or rating_change_query):
                             debug_print(
-                                "_update_metadata: no changes found to selected metadata. No changes being made."
+                                '_update_metadata: setting subtitle - subtitle ="%s"'
+                                % new_subtitle
                             )
-                            unchanged_books += 1
-                            continue
-
-                        update_query += " WHERE ContentID = ? AND BookID IS NULL"
-                        update_values.append(contentID)
-                        debug_print("_update_metadata: update_query=%s" % update_query)
-                        debug_print("_update_metadata: update_values= ", update_values)
-                        try:
-                            if changes_found:
-                                cursor.execute(update_query, update_values)
-
-                            if rating_change_query:
-                                debug_print(
-                                    "_update_metadata: rating_change_query=%s"
-                                    % rating_change_query
-                                )
-                                debug_print(
-                                    "_update_metadata: rating_values= ", rating_values
-                                )
-                                cursor.execute(rating_change_query, rating_values)
-
-                            updated_books += 1
-                        except:
                             debug_print(
-                                "    Database Exception:  Unable to set series info"
+                                '_update_metadata: setting subtitle - result["Subtitle"] = "%s"'
+                                % result["Subtitle"]
                             )
-                            raise
-                    else:
-                        debug_print(
-                            "_update_metadata: no match for title='%s' contentId='%s'"
-                            % (book.title, contentID)
-                        )
-                        not_on_device_books += 1
-            debug_print(
-                "Update summary: Books updated=%d, unchanged books=%d, not on device=%d, Total=%d"
-                % (updated_books, unchanged_books, not_on_device_books, count_books)
-            )
+                        if (
+                            not new_subtitle
+                            and (
+                                not (
+                                    result["Subtitle"] is None
+                                    or result["Subtitle"] == ""
+                                )
+                            )
+                        ) or (new_subtitle and not result["Subtitle"] == new_subtitle):
+                            update_values.append(new_subtitle)
+                            set_clause_columns.append("Subtitle=?")
 
-            cursor.close()
+                    debug_print(
+                        "_update_metadata: self.options[cfg.KEY_SET_READING_DIRECTION]",
+                        self.options[cfg.KEY_SET_READING_DIRECTION],
+                    )
+                    debug_print(
+                        "_update_metadata: self.options[cfg.KEY_READING_DIRECTION]",
+                        self.options[cfg.KEY_READING_DIRECTION],
+                    )
+                    if self.options[cfg.KEY_SET_READING_DIRECTION] and (
+                        not (
+                            result["PageProgressDirection"]
+                            == self.options[cfg.KEY_READING_DIRECTION]
+                        )
+                    ):
+                        set_clause_columns.append("PageProgressDirection=?")
+                        update_values.append(self.options[cfg.KEY_READING_DIRECTION])
+
+                    debug_print(
+                        "_update_metadata: self.options[cfg.KEY_SYNC_DATE]",
+                        self.options[cfg.KEY_SYNC_DATE],
+                    )
+                    debug_print(
+                        "_update_metadata: self.options[cfg.KEY_SYNC_DATE_COLUMN]",
+                        self.options[cfg.KEY_SYNC_DATE_COLUMN],
+                    )
+                    new_timestamp = None
+                    if self.options[cfg.KEY_SYNC_DATE]:
+                        if self.options[cfg.KEY_SYNC_DATE_COLUMN] == "timestamp":
+                            new_timestamp = newmi.timestamp
+                        elif self.options[cfg.KEY_SYNC_DATE_COLUMN] == "last_modified":
+                            new_timestamp = newmi.last_modified
+                        elif self.options[cfg.KEY_SYNC_DATE_COLUMN] == "pubdate":
+                            new_timestamp = newmi.pubdate
+                        elif self.options[cfg.KEY_SYNC_DATE_COLUMN][0] == "#":
+                            new_timestamp = newmi.get_user_metadata(
+                                self.options[cfg.KEY_SYNC_DATE_COLUMN], True
+                            )["#value#"]
+                        elif (
+                            self.options[cfg.KEY_SYNC_DATE_COLUMN]
+                            == cfg.TOKEN_FILE_TIMESTAMP
+                        ):
+                            debug_print(
+                                "_update_metadata: Using book file timestamp for Date Added sort."
+                            )
+                            debug_print("_update_metadata - book=", book)
+                            device_book_path = self.get_device_path_from_contentID(
+                                contentID, result["MimeType"]
+                            )
+                            debug_print(
+                                "_update_metadata: device_book_path=",
+                                device_book_path,
+                            )
+                            new_timestamp = datetime.utcfromtimestamp(
+                                os.path.getmtime(device_book_path)
+                            )
+                            debug_print(
+                                "_update_metadata: new_timestamp=", new_timestamp
+                            )
+
+                        if new_timestamp is not None:
+                            synctime_string = strftime(
+                                self.device_timestamp_string, new_timestamp
+                            )
+                        if new_timestamp is not None and not (
+                            result["___SyncTime"] == synctime_string
+                        ):
+                            set_clause_columns.append("___SyncTime=?")
+                            debug_print(
+                                "_update_metadata: convert_kobo_date(result['___SyncTime'])=",
+                                convert_kobo_date(result["___SyncTime"]),
+                            )
+                            debug_print(
+                                "_update_metadata: convert_kobo_date(result['___SyncTime']).__class__=",
+                                convert_kobo_date(result["___SyncTime"]).__class__,
+                            )
+                            debug_print(
+                                "_update_metadata: new_timestamp  =", new_timestamp
+                            )
+                            debug_print(
+                                "_update_metadata: result['___SyncTime']     =",
+                                result["___SyncTime"],
+                            )
+                            debug_print(
+                                "_update_metadata: synctime_string=",
+                                synctime_string,
+                            )
+                            update_values.append(synctime_string)
+
+                    if self.options["setRreadingStatus"] and (
+                        not (result["ReadStatus"] == self.options["readingStatus"])
+                        or self.options["resetPosition"]
+                    ):
+                        set_clause_columns.append("ReadStatus=?")
+                        update_values.append(self.options["readingStatus"])
+                        if self.options["resetPosition"]:
+                            set_clause_columns.append("DateLastRead=?")
+                            update_values.append(None)
+                            set_clause_columns.append("ChapterIDBookmarked=?")
+                            update_values.append(None)
+                            set_clause_columns.append("___PercentRead=?")
+                            update_values.append(0)
+                            set_clause_columns.append("FirstTimeReading=?")
+                            update_values.append(self.options["readingStatus"] < 2)
+
+                    if len(set_clause_columns) > 0:
+                        update_query += ",".join(set_clause_columns)
+                        changes_found = True
+
+                    if not (changes_found or rating_change_query):
+                        debug_print(
+                            "_update_metadata: no changes found to selected metadata. No changes being made."
+                        )
+                        unchanged_books += 1
+                        continue
+
+                    update_query += " WHERE ContentID = ? AND BookID IS NULL"
+                    update_values.append(contentID)
+                    debug_print("_update_metadata: update_query=%s" % update_query)
+                    debug_print("_update_metadata: update_values= ", update_values)
+                    try:
+                        if changes_found:
+                            cursor.execute(update_query, update_values)
+
+                        if rating_change_query:
+                            debug_print(
+                                "_update_metadata: rating_change_query=%s"
+                                % rating_change_query
+                            )
+                            debug_print(
+                                "_update_metadata: rating_values= ", rating_values
+                            )
+                            cursor.execute(rating_change_query, rating_values)
+
+                        updated_books += 1
+                    except:
+                        debug_print(
+                            "    Database Exception:  Unable to set series info"
+                        )
+                        raise
+                else:
+                    debug_print(
+                        "_update_metadata: no match for title='%s' contentId='%s'"
+                        % (book.title, contentID)
+                    )
+                    not_on_device_books += 1
+        debug_print(
+            "Update summary: Books updated=%d, unchanged books=%d, not on device=%d, Total=%d"
+            % (updated_books, unchanged_books, not_on_device_books, count_books)
+        )
 
         self.hide_progressbar()
 
@@ -5507,476 +5435,446 @@ class KoboUtilitiesAction(InterfaceAction):
         store_if_more_recent = self.options[cfg.KEY_STORE_IF_MORE_RECENT]
         do_not_store_if_reopened = self.options[cfg.KEY_DO_NOT_STORE_IF_REOPENED]
 
-        with self.device_database_connection(use_row_factory=True) as connection:
-            self.progressbar(_("Storing reading positions"), on_top=True)
-            self.show_progressbar(len(books))
+        connection = self.device_database_connection(use_row_factory=True)
+        self.progressbar(_("Storing reading positions"), on_top=True)
+        self.show_progressbar(len(books))
 
-            library_db = self.gui.current_db
-            (
-                kobo_chapteridbookmarked_column_name,
-                kobo_percentRead_column_name,
-                rating_column_name,
-                last_read_column_name,
-                time_spent_reading_column_name,
-                rest_of_book_estimate_column_name,
-            ) = self.get_column_names(profileName)
-            debug_print(
-                "_store_current_bookmark - kobo_chapteridbookmarked_column_name=",
-                kobo_chapteridbookmarked_column_name,
-            )
-            debug_print(
-                "_store_current_bookmark - kobo_percentRead_column_name=",
-                kobo_percentRead_column_name,
-            )
-            debug_print(
-                "_store_current_bookmark - rating_column_name=", rating_column_name
-            )
-            debug_print(
-                "_store_current_bookmark - last_read_column_name=",
-                last_read_column_name,
-            )
-            debug_print(
-                "_store_current_bookmark - time_spent_reading_column_name=",
-                time_spent_reading_column_name,
-            )
-            debug_print(
-                "_store_current_bookmark - rest_of_book_estimate_column_name=",
-                rest_of_book_estimate_column_name,
-            )
+        library_db = self.gui.current_db
+        (
+            kobo_chapteridbookmarked_column_name,
+            kobo_percentRead_column_name,
+            rating_column_name,
+            last_read_column_name,
+            time_spent_reading_column_name,
+            rest_of_book_estimate_column_name,
+        ) = self.get_column_names(profileName)
+        debug_print(
+            "_store_current_bookmark - kobo_chapteridbookmarked_column_name=",
+            kobo_chapteridbookmarked_column_name,
+        )
+        debug_print(
+            "_store_current_bookmark - kobo_percentRead_column_name=",
+            kobo_percentRead_column_name,
+        )
+        debug_print("_store_current_bookmark - rating_column_name=", rating_column_name)
+        debug_print(
+            "_store_current_bookmark - last_read_column_name=",
+            last_read_column_name,
+        )
+        debug_print(
+            "_store_current_bookmark - time_spent_reading_column_name=",
+            time_spent_reading_column_name,
+        )
+        debug_print(
+            "_store_current_bookmark - rest_of_book_estimate_column_name=",
+            rest_of_book_estimate_column_name,
+        )
 
-            if rating_column_name is not None:
-                if not rating_column_name == "rating":
-                    rating_col_label = (
-                        library_db.field_metadata.key_to_label(rating_column_name)
-                        if rating_column_name
-                        else ""
-                    )
+        if rating_column_name is not None:
+            if not rating_column_name == "rating":
+                rating_col_label = (
+                    library_db.field_metadata.key_to_label(rating_column_name)
+                    if rating_column_name
+                    else ""
+                )
+            else:
+                rating_col_label = None
+            debug_print("_store_current_bookmark - rating_col_label=", rating_col_label)
+
+        id_map = {}
+        id_map_percentRead = {}
+        id_map_chapteridbookmarked = {}
+        id_map_rating = {}
+        id_map_last_read = {}
+        id_map_time_spent_reading = {}
+        id_map_rest_of_book_estimate = {}
+
+        debug_print("_store_current_bookmark - Starting to look at selected books...")
+        cursor = connection.cursor()
+        for book in books:
+            count_books += 1
+            mi = Metadata("Unknown")
+            debug_print("_store_current_bookmark - Looking at book: %s" % book.title)
+            self.set_progressbar_label(_("Checkin ") + book.title)
+            self.increment_progressbar()
+            book_updated = False
+
+            if len(book.contentIDs) == 0:
+                books_without_reading_locations += 1
+                continue
+
+            for contentID in book.contentIDs:
+                debug_print("_store_current_bookmark - contentId='%s'" % (contentID))
+                fetch_values = (contentID,)
+                fetch_queries = self._get_fetch_query_for_firmware_version(
+                    self.device_fwversion
+                )
+                if contentID.endswith(".kepub.epub"):
+                    fetch_query = fetch_queries["kepub"]
                 else:
-                    rating_col_label = None
+                    fetch_query = fetch_queries["epub"]
                 debug_print(
-                    "_store_current_bookmark - rating_col_label=", rating_col_label
+                    "_store_current_bookmark - fetch_query='%s'" % (fetch_query)
                 )
+                cursor.execute(fetch_query, fetch_values)
+                try:
+                    result = next(cursor)
+                except StopIteration:
+                    result = None
 
-            id_map = {}
-            id_map_percentRead = {}
-            id_map_chapteridbookmarked = {}
-            id_map_rating = {}
-            id_map_last_read = {}
-            id_map_time_spent_reading = {}
-            id_map_rest_of_book_estimate = {}
+                kobo_chapteridbookmarked = None
+                kobo_adobe_location = None
+                kobo_percentRead = None
+                last_read = None
+                time_spent_reading = None
+                rest_of_book_estimate = None
 
-            debug_print(
-                "_store_current_bookmark - Starting to look at selected books..."
-            )
-            cursor = connection.cursor()
-            for book in books:
-                count_books += 1
-                mi = Metadata("Unknown")
-                debug_print(
-                    "_store_current_bookmark - Looking at book: %s" % book.title
-                )
-                self.set_progressbar_label(_("Checkin ") + book.title)
-                self.increment_progressbar()
-                book_updated = False
+                if result is not None:
+                    debug_print("_store_current_bookmark - result=", result)
+                    if result["ReadStatus"] == 0:
+                        if clear_if_unread:
+                            kobo_chapteridbookmarked = None
+                            kobo_adobe_location = None
+                            kobo_percentRead = None
+                            last_read = None
+                            kobo_rating = 0
+                            time_spent_reading = None
+                            rest_of_book_estimate = None
+                        else:
+                            books_without_reading_locations += 1
+                            continue
+                    else:
+                        if result["DateLastRead"]:
+                            debug_print(
+                                "_store_current_bookmark - result['DateLastRead']=",
+                                result["DateLastRead"],
+                            )
+                            last_read = convert_kobo_date(result["DateLastRead"])
+                            debug_print(
+                                "_store_current_bookmark - last_read=", last_read
+                            )
 
-                if len(book.contentIDs) == 0:
+                        if last_read_column_name is not None and store_if_more_recent:
+                            current_last_read = book.get_user_metadata(
+                                last_read_column_name, True
+                            )["#value#"]
+                            debug_print(
+                                "_store_current_bookmark - book.get_user_metadata(last_read_column_name, True)['#value#']=",
+                                current_last_read,
+                            )
+                            debug_print(
+                                "_store_current_bookmark - setting mi.last_read=",
+                                last_read,
+                            )
+                            if current_last_read is not None and last_read is not None:
+                                debug_print(
+                                    "_store_current_bookmark - store_if_more_recent - current_last_read < last_read=",
+                                    current_last_read < last_read,
+                                )
+                                if current_last_read >= last_read:
+                                    continue
+                            elif current_last_read is not None and last_read is None:
+                                continue
+
+                        if (
+                            kobo_percentRead_column_name is not None
+                            and do_not_store_if_reopened
+                        ):
+                            current_percentRead = book.get_user_metadata(
+                                kobo_percentRead_column_name, True
+                            )["#value#"]
+                            debug_print(
+                                "_store_current_bookmark - do_not_store_if_reopened - current_percentRead=",
+                                current_percentRead,
+                            )
+                            if (
+                                current_percentRead is not None
+                                and current_percentRead >= 100
+                            ):
+                                continue
+
+                        if (
+                            result["MimeType"] == MIMETYPE_KOBO
+                            or self.epub_location_like_kepub
+                        ):
+                            kobo_chapteridbookmarked = result["ChapterIDBookmarked"]
+                            kobo_adobe_location = None
+                        else:
+                            kobo_chapteridbookmarked = (
+                                result["ChapterIDBookmarked"][len(contentID) + 1 :]
+                                if result["ChapterIDBookmarked"]
+                                else None
+                            )
+                            kobo_adobe_location = result["adobe_location"]
+
+                        if result["ReadStatus"] == 1:
+                            kobo_percentRead = result["___PercentRead"]
+                        elif result["ReadStatus"] == 2:
+                            kobo_percentRead = 100
+
+                        if result["Rating"]:
+                            kobo_rating = result["Rating"] * 2
+                        else:
+                            kobo_rating = 0
+
+                        if result["TimeSpentReading"]:
+                            time_spent_reading = result["TimeSpentReading"]
+                        if result["RestOfBookEstimate"]:
+                            rest_of_book_estimate = result["RestOfBookEstimate"]
+
+                else:
                     books_without_reading_locations += 1
                     continue
 
-                for contentID in book.contentIDs:
+                debug_print(
+                    "_store_current_bookmark - kobo_chapteridbookmarked='%s'"
+                    % (kobo_chapteridbookmarked)
+                )
+                debug_print(
+                    "_store_current_bookmark - kobo_adobe_location='%s'"
+                    % (kobo_adobe_location)
+                )
+                debug_print(
+                    "_store_current_bookmark - kobo_percentRead=", kobo_percentRead
+                )
+                debug_print(
+                    "_store_current_bookmark - time_spent_reading='%s'"
+                    % (time_spent_reading)
+                )
+                debug_print(
+                    "_store_current_bookmark - rest_of_book_estimate='%s'"
+                    % (rest_of_book_estimate)
+                )
+
+                if last_read_column_name is not None:
+                    current_last_read = book.get_user_metadata(
+                        last_read_column_name, True
+                    )["#value#"]
                     debug_print(
-                        "_store_current_bookmark - contentId='%s'" % (contentID)
+                        "_store_current_bookmark - book.get_user_metadata(last_read_column_name, True)['#value#']=",
+                        current_last_read,
                     )
-                    fetch_values = (contentID,)
-                    fetch_queries = self._get_fetch_query_for_firmware_version(
-                        self.device_fwversion
+                    debug_print(
+                        "_store_current_bookmark - setting mi.last_read=", last_read
                     )
-                    if contentID.endswith(".kepub.epub"):
-                        fetch_query = fetch_queries["kepub"]
+                    debug_print(
+                        "_store_current_bookmark - current_last_read == last_read=",
+                        current_last_read == last_read,
+                    )
+
+                    if value_changed(current_last_read, last_read):
+                        id_map_last_read[book.calibre_id] = last_read
+                        book_updated = True
                     else:
-                        fetch_query = fetch_queries["epub"]
-                    debug_print(
-                        "_store_current_bookmark - fetch_query='%s'" % (fetch_query)
-                    )
-                    cursor.execute(fetch_query, fetch_values)
-                    try:
-                        result = next(cursor)
-                    except StopIteration:
-                        result = None
+                        book_updated = book_updated or False
 
-                    kobo_chapteridbookmarked = None
-                    kobo_adobe_location = None
-                    kobo_percentRead = None
-                    last_read = None
-                    time_spent_reading = None
-                    rest_of_book_estimate = None
-
-                    if result is not None:
-                        debug_print("_store_current_bookmark - result=", result)
-                        if result["ReadStatus"] == 0:
-                            if clear_if_unread:
-                                kobo_chapteridbookmarked = None
-                                kobo_adobe_location = None
-                                kobo_percentRead = None
-                                last_read = None
-                                kobo_rating = 0
-                                time_spent_reading = None
-                                rest_of_book_estimate = None
-                            else:
-                                books_without_reading_locations += 1
-                                continue
-                        else:
-                            if result["DateLastRead"]:
-                                debug_print(
-                                    "_store_current_bookmark - result['DateLastRead']=",
-                                    result["DateLastRead"],
-                                )
-                                last_read = convert_kobo_date(result["DateLastRead"])
-                                debug_print(
-                                    "_store_current_bookmark - last_read=", last_read
-                                )
-
-                            if (
-                                last_read_column_name is not None
-                                and store_if_more_recent
-                            ):
-                                current_last_read = book.get_user_metadata(
-                                    last_read_column_name, True
-                                )["#value#"]
-                                debug_print(
-                                    "_store_current_bookmark - book.get_user_metadata(last_read_column_name, True)['#value#']=",
-                                    current_last_read,
-                                )
-                                debug_print(
-                                    "_store_current_bookmark - setting mi.last_read=",
-                                    last_read,
-                                )
-                                if (
-                                    current_last_read is not None
-                                    and last_read is not None
-                                ):
-                                    debug_print(
-                                        "_store_current_bookmark - store_if_more_recent - current_last_read < last_read=",
-                                        current_last_read < last_read,
-                                    )
-                                    if current_last_read >= last_read:
-                                        continue
-                                elif (
-                                    current_last_read is not None and last_read is None
-                                ):
-                                    continue
-
-                            if (
-                                kobo_percentRead_column_name is not None
-                                and do_not_store_if_reopened
-                            ):
-                                current_percentRead = book.get_user_metadata(
-                                    kobo_percentRead_column_name, True
-                                )["#value#"]
-                                debug_print(
-                                    "_store_current_bookmark - do_not_store_if_reopened - current_percentRead=",
-                                    current_percentRead,
-                                )
-                                if (
-                                    current_percentRead is not None
-                                    and current_percentRead >= 100
-                                ):
-                                    continue
-
-                            if (
-                                result["MimeType"] == MIMETYPE_KOBO
-                                or self.epub_location_like_kepub
-                            ):
-                                kobo_chapteridbookmarked = result["ChapterIDBookmarked"]
-                                kobo_adobe_location = None
-                            else:
-                                kobo_chapteridbookmarked = (
-                                    result["ChapterIDBookmarked"][len(contentID) + 1 :]
-                                    if result["ChapterIDBookmarked"]
-                                    else None
-                                )
-                                kobo_adobe_location = result["adobe_location"]
-
-                            if result["ReadStatus"] == 1:
-                                kobo_percentRead = result["___PercentRead"]
-                            elif result["ReadStatus"] == 2:
-                                kobo_percentRead = 100
-
-                            if result["Rating"]:
-                                kobo_rating = result["Rating"] * 2
-                            else:
-                                kobo_rating = 0
-
-                            if result["TimeSpentReading"]:
-                                time_spent_reading = result["TimeSpentReading"]
-                            if result["RestOfBookEstimate"]:
-                                rest_of_book_estimate = result["RestOfBookEstimate"]
-
+                if kobo_chapteridbookmarked_column_name is not None:
+                    if (
+                        kobo_chapteridbookmarked is not None
+                        and kobo_adobe_location is not None
+                    ):
+                        new_value = (
+                            kobo_chapteridbookmarked
+                            + BOOKMARK_SEPARATOR
+                            + kobo_adobe_location
+                        )
+                    elif kobo_chapteridbookmarked:
+                        new_value = kobo_chapteridbookmarked
                     else:
-                        books_without_reading_locations += 1
-                        continue
-
+                        new_value = None
+                        debug_print(
+                            "_store_current_bookmark - setting bookmark column to None"
+                        )
                     debug_print(
-                        "_store_current_bookmark - kobo_chapteridbookmarked='%s'"
-                        % (kobo_chapteridbookmarked)
+                        "_store_current_bookmark - chapterIdBookmark - on kobo=",
+                        new_value,
                     )
                     debug_print(
-                        "_store_current_bookmark - kobo_adobe_location='%s'"
-                        % (kobo_adobe_location)
-                    )
-                    debug_print(
-                        "_store_current_bookmark - kobo_percentRead=", kobo_percentRead
-                    )
-                    debug_print(
-                        "_store_current_bookmark - time_spent_reading='%s'"
-                        % (time_spent_reading)
-                    )
-                    debug_print(
-                        "_store_current_bookmark - rest_of_book_estimate='%s'"
-                        % (rest_of_book_estimate)
-                    )
-
-                    if last_read_column_name is not None:
-                        current_last_read = book.get_user_metadata(
-                            last_read_column_name, True
-                        )["#value#"]
-                        debug_print(
-                            "_store_current_bookmark - book.get_user_metadata(last_read_column_name, True)['#value#']=",
-                            current_last_read,
-                        )
-                        debug_print(
-                            "_store_current_bookmark - setting mi.last_read=", last_read
-                        )
-                        debug_print(
-                            "_store_current_bookmark - current_last_read == last_read=",
-                            current_last_read == last_read,
-                        )
-
-                        if value_changed(current_last_read, last_read):
-                            id_map_last_read[book.calibre_id] = last_read
-                            book_updated = True
-                        else:
-                            book_updated = book_updated or False
-
-                    if kobo_chapteridbookmarked_column_name is not None:
-                        if (
-                            kobo_chapteridbookmarked is not None
-                            and kobo_adobe_location is not None
-                        ):
-                            new_value = (
-                                kobo_chapteridbookmarked
-                                + BOOKMARK_SEPARATOR
-                                + kobo_adobe_location
-                            )
-                        elif kobo_chapteridbookmarked:
-                            new_value = kobo_chapteridbookmarked
-                        else:
-                            new_value = None
-                            debug_print(
-                                "_store_current_bookmark - setting bookmark column to None"
-                            )
-                        debug_print(
-                            "_store_current_bookmark - chapterIdBookmark - on kobo=",
-                            new_value,
-                        )
-                        debug_print(
-                            "_store_current_bookmark - chapterIdBookmark - in library=",
-                            book.get_user_metadata(
-                                kobo_chapteridbookmarked_column_name, True
-                            )["#value#"],
-                        )
-                        debug_print(
-                            "_store_current_bookmark - chapterIdBookmark - on kobo==in library=",
-                            new_value
-                            == book.get_user_metadata(
-                                kobo_chapteridbookmarked_column_name, True
-                            )["#value#"],
-                        )
-                        old_value = book.get_user_metadata(
+                        "_store_current_bookmark - chapterIdBookmark - in library=",
+                        book.get_user_metadata(
                             kobo_chapteridbookmarked_column_name, True
-                        )["#value#"]
-
-                        if value_changed(old_value, new_value):
-                            id_map_chapteridbookmarked[book.calibre_id] = new_value
-                            book_updated = True
-                        else:
-                            book_updated = book_updated or False
-
-                    if kobo_percentRead_column_name is not None:
-                        debug_print(
-                            "_store_current_bookmark - setting kobo_percentRead=",
-                            kobo_percentRead,
-                        )
-                        current_percentRead = book.get_user_metadata(
-                            kobo_percentRead_column_name, True
-                        )["#value#"]
-                        debug_print(
-                            "_store_current_bookmark - percent read - in book=",
-                            current_percentRead,
-                        )
-
-                        if value_changed(current_percentRead, kobo_percentRead):
-                            id_map_percentRead[book.calibre_id] = kobo_percentRead
-                            book_updated = True
-                        else:
-                            book_updated = book_updated or False
-
-                    if rating_column_name is not None and kobo_rating > 0:
-                        debug_print(
-                            "_store_current_bookmark - setting rating_column_name=",
-                            rating_column_name,
-                        )
-                        if rating_column_name == "rating":
-                            current_rating = book.rating
-                            debug_print(
-                                "_store_current_bookmark - rating - in book=",
-                                current_rating,
-                            )
-                            if not current_rating == kobo_rating:
-                                library_db.set_rating(
-                                    book.calibre_id, kobo_rating, commit=False
-                                )
-                        else:
-                            current_rating = book.get_user_metadata(
-                                rating_column_name, True
-                            )["#value#"]
-                            if not current_rating == kobo_rating:
-                                library_db.set_custom(
-                                    book.calibre_id,
-                                    kobo_rating,
-                                    label=rating_col_label,
-                                    commit=False,
-                                )
-                        if value_changed(current_rating, kobo_rating):
-                            id_map_rating[book.calibre_id] = kobo_rating
-                            book_updated = True
-                        else:
-                            book_updated = book_updated or False
-
-                    if time_spent_reading_column_name is not None:
-                        debug_print(
-                            "_store_current_bookmark - setting time_spent_reading=",
-                            time_spent_reading,
-                        )
-                        current_time_spent_reading = book.get_user_metadata(
-                            time_spent_reading_column_name, True
-                        )["#value#"]
-                        debug_print(
-                            "_store_current_bookmark - time spent reading - in book=",
-                            current_time_spent_reading,
-                        )
-
-                        if value_changed(
-                            current_time_spent_reading, time_spent_reading
-                        ):
-                            id_map_time_spent_reading[book.calibre_id] = (
-                                time_spent_reading
-                            )
-                            book_updated = True
-                        else:
-                            book_updated = book_updated or False
-
-                    if rest_of_book_estimate_column_name is not None:
-                        debug_print(
-                            "_store_current_bookmark - setting rest_of_book_estimate=",
-                            rest_of_book_estimate,
-                        )
-                        current_rest_of_book_estimate = book.get_user_metadata(
-                            time_spent_reading_column_name, True
-                        )["#value#"]
-                        debug_print(
-                            "_store_current_bookmark - rest of book estimate - in book=",
-                            current_rest_of_book_estimate,
-                        )
-
-                        if value_changed(
-                            current_rest_of_book_estimate, rest_of_book_estimate
-                        ):
-                            id_map_rest_of_book_estimate[book.calibre_id] = (
-                                rest_of_book_estimate
-                            )
-                            book_updated = True
-                        else:
-                            book_updated = book_updated or False
-
-                    id_map[book.calibre_id] = mi
-
-                if book_updated:
-                    reading_locations_updated += 1
-
-            cursor.close()
-
-            debug_print("_store_current_bookmark - Updating GUI - new DB engine")
-            if (
-                kobo_chapteridbookmarked_column_name
-                and len(id_map_chapteridbookmarked) > 0
-            ):
-                debug_print(
-                    "_store_current_bookmark - Updating metadata - for column: %s number of changes=%d"
-                    % (
-                        kobo_chapteridbookmarked_column_name,
-                        len(id_map_chapteridbookmarked),
+                        )["#value#"],
                     )
-                )
-                library_db.new_api.set_field(
-                    kobo_chapteridbookmarked_column_name, id_map_chapteridbookmarked
-                )
-            if kobo_percentRead_column_name and len(id_map_percentRead) > 0:
-                debug_print(
-                    "_store_current_bookmark - Updating metadata - for column: %s number of changes=%d"
-                    % (kobo_percentRead_column_name, len(id_map_percentRead))
-                )
-                library_db.new_api.set_field(
-                    kobo_percentRead_column_name, id_map_percentRead
-                )
-            if rating_column_name and len(id_map_rating) > 0:
-                debug_print(
-                    "_store_current_bookmark - Updating metadata - for column: %s number of changes=%d"
-                    % (rating_column_name, len(id_map_rating))
-                )
-                library_db.new_api.set_field(rating_column_name, id_map_rating)
-            if last_read_column_name and len(id_map_last_read) > 0:
-                debug_print(
-                    "_store_current_bookmark - Updating metadata - for column: %s number of changes=%d"
-                    % (last_read_column_name, len(id_map_last_read))
-                )
-                library_db.new_api.set_field(last_read_column_name, id_map_last_read)
-            if time_spent_reading_column_name and len(id_map_time_spent_reading) > 0:
-                debug_print(
-                    "_store_current_bookmark - Updating metadata - for column: %s number of changes=%d"
-                    % (time_spent_reading_column_name, len(id_map_time_spent_reading))
-                )
-                library_db.new_api.set_field(
-                    time_spent_reading_column_name, id_map_time_spent_reading
-                )
-            if (
-                rest_of_book_estimate_column_name
-                and len(id_map_rest_of_book_estimate) > 0
-            ):
-                debug_print(
-                    "_store_current_bookmark - Updating metadata - for column: %s number of changes=%d"
-                    % (
-                        rest_of_book_estimate_column_name,
-                        len(id_map_rest_of_book_estimate),
+                    debug_print(
+                        "_store_current_bookmark - chapterIdBookmark - on kobo==in library=",
+                        new_value
+                        == book.get_user_metadata(
+                            kobo_chapteridbookmarked_column_name, True
+                        )["#value#"],
                     )
-                )
-                library_db.new_api.set_field(
-                    rest_of_book_estimate_column_name, id_map_rest_of_book_estimate
-                )
-            self.gui.iactions["Edit Metadata"].refresh_gui(list(id_map))
+                    old_value = book.get_user_metadata(
+                        kobo_chapteridbookmarked_column_name, True
+                    )["#value#"]
 
-            self.hide_progressbar()
-            if len(id_map) > 0:
-                self.gui.status_bar.show_message(
-                    _("Kobo Utilities")
-                    + " - "
-                    + _("Storing reading positions completed - {0} changed.").format(
-                        len(id_map)
-                    ),
-                    3000,
-                )
+                    if value_changed(old_value, new_value):
+                        id_map_chapteridbookmarked[book.calibre_id] = new_value
+                        book_updated = True
+                    else:
+                        book_updated = book_updated or False
 
-            library_db.commit()
+                if kobo_percentRead_column_name is not None:
+                    debug_print(
+                        "_store_current_bookmark - setting kobo_percentRead=",
+                        kobo_percentRead,
+                    )
+                    current_percentRead = book.get_user_metadata(
+                        kobo_percentRead_column_name, True
+                    )["#value#"]
+                    debug_print(
+                        "_store_current_bookmark - percent read - in book=",
+                        current_percentRead,
+                    )
+
+                    if value_changed(current_percentRead, kobo_percentRead):
+                        id_map_percentRead[book.calibre_id] = kobo_percentRead
+                        book_updated = True
+                    else:
+                        book_updated = book_updated or False
+
+                if rating_column_name is not None and kobo_rating > 0:
+                    debug_print(
+                        "_store_current_bookmark - setting rating_column_name=",
+                        rating_column_name,
+                    )
+                    if rating_column_name == "rating":
+                        current_rating = book.rating
+                        debug_print(
+                            "_store_current_bookmark - rating - in book=",
+                            current_rating,
+                        )
+                        if not current_rating == kobo_rating:
+                            library_db.set_rating(
+                                book.calibre_id, kobo_rating, commit=False
+                            )
+                    else:
+                        current_rating = book.get_user_metadata(
+                            rating_column_name, True
+                        )["#value#"]
+                        if not current_rating == kobo_rating:
+                            library_db.set_custom(
+                                book.calibre_id,
+                                kobo_rating,
+                                label=rating_col_label,
+                                commit=False,
+                            )
+                    if value_changed(current_rating, kobo_rating):
+                        id_map_rating[book.calibre_id] = kobo_rating
+                        book_updated = True
+                    else:
+                        book_updated = book_updated or False
+
+                if time_spent_reading_column_name is not None:
+                    debug_print(
+                        "_store_current_bookmark - setting time_spent_reading=",
+                        time_spent_reading,
+                    )
+                    current_time_spent_reading = book.get_user_metadata(
+                        time_spent_reading_column_name, True
+                    )["#value#"]
+                    debug_print(
+                        "_store_current_bookmark - time spent reading - in book=",
+                        current_time_spent_reading,
+                    )
+
+                    if value_changed(current_time_spent_reading, time_spent_reading):
+                        id_map_time_spent_reading[book.calibre_id] = time_spent_reading
+                        book_updated = True
+                    else:
+                        book_updated = book_updated or False
+
+                if rest_of_book_estimate_column_name is not None:
+                    debug_print(
+                        "_store_current_bookmark - setting rest_of_book_estimate=",
+                        rest_of_book_estimate,
+                    )
+                    current_rest_of_book_estimate = book.get_user_metadata(
+                        time_spent_reading_column_name, True
+                    )["#value#"]
+                    debug_print(
+                        "_store_current_bookmark - rest of book estimate - in book=",
+                        current_rest_of_book_estimate,
+                    )
+
+                    if value_changed(
+                        current_rest_of_book_estimate, rest_of_book_estimate
+                    ):
+                        id_map_rest_of_book_estimate[book.calibre_id] = (
+                            rest_of_book_estimate
+                        )
+                        book_updated = True
+                    else:
+                        book_updated = book_updated or False
+
+                id_map[book.calibre_id] = mi
+
+            if book_updated:
+                reading_locations_updated += 1
+
+        debug_print("_store_current_bookmark - Updating GUI - new DB engine")
+        if kobo_chapteridbookmarked_column_name and len(id_map_chapteridbookmarked) > 0:
+            debug_print(
+                "_store_current_bookmark - Updating metadata - for column: %s number of changes=%d"
+                % (
+                    kobo_chapteridbookmarked_column_name,
+                    len(id_map_chapteridbookmarked),
+                )
+            )
+            library_db.new_api.set_field(
+                kobo_chapteridbookmarked_column_name, id_map_chapteridbookmarked
+            )
+        if kobo_percentRead_column_name and len(id_map_percentRead) > 0:
+            debug_print(
+                "_store_current_bookmark - Updating metadata - for column: %s number of changes=%d"
+                % (kobo_percentRead_column_name, len(id_map_percentRead))
+            )
+            library_db.new_api.set_field(
+                kobo_percentRead_column_name, id_map_percentRead
+            )
+        if rating_column_name and len(id_map_rating) > 0:
+            debug_print(
+                "_store_current_bookmark - Updating metadata - for column: %s number of changes=%d"
+                % (rating_column_name, len(id_map_rating))
+            )
+            library_db.new_api.set_field(rating_column_name, id_map_rating)
+        if last_read_column_name and len(id_map_last_read) > 0:
+            debug_print(
+                "_store_current_bookmark - Updating metadata - for column: %s number of changes=%d"
+                % (last_read_column_name, len(id_map_last_read))
+            )
+            library_db.new_api.set_field(last_read_column_name, id_map_last_read)
+        if time_spent_reading_column_name and len(id_map_time_spent_reading) > 0:
+            debug_print(
+                "_store_current_bookmark - Updating metadata - for column: %s number of changes=%d"
+                % (time_spent_reading_column_name, len(id_map_time_spent_reading))
+            )
+            library_db.new_api.set_field(
+                time_spent_reading_column_name, id_map_time_spent_reading
+            )
+        if rest_of_book_estimate_column_name and len(id_map_rest_of_book_estimate) > 0:
+            debug_print(
+                "_store_current_bookmark - Updating metadata - for column: %s number of changes=%d"
+                % (
+                    rest_of_book_estimate_column_name,
+                    len(id_map_rest_of_book_estimate),
+                )
+            )
+            library_db.new_api.set_field(
+                rest_of_book_estimate_column_name, id_map_rest_of_book_estimate
+            )
+        self.gui.iactions["Edit Metadata"].refresh_gui(list(id_map))
+
+        self.hide_progressbar()
+        if len(id_map) > 0:
+            self.gui.status_bar.show_message(
+                _("Kobo Utilities")
+                + " - "
+                + _("Storing reading positions completed - {0} changed.").format(
+                    len(id_map)
+                ),
+                3000,
+            )
+
+        library_db.commit()
 
         debug_print("_store_current_bookmark - finished")
 
@@ -6056,345 +5954,324 @@ class KoboUtilitiesAction(InterfaceAction):
         )  # fmt: skip
         rating_delete = "DELETE FROM ratings WHERE ContentID = ?"
 
-        with self.device_database_connection(use_row_factory=True) as connection:
-            cursor = connection.cursor()
+        connection = self.device_database_connection(use_row_factory=True)
+        cursor = connection.cursor()
 
-            for book in books:
-                count_books += 1
-                for contentID in book.contentIDs:
-                    chapter_values = (contentID,)
-                    cursor.execute(chapter_query, chapter_values)
-                    try:
-                        result = next(cursor)
-                    except StopIteration:
-                        result = None
+        for book in books:
+            count_books += 1
+            for contentID in book.contentIDs:
+                chapter_values = (contentID,)
+                cursor.execute(chapter_query, chapter_values)
+                try:
+                    result = next(cursor)
+                except StopIteration:
+                    result = None
 
-                    if result is not None:
-                        debug_print("_restore_current_bookmark - result= ", result)
-                        chapter_update = "UPDATE content SET "
-                        chapter_set_clause = ""
-                        chapter_values = []
-                        location_update = "UPDATE content SET "
-                        location_set_clause = ""
-                        location_values = []
-                        rating_change_query = None
-                        rating_values = []
+                if result is not None:
+                    debug_print("_restore_current_bookmark - result= ", result)
+                    chapter_update = "UPDATE content SET "
+                    chapter_set_clause = ""
+                    chapter_values = []
+                    location_update = "UPDATE content SET "
+                    location_set_clause = ""
+                    location_values = []
+                    rating_change_query = None
+                    rating_values = []
 
-                        kobo_chapteridbookmarked = None
-                        kobo_adobe_location = None
-                        kobo_percentRead = None
-                        kobo_time_spent_reading = None
-                        kobo_rest_of_book_estimate = None
+                    kobo_chapteridbookmarked = None
+                    kobo_adobe_location = None
+                    kobo_percentRead = None
+                    kobo_time_spent_reading = None
+                    kobo_rest_of_book_estimate = None
 
-                        if kobo_chapteridbookmarked_column:
-                            reading_location_string = book.get_user_metadata(
-                                kobo_chapteridbookmarked_column, True
-                            )["#value#"]
+                    if kobo_chapteridbookmarked_column:
+                        reading_location_string = book.get_user_metadata(
+                            kobo_chapteridbookmarked_column, True
+                        )["#value#"]
+                        debug_print(
+                            "_restore_current_bookmark - reading_location_string=",
+                            reading_location_string,
+                        )
+                        if reading_location_string is not None:
+                            if result["MimeType"] == MIMETYPE_KOBO:
+                                kobo_chapteridbookmarked = reading_location_string
+                                kobo_adobe_location = None
+                            else:
+                                reading_location_parts = reading_location_string.split(
+                                    BOOKMARK_SEPARATOR
+                                )
+                                debug_print(
+                                    "_restore_current_bookmark - reading_location_parts=",
+                                    reading_location_parts,
+                                )
+                                debug_print(
+                                    "_restore_current_bookmark - self.epub_location_like_kepub=",
+                                    self.epub_location_like_kepub,
+                                )
+                                if self.epub_location_like_kepub:
+                                    kobo_chapteridbookmarked = (
+                                        reading_location_parts[1]
+                                        if len(reading_location_parts) == 2
+                                        else reading_location_string
+                                    )
+                                    kobo_adobe_location = None
+                                else:
+                                    if len(reading_location_parts) == 2:
+                                        kobo_chapteridbookmarked = (
+                                            contentID + "#" + reading_location_parts[0]
+                                        )
+                                        kobo_adobe_location = reading_location_parts[1]
+                                    else:
+                                        cursor.execute(volume_zero_query, [contentID])
+                                        try:
+                                            volume_zero_result = next(cursor)
+                                            kobo_chapteridbookmarked = (
+                                                volume_zero_result["ContentID"]
+                                            )
+                                            kobo_adobe_location = (
+                                                reading_location_parts[0]
+                                            )
+                                        except StopIteration:
+                                            volume_zero_result = None
+
+                        if reading_location_string:
+                            chapter_values.append(kobo_chapteridbookmarked)
+                            chapter_set_clause += ", ChapterIDBookmarked  = ? "
+                            location_values.append(kobo_adobe_location)
+                            location_set_clause += ", adobe_location  = ? "
+                        else:
                             debug_print(
                                 "_restore_current_bookmark - reading_location_string=",
                                 reading_location_string,
                             )
-                            if reading_location_string is not None:
-                                if result["MimeType"] == MIMETYPE_KOBO:
-                                    kobo_chapteridbookmarked = reading_location_string
-                                    kobo_adobe_location = None
-                                else:
-                                    reading_location_parts = (
-                                        reading_location_string.split(
-                                            BOOKMARK_SEPARATOR
-                                        )
-                                    )
-                                    debug_print(
-                                        "_restore_current_bookmark - reading_location_parts=",
-                                        reading_location_parts,
-                                    )
-                                    debug_print(
-                                        "_restore_current_bookmark - self.epub_location_like_kepub=",
-                                        self.epub_location_like_kepub,
-                                    )
-                                    if self.epub_location_like_kepub:
-                                        kobo_chapteridbookmarked = (
-                                            reading_location_parts[1]
-                                            if len(reading_location_parts) == 2
-                                            else reading_location_string
-                                        )
-                                        kobo_adobe_location = None
-                                    else:
-                                        if len(reading_location_parts) == 2:
-                                            kobo_chapteridbookmarked = (
-                                                contentID
-                                                + "#"
-                                                + reading_location_parts[0]
-                                            )
-                                            kobo_adobe_location = (
-                                                reading_location_parts[1]
-                                            )
-                                        else:
-                                            cursor.execute(
-                                                volume_zero_query, [contentID]
-                                            )
-                                            try:
-                                                volume_zero_result = next(cursor)
-                                                kobo_chapteridbookmarked = (
-                                                    volume_zero_result["ContentID"]
-                                                )
-                                                kobo_adobe_location = (
-                                                    reading_location_parts[0]
-                                                )
-                                            except StopIteration:
-                                                volume_zero_result = None
 
-                            if reading_location_string:
-                                chapter_values.append(kobo_chapteridbookmarked)
-                                chapter_set_clause += ", ChapterIDBookmarked  = ? "
-                                location_values.append(kobo_adobe_location)
-                                location_set_clause += ", adobe_location  = ? "
-                            else:
-                                debug_print(
-                                    "_restore_current_bookmark - reading_location_string=",
-                                    reading_location_string,
-                                )
+                    if kobo_percentRead_column:
+                        kobo_percentRead = book.get_user_metadata(
+                            kobo_percentRead_column, True
+                        )["#value#"]
+                        kobo_percentRead = (
+                            kobo_percentRead
+                            if kobo_percentRead
+                            else result["___PercentRead"]
+                        )
+                        chapter_values.append(kobo_percentRead)
+                        chapter_set_clause += ", ___PercentRead  = ? "
 
-                        if kobo_percentRead_column:
-                            kobo_percentRead = book.get_user_metadata(
-                                kobo_percentRead_column, True
-                            )["#value#"]
-                            kobo_percentRead = (
-                                kobo_percentRead
-                                if kobo_percentRead
-                                else result["___PercentRead"]
+                    if self.options[cfg.KEY_READING_STATUS]:
+                        if kobo_percentRead:
+                            debug_print(
+                                "_restore_current_bookmark - chapter_values= ",
+                                chapter_values,
                             )
-                            chapter_values.append(kobo_percentRead)
-                            chapter_set_clause += ", ___PercentRead  = ? "
-
-                        if self.options[cfg.KEY_READING_STATUS]:
-                            if kobo_percentRead:
+                            if kobo_percentRead == 100:
+                                chapter_values.append(2)
                                 debug_print(
                                     "_restore_current_bookmark - chapter_values= ",
                                     chapter_values,
                                 )
-                                if kobo_percentRead == 100:
-                                    chapter_values.append(2)
-                                    debug_print(
-                                        "_restore_current_bookmark - chapter_values= ",
-                                        chapter_values,
-                                    )
-                                else:
-                                    chapter_values.append(1)
-                                    debug_print(
-                                        "_restore_current_bookmark - chapter_values= ",
-                                        chapter_values,
-                                    )
-                                chapter_set_clause += ", ReadStatus  = ? "
-                                chapter_values.append("false")
-                                chapter_set_clause += ", FirstTimeReading = ? "
+                            else:
+                                chapter_values.append(1)
+                                debug_print(
+                                    "_restore_current_bookmark - chapter_values= ",
+                                    chapter_values,
+                                )
+                            chapter_set_clause += ", ReadStatus  = ? "
+                            chapter_values.append("false")
+                            chapter_set_clause += ", FirstTimeReading = ? "
 
-                        last_read = None
-                        if self.options[cfg.KEY_DATE_TO_NOW]:
-                            last_read = strftime(
-                                self.device_timestamp_string, time.gmtime()
-                            )
+                    last_read = None
+                    if self.options[cfg.KEY_DATE_TO_NOW]:
+                        last_read = strftime(
+                            self.device_timestamp_string, time.gmtime()
+                        )
+                        debug_print(
+                            "_restore_current_bookmark - setting to now - last_read= ",
+                            last_read,
+                        )
+                    elif last_read_column:
+                        last_read = book.get_user_metadata(last_read_column, True)[
+                            "#value#"
+                        ]
+                        if last_read is not None:
+                            last_read = last_read.strftime(self.device_timestamp_string)
+                        debug_print(
+                            "_restore_current_bookmark - setting from library - last_read= ",
+                            last_read,
+                        )
+                    debug_print("_restore_current_bookmark - last_read= ", last_read)
+                    debug_print(
+                        "_restore_current_bookmark - result['___SyncTime']= ",
+                        result["___SyncTime"],
+                    )
+                    if last_read is not None:
+                        chapter_values.append(last_read)
+                        chapter_set_clause += ", DateLastRead  = ? "
+                        # Somewhere the "Recent" sort changed from only using the ___SyncTime if DateLastRead was null,
+                        # Now it uses the MAX(___SyncTime, DateLastRead). Need to set ___SyncTime if it is after DateLastRead
+                        # to correctly maintain sort order.
+                        if (
+                            self.device_fwversion >= (4, 1, 0)
+                            and last_read < result["___SyncTime"]
+                        ):
                             debug_print(
-                                "_restore_current_bookmark - setting to now - last_read= ",
-                                last_read,
+                                "_restore_current_bookmark - setting ___SyncTime to same as DateLastRead"
                             )
-                        elif last_read_column:
-                            last_read = book.get_user_metadata(last_read_column, True)[
+                            chapter_values.append(last_read)
+                            chapter_set_clause += ", ___SyncTime  = ? "
+
+                    debug_print(
+                        "_restore_current_bookmark - self.options[cfg.KEY_SET_RATING]= ",
+                        self.options[cfg.KEY_SET_RATING],
+                    )
+                    rating = None
+                    if rating_column is not None and self.options[cfg.KEY_SET_RATING]:
+                        if rating_column == "rating":
+                            rating = book.rating
+                        else:
+                            rating = book.get_user_metadata(rating_column, True)[
                                 "#value#"
                             ]
-                            if last_read is not None:
-                                last_read = last_read.strftime(
-                                    self.device_timestamp_string
-                                )
-                            debug_print(
-                                "_restore_current_bookmark - setting from library - last_read= ",
-                                last_read,
-                            )
+                        rating = None if not rating or rating == 0 else rating / 2
                         debug_print(
-                            "_restore_current_bookmark - last_read= ", last_read
+                            "_restore_current_bookmark - rating=",
+                            rating,
+                            " result['Rating']=",
+                            result["Rating"],
                         )
-                        debug_print(
-                            "_restore_current_bookmark - result['___SyncTime']= ",
-                            result["___SyncTime"],
-                        )
+                        rating_values.append(rating)
                         if last_read is not None:
-                            chapter_values.append(last_read)
-                            chapter_set_clause += ", DateLastRead  = ? "
-                            # Somewhere the "Recent" sort changed from only using the ___SyncTime if DateLastRead was null,
-                            # Now it uses the MAX(___SyncTime, DateLastRead). Need to set ___SyncTime if it is after DateLastRead
-                            # to correctly maintain sort order.
-                            if (
-                                self.device_fwversion >= (4, 1, 0)
-                                and last_read < result["___SyncTime"]
-                            ):
-                                debug_print(
-                                    "_restore_current_bookmark - setting ___SyncTime to same as DateLastRead"
-                                )
-                                chapter_values.append(last_read)
-                                chapter_set_clause += ", ___SyncTime  = ? "
-
-                        debug_print(
-                            "_restore_current_bookmark - self.options[cfg.KEY_SET_RATING]= ",
-                            self.options[cfg.KEY_SET_RATING],
-                        )
-                        rating = None
-                        if (
-                            rating_column is not None
-                            and self.options[cfg.KEY_SET_RATING]
-                        ):
-                            if rating_column == "rating":
-                                rating = book.rating
-                            else:
-                                rating = book.get_user_metadata(rating_column, True)[
-                                    "#value#"
-                                ]
-                            rating = None if not rating or rating == 0 else rating / 2
-                            debug_print(
-                                "_restore_current_bookmark - rating=",
-                                rating,
-                                " result['Rating']=",
-                                result["Rating"],
-                            )
-                            rating_values.append(rating)
-                            if last_read is not None:
-                                rating_values.append(last_read)
-                            else:
-                                rating_values.append(
-                                    strftime(
-                                        self.device_timestamp_string, time.gmtime()
-                                    )
-                                )
-
-                            rating_values.append(contentID)
-                            if rating is None:
-                                rating_change_query = rating_delete
-                                rating_values = (contentID,)
-                            elif (
-                                result["DateModified"] is None
-                            ):  # If the date modified column does not have a value, there is no rating column
-                                rating_change_query = rating_insert
-                            else:
-                                rating_change_query = rating_update
-
-                        if time_spent_reading_column:
-                            kobo_time_spent_reading = book.get_user_metadata(
-                                time_spent_reading_column, True
-                            )["#value#"]
-                            kobo_time_spent_reading = (
-                                kobo_time_spent_reading
-                                if kobo_time_spent_reading is not None
-                                else 0
-                            )
-                            chapter_values.append(kobo_time_spent_reading)
-                            chapter_set_clause += ", TimeSpentReading = ? "
-
-                        if rest_of_book_estimate_column:
-                            kobo_rest_of_book_estimate = book.get_user_metadata(
-                                rest_of_book_estimate_column, True
-                            )["#value#"]
-                            kobo_rest_of_book_estimate = (
-                                kobo_rest_of_book_estimate
-                                if kobo_rest_of_book_estimate is not None
-                                else 0
-                            )
-                            chapter_values.append(kobo_rest_of_book_estimate)
-                            chapter_set_clause += ", RestOfBookEstimate = ? "
-
-                        debug_print(
-                            "_restore_current_bookmark - found contentId='%s'"
-                            % (contentID)
-                        )
-                        debug_print(
-                            "_restore_current_bookmark - kobo_chapteridbookmarked=",
-                            kobo_chapteridbookmarked,
-                        )
-                        debug_print(
-                            "_restore_current_bookmark - kobo_adobe_location=",
-                            kobo_adobe_location,
-                        )
-                        debug_print(
-                            "_restore_current_bookmark - kobo_percentRead=",
-                            kobo_percentRead,
-                        )
-                        debug_print("_restore_current_bookmark - rating=", rating)
-                        debug_print("_restore_current_bookmark - last_read=", last_read)
-                        debug_print(
-                            "_restore_current_bookmark - kobo_time_spent_reading=",
-                            kobo_time_spent_reading,
-                        )
-                        debug_print(
-                            "_restore_current_bookmark - kobo_rest_of_book_estimate=",
-                            kobo_rest_of_book_estimate,
-                        )
-
-                        if len(chapter_set_clause) > 0:
-                            chapter_update += chapter_set_clause[1:]
-                            chapter_update += "WHERE ContentID = ? AND BookID IS NULL"
-                            chapter_values.append(contentID)
+                            rating_values.append(last_read)
                         else:
-                            debug_print(
-                                "_restore_current_bookmark - no changes found to selected metadata. No changes being made."
+                            rating_values.append(
+                                strftime(self.device_timestamp_string, time.gmtime())
                             )
-                            not_on_device_books += 1
-                            continue
 
-                        debug_print(
-                            "_restore_current_bookmark - chapter_update=%s"
-                            % chapter_update
-                        )
-                        debug_print(
-                            "_restore_current_bookmark - chapter_values= ",
-                            chapter_values,
-                        )
-                        try:
-                            cursor.execute(chapter_update, chapter_values)
-                            if len(location_set_clause) > 0 and not (
-                                result["MimeType"] == MIMETYPE_KOBO
-                                or self.epub_location_like_kepub
-                            ):
-                                location_update += location_set_clause[1:]
-                                location_update += (
-                                    " WHERE ContentID = ? AND BookID IS NOT NULL"
-                                )
-                                location_values.append(kobo_chapteridbookmarked)
-                                debug_print(
-                                    "_restore_current_bookmark - location_update=%s"
-                                    % location_update
-                                )
-                                debug_print(
-                                    "_restore_current_bookmark - location_values= ",
-                                    location_values,
-                                )
-                                cursor.execute(location_update, location_values)
-                            if rating_change_query:
-                                debug_print(
-                                    "_restore_current_bookmark - rating_change_query=%s"
-                                    % rating_change_query
-                                )
-                                debug_print(
-                                    "_restore_current_bookmark - rating_values= ",
-                                    rating_values,
-                                )
-                                cursor.execute(rating_change_query, rating_values)
+                        rating_values.append(contentID)
+                        if rating is None:
+                            rating_change_query = rating_delete
+                            rating_values = (contentID,)
+                        elif (
+                            result["DateModified"] is None
+                        ):  # If the date modified column does not have a value, there is no rating column
+                            rating_change_query = rating_insert
+                        else:
+                            rating_change_query = rating_update
 
-                            updated_books += 1
-                        except:
-                            debug_print(
-                                "    Database Exception:  Unable to set bookmark info."
-                            )
-                            raise
+                    if time_spent_reading_column:
+                        kobo_time_spent_reading = book.get_user_metadata(
+                            time_spent_reading_column, True
+                        )["#value#"]
+                        kobo_time_spent_reading = (
+                            kobo_time_spent_reading
+                            if kobo_time_spent_reading is not None
+                            else 0
+                        )
+                        chapter_values.append(kobo_time_spent_reading)
+                        chapter_set_clause += ", TimeSpentReading = ? "
+
+                    if rest_of_book_estimate_column:
+                        kobo_rest_of_book_estimate = book.get_user_metadata(
+                            rest_of_book_estimate_column, True
+                        )["#value#"]
+                        kobo_rest_of_book_estimate = (
+                            kobo_rest_of_book_estimate
+                            if kobo_rest_of_book_estimate is not None
+                            else 0
+                        )
+                        chapter_values.append(kobo_rest_of_book_estimate)
+                        chapter_set_clause += ", RestOfBookEstimate = ? "
+
+                    debug_print(
+                        "_restore_current_bookmark - found contentId='%s'" % (contentID)
+                    )
+                    debug_print(
+                        "_restore_current_bookmark - kobo_chapteridbookmarked=",
+                        kobo_chapteridbookmarked,
+                    )
+                    debug_print(
+                        "_restore_current_bookmark - kobo_adobe_location=",
+                        kobo_adobe_location,
+                    )
+                    debug_print(
+                        "_restore_current_bookmark - kobo_percentRead=",
+                        kobo_percentRead,
+                    )
+                    debug_print("_restore_current_bookmark - rating=", rating)
+                    debug_print("_restore_current_bookmark - last_read=", last_read)
+                    debug_print(
+                        "_restore_current_bookmark - kobo_time_spent_reading=",
+                        kobo_time_spent_reading,
+                    )
+                    debug_print(
+                        "_restore_current_bookmark - kobo_rest_of_book_estimate=",
+                        kobo_rest_of_book_estimate,
+                    )
+
+                    if len(chapter_set_clause) > 0:
+                        chapter_update += chapter_set_clause[1:]
+                        chapter_update += "WHERE ContentID = ? AND BookID IS NULL"
+                        chapter_values.append(contentID)
                     else:
                         debug_print(
-                            "_restore_current_bookmark - no match for title='%s' contentId='%s'"
-                            % (book.title, book.contentID)
+                            "_restore_current_bookmark - no changes found to selected metadata. No changes being made."
                         )
                         not_on_device_books += 1
-            debug_print(
-                "_restore_current_bookmark - Update summary: Books updated=%d, not on device=%d, Total=%d"
-                % (updated_books, not_on_device_books, count_books)
-            )
+                        continue
 
-            cursor.close()
+                    debug_print(
+                        "_restore_current_bookmark - chapter_update=%s" % chapter_update
+                    )
+                    debug_print(
+                        "_restore_current_bookmark - chapter_values= ",
+                        chapter_values,
+                    )
+                    try:
+                        cursor.execute(chapter_update, chapter_values)
+                        if len(location_set_clause) > 0 and not (
+                            result["MimeType"] == MIMETYPE_KOBO
+                            or self.epub_location_like_kepub
+                        ):
+                            location_update += location_set_clause[1:]
+                            location_update += (
+                                " WHERE ContentID = ? AND BookID IS NOT NULL"
+                            )
+                            location_values.append(kobo_chapteridbookmarked)
+                            debug_print(
+                                "_restore_current_bookmark - location_update=%s"
+                                % location_update
+                            )
+                            debug_print(
+                                "_restore_current_bookmark - location_values= ",
+                                location_values,
+                            )
+                            cursor.execute(location_update, location_values)
+                        if rating_change_query:
+                            debug_print(
+                                "_restore_current_bookmark - rating_change_query=%s"
+                                % rating_change_query
+                            )
+                            debug_print(
+                                "_restore_current_bookmark - rating_values= ",
+                                rating_values,
+                            )
+                            cursor.execute(rating_change_query, rating_values)
+
+                        updated_books += 1
+                    except:
+                        debug_print(
+                            "    Database Exception:  Unable to set bookmark info."
+                        )
+                        raise
+                else:
+                    debug_print(
+                        "_restore_current_bookmark - no match for title='%s' contentId='%s'"
+                        % (book.title, book.contentID)
+                    )
+                    not_on_device_books += 1
+        debug_print(
+            "_restore_current_bookmark - Update summary: Books updated=%d, not on device=%d, Total=%d"
+            % (updated_books, not_on_device_books, count_books)
+        )
 
         return (updated_books, not_on_device_books, count_books)
 
@@ -6421,159 +6298,148 @@ class KoboUtilitiesAction(InterfaceAction):
             "ORDER BY c.ContentID, sc.ShelfName"
         )
 
-        with self.device_database_connection() as connection:
-            library_db = self.gui.current_db
-            library_config = cfg.get_library_config(library_db)
-            bookshelf_column_name = library_config.get(
-                cfg.KEY_SHELVES_CUSTOM_COLUMN,
-                cfg.GET_SHELVES_OPTIONS_DEFAULTS[cfg.KEY_SHELVES_CUSTOM_COLUMN],
-            )
-            debug_print(
-                "_get_shelves_from_device - bookshelf_column_name=",
-                bookshelf_column_name,
-            )
-            bookshelf_column = library_db.field_metadata[bookshelf_column_name]
-            bookshelf_column_label = library_db.field_metadata.key_to_label(
-                bookshelf_column_name
-            )
-            bookshelf_column_is_multiple = (
-                bookshelf_column["is_multiple"] is not None
-                and len(bookshelf_column["is_multiple"]) > 0
-            )
-            debug_print(
-                "_get_shelves_from_device - bookshelf_column_label=",
-                bookshelf_column_label,
-            )
-            debug_print(
-                "_get_shelves_from_device - bookshelf_column_is_multiple=",
-                bookshelf_column_is_multiple,
-            )
+        connection = self.device_database_connection()
+        library_db = self.gui.current_db
+        library_config = cfg.get_library_config(library_db)
+        bookshelf_column_name = library_config.get(
+            cfg.KEY_SHELVES_CUSTOM_COLUMN,
+            cfg.GET_SHELVES_OPTIONS_DEFAULTS[cfg.KEY_SHELVES_CUSTOM_COLUMN],
+        )
+        debug_print(
+            "_get_shelves_from_device - bookshelf_column_name=",
+            bookshelf_column_name,
+        )
+        bookshelf_column = library_db.field_metadata[bookshelf_column_name]
+        bookshelf_column_label = library_db.field_metadata.key_to_label(
+            bookshelf_column_name
+        )
+        bookshelf_column_is_multiple = (
+            bookshelf_column["is_multiple"] is not None
+            and len(bookshelf_column["is_multiple"]) > 0
+        )
+        debug_print(
+            "_get_shelves_from_device - bookshelf_column_label=",
+            bookshelf_column_label,
+        )
+        debug_print(
+            "_get_shelves_from_device - bookshelf_column_is_multiple=",
+            bookshelf_column_is_multiple,
+        )
 
-            cursor = connection.cursor()
-            for book in books:
-                self.set_progressbar_label(_("Getting shelves for ") + book.title)
-                self.increment_progressbar()
-                count_books += 1
-                shelf_names = []
-                update_library = False
-                for contentID in book.contentIDs:
-                    debug_print(
-                        "_get_shelves_from_device - title='%s' contentId='%s'"
-                        % (book.title, contentID)
+        cursor = connection.cursor()
+        for book in books:
+            self.set_progressbar_label(_("Getting shelves for ") + book.title)
+            self.increment_progressbar()
+            count_books += 1
+            shelf_names = []
+            update_library = False
+            for contentID in book.contentIDs:
+                debug_print(
+                    "_get_shelves_from_device - title='%s' contentId='%s'"
+                    % (book.title, contentID)
+                )
+                fetch_values = (contentID,)
+                debug_print(
+                    "_get_shelves_from_device - tetch_query='%s'" % (fetch_query)
+                )
+                cursor.execute(fetch_query, fetch_values)
+
+                for row in cursor:
+                    debug_print("_get_shelves_from_device - result=", row)
+                    shelf_names.append(row[1])
+                    update_library = True
+
+            if len(shelf_names) > 0:
+                books_with_shelves += 1
+            else:
+                books_without_shelves += 1
+                continue
+
+            if update_library and len(shelf_names) > 0:
+                debug_print(
+                    "_get_shelves_from_device - device shelf_names='%s'" % (shelf_names)
+                )
+                debug_print(
+                    "_get_shelves_from_device - device set(shelf_names)='%s'"
+                    % (set(shelf_names))
+                )
+                old_value = book.get_user_metadata(bookshelf_column_name, True)[
+                    "#value#"
+                ]
+                debug_print(
+                    "_get_shelves_from_device - library shelf names='%s'" % (old_value)
+                )
+                if old_value is None or not set(old_value) == set(shelf_names):
+                    debug_print("_get_shelves_from_device - shelves are not the same")
+                    shelf_names = (
+                        list(set(shelf_names))
+                        if bookshelf_column_is_multiple
+                        else ", ".join(shelf_names)
                     )
-                    fetch_values = (contentID,)
-                    debug_print(
-                        "_get_shelves_from_device - tetch_query='%s'" % (fetch_query)
-                    )
-                    cursor.execute(fetch_query, fetch_values)
-
-                    for row in cursor:
-                        debug_print("_get_shelves_from_device - result=", row)
-                        shelf_names.append(row[1])
-                        update_library = True
-
-                if len(shelf_names) > 0:
-                    books_with_shelves += 1
-                else:
-                    books_without_shelves += 1
-                    continue
-
-                if update_library and len(shelf_names) > 0:
                     debug_print(
                         "_get_shelves_from_device - device shelf_names='%s'"
                         % (shelf_names)
                     )
+                    if replace_shelves or old_value is None:
+                        new_value = shelf_names
+                    elif bookshelf_column_is_multiple:
+                        new_value = old_value + shelf_names
+                    else:
+                        new_value = old_value + ", " + shelf_names
                     debug_print(
-                        "_get_shelves_from_device - device set(shelf_names)='%s'"
-                        % (set(shelf_names))
+                        "_get_shelves_from_device - new shelf names='%s'" % (new_value)
                     )
-                    old_value = book.get_user_metadata(bookshelf_column_name, True)[
-                        "#value#"
-                    ]
-                    debug_print(
-                        "_get_shelves_from_device - library shelf names='%s'"
-                        % (old_value)
+                    library_db.set_custom(
+                        book.calibre_id,
+                        new_value,
+                        label=bookshelf_column_label,
+                        commit=False,
                     )
-                    if old_value is None or not set(old_value) == set(shelf_names):
-                        debug_print(
-                            "_get_shelves_from_device - shelves are not the same"
-                        )
-                        shelf_names = (
-                            list(set(shelf_names))
-                            if bookshelf_column_is_multiple
-                            else ", ".join(shelf_names)
-                        )
-                        debug_print(
-                            "_get_shelves_from_device - device shelf_names='%s'"
-                            % (shelf_names)
-                        )
-                        if replace_shelves or old_value is None:
-                            new_value = shelf_names
-                        elif bookshelf_column_is_multiple:
-                            new_value = old_value + shelf_names
-                        else:
-                            new_value = old_value + ", " + shelf_names
-                        debug_print(
-                            "_get_shelves_from_device - new shelf names='%s'"
-                            % (new_value)
-                        )
-                        library_db.set_custom(
-                            book.calibre_id,
-                            new_value,
-                            label=bookshelf_column_label,
-                            commit=False,
-                        )
 
-                else:
-                    books_with_shelves -= 1
-                    books_without_shelves += 1
+            else:
+                books_with_shelves -= 1
+                books_without_shelves += 1
 
-            cursor.close()
-
-            library_db.commit()
+        library_db.commit()
         self.hide_progressbar()
 
         return (books_with_shelves, books_without_shelves, count_books)
 
     def fetch_book_fonts(self):
         debug_print("fetch_book_fonts - start")
-        with self.device_database_connection() as connection:
-            book_options = {}
+        connection = self.device_database_connection()
+        book_options = {}
 
-            fetch_query = (
-                "SELECT  "
-                '"ReadingFontFamily", '
-                '"ReadingFontSize", '
-                '"ReadingAlignment", '
-                '"ReadingLineHeight", '
-                '"ReadingLeftMargin", '
-                '"ReadingRightMargin"  '
-                "FROM content_settings "
-                "WHERE ContentType = ? "
-                "AND ContentId = ?"
-            )
-            fetch_values = (
-                self.CONTENTTYPE,
-                self.single_contentID,
-            )
+        fetch_query = (
+            "SELECT  "
+            '"ReadingFontFamily", '
+            '"ReadingFontSize", '
+            '"ReadingAlignment", '
+            '"ReadingLineHeight", '
+            '"ReadingLeftMargin", '
+            '"ReadingRightMargin"  '
+            "FROM content_settings "
+            "WHERE ContentType = ? "
+            "AND ContentId = ?"
+        )
+        fetch_values = (
+            self.CONTENTTYPE,
+            self.single_contentID,
+        )
 
-            cursor = connection.cursor()
-            cursor.execute(fetch_query, fetch_values)
-            try:
-                result = next(cursor)
-            except StopIteration:
-                result = None
-            if result is not None:
-                book_options["readingFontFamily"] = result[0]
-                book_options["readingFontSize"] = result[1]
-                book_options["readingAlignment"] = (
-                    result[2].title() if result[2] else "Off"
-                )
-                book_options["readingLineHeight"] = result[3]
-                book_options["readingLeftMargin"] = result[4]
-                book_options["readingRightMargin"] = result[5]
-
-            cursor.close()
+        cursor = connection.cursor()
+        cursor.execute(fetch_query, fetch_values)
+        try:
+            result = next(cursor)
+        except StopIteration:
+            result = None
+        if result is not None:
+            book_options["readingFontFamily"] = result[0]
+            book_options["readingFontSize"] = result[1]
+            book_options["readingAlignment"] = result[2].title() if result[2] else "Off"
+            book_options["readingLineHeight"] = result[3]
+            book_options["readingLeftMargin"] = result[4]
+            book_options["readingRightMargin"] = result[5]
 
         return book_options
 
@@ -6593,106 +6459,102 @@ class KoboUtilitiesAction(InterfaceAction):
         deleted_fonts = 0
         count_books = 0
 
-        with self.device_database_connection() as connection:
-            debug_print("_set_reader_fonts - connected to device database")
+        connection = self.device_database_connection()
+        debug_print("_set_reader_fonts - connected to device database")
 
-            test_query = (
-                "SELECT 1 "
-                "FROM content_settings "
-                "WHERE ContentType = ? "
+        test_query = (
+            "SELECT 1 "
+            "FROM content_settings "
+            "WHERE ContentType = ? "
+            "AND ContentId = ?"
+        )  # fmt: skip
+        delete_query = (
+            "DELETE "
+            "FROM content_settings "
+            "WHERE ContentType = ? "
+            "AND ContentId = ?"
+        )  # fmt: skip
+
+        if not delete:
+            font_face = self.options[cfg.KEY_READING_FONT_FAMILY]
+            justification = self.options[cfg.KEY_READING_ALIGNMENT].lower()
+            justification = (
+                None if justification == "Off" or justification == "" else justification
+            )
+            font_size = self.options[cfg.KEY_READING_FONT_SIZE]
+            line_spacing = self.options[cfg.KEY_READING_LINE_HEIGHT]
+            left_margins = self.options[cfg.KEY_READING_LEFT_MARGIN]
+            right_margins = self.options[cfg.KEY_READING_RIGHT_MARGIN]
+
+            add_query = (
+                "INSERT INTO content_settings ( "
+                '"ContentType", '
+                '"DateModified", '
+                '"ReadingFontFamily", '
+                '"ReadingFontSize", '
+                '"ReadingAlignment", '
+                '"ReadingLineHeight", '
+                '"ReadingLeftMargin", '
+                '"ReadingRightMargin", '
+                '"ContentID" '
+                ") "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            )
+            add_values = (
+                self.CONTENTTYPE,
+                time.strftime(self.device_timestamp_string, time.gmtime()),
+                font_face,
+                font_size,
+                justification,
+                line_spacing,
+                left_margins,
+                right_margins,
+            )
+            update_query = (
+                "UPDATE content_settings "
+                'SET "DateModified" = ?, '
+                '"ReadingFontFamily" = ?, '
+                '"ReadingFontSize" = ?, '
+                '"ReadingAlignment" = ?, '
+                '"ReadingLineHeight" = ?, '
+                '"ReadingLeftMargin" = ?, '
+                '"ReadingRightMargin" = ? '
+                "WHERE ContentType = ?  "
                 "AND ContentId = ?"
-            )  # fmt: skip
-            delete_query = (
-                "DELETE "
-                "FROM content_settings "
-                "WHERE ContentType = ? "
-                "AND ContentId = ?"
-            )  # fmt: skip
+            )
+            update_values = (
+                time.strftime(self.device_timestamp_string, time.gmtime()),
+                font_face,
+                font_size,
+                justification,
+                line_spacing,
+                left_margins,
+                right_margins,
+                self.CONTENTTYPE,
+            )
 
-            if not delete:
-                font_face = self.options[cfg.KEY_READING_FONT_FAMILY]
-                justification = self.options[cfg.KEY_READING_ALIGNMENT].lower()
-                justification = (
-                    None
-                    if justification == "Off" or justification == ""
-                    else justification
-                )
-                font_size = self.options[cfg.KEY_READING_FONT_SIZE]
-                line_spacing = self.options[cfg.KEY_READING_LINE_HEIGHT]
-                left_margins = self.options[cfg.KEY_READING_LEFT_MARGIN]
-                right_margins = self.options[cfg.KEY_READING_RIGHT_MARGIN]
+        cursor = connection.cursor()
 
-                add_query = (
-                    "INSERT INTO content_settings ( "
-                    '"ContentType", '
-                    '"DateModified", '
-                    '"ReadingFontFamily", '
-                    '"ReadingFontSize", '
-                    '"ReadingAlignment", '
-                    '"ReadingLineHeight", '
-                    '"ReadingLeftMargin", '
-                    '"ReadingRightMargin", '
-                    '"ContentID" '
-                    ") "
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-                )
-                add_values = (
-                    self.CONTENTTYPE,
-                    time.strftime(self.device_timestamp_string, time.gmtime()),
-                    font_face,
-                    font_size,
-                    justification,
-                    line_spacing,
-                    left_margins,
-                    right_margins,
-                )
-                update_query = (
-                    "UPDATE content_settings "
-                    'SET "DateModified" = ?, '
-                    '"ReadingFontFamily" = ?, '
-                    '"ReadingFontSize" = ?, '
-                    '"ReadingAlignment" = ?, '
-                    '"ReadingLineHeight" = ?, '
-                    '"ReadingLeftMargin" = ?, '
-                    '"ReadingRightMargin" = ? '
-                    "WHERE ContentType = ?  "
-                    "AND ContentId = ?"
-                )
-                update_values = (
-                    time.strftime(self.device_timestamp_string, time.gmtime()),
-                    font_face,
-                    font_size,
-                    justification,
-                    line_spacing,
-                    left_margins,
-                    right_margins,
-                    self.CONTENTTYPE,
-                )
-
-            cursor = connection.cursor()
-
-            for contentID in contentIDs:
-                test_values = (
-                    self.CONTENTTYPE,
-                    contentID,
-                )
-                if delete:
-                    cursor.execute(delete_query, test_values)
-                    deleted_fonts += 1
-                else:
-                    cursor.execute(test_query, test_values)
-                    try:
-                        result = next(cursor)
-                        debug_print("_set_reader_fonts - found existing row:", result)
-                        if not self.options[cfg.KEY_DO_NOT_UPDATE_IF_SET]:
-                            cursor.execute(update_query, update_values + (contentID,))
-                            updated_fonts += 1
-                    except StopIteration:
-                        cursor.execute(add_query, add_values + (contentID,))
-                        added_fonts += 1
-                count_books += 1
-
-            cursor.close()
+        for contentID in contentIDs:
+            test_values = (
+                self.CONTENTTYPE,
+                contentID,
+            )
+            if delete:
+                cursor.execute(delete_query, test_values)
+                deleted_fonts += 1
+            else:
+                cursor.execute(test_query, test_values)
+                try:
+                    result = next(cursor)
+                    debug_print("_set_reader_fonts - found existing row:", result)
+                    if not self.options[cfg.KEY_DO_NOT_UPDATE_IF_SET]:
+                        cursor.execute(update_query, update_values + (contentID,))
+                        updated_fonts += 1
+                except StopIteration:
+                    cursor.execute(add_query, add_values + (contentID,))
+                    added_fonts += 1
+            count_books += 1
 
         return updated_fonts, added_fonts, deleted_fonts, count_books
 
@@ -6872,36 +6734,34 @@ class KoboUtilitiesAction(InterfaceAction):
             "DROP TRIGGER IF EXISTS KTE_Activity_DismissNewBookTiles",
         )
 
-        with self.device_database_connection() as connection:
-            update_query = "UPDATE Activity SET Enabled = 'false' " + where_clause
+        connection = self.device_database_connection()
+        update_query = "UPDATE Activity SET Enabled = 'false' " + where_clause
 
-            cursor = connection.cursor()
+        cursor = connection.cursor()
 
-            debug_print(
-                "KoboUtilities:_dismiss_tiles - executing update_query=", update_query
-            )
-            cursor.execute(update_query)
+        debug_print(
+            "KoboUtilities:_dismiss_tiles - executing update_query=", update_query
+        )
+        cursor.execute(update_query)
 
-            if self.options[cfg.KEY_CHANGE_DISMISS_TRIGGER]:
-                if (
-                    self.options[cfg.KEY_DELETE_DISMISS_TRIGGER]
-                    or self.options[cfg.KEY_CREATE_DISMISS_TRIGGER]
-                ):
-                    for trigger_statement in trigger_delete_statements:
-                        debug_print(
-                            "KoboUtilities:_dismiss_tiles - executing trigger_statement=",
-                            trigger_statement,
-                        )
-                        cursor.execute(trigger_statement)
-                if self.options[cfg.KEY_CREATE_DISMISS_TRIGGER]:
-                    for trigger_statement in trigger_change_statements:
-                        debug_print(
-                            "KoboUtilities:_dismiss_tiles - executing trigger_statement=",
-                            trigger_statement,
-                        )
-                        cursor.execute(trigger_statement)
-
-            cursor.close()
+        if self.options[cfg.KEY_CHANGE_DISMISS_TRIGGER]:
+            if (
+                self.options[cfg.KEY_DELETE_DISMISS_TRIGGER]
+                or self.options[cfg.KEY_CREATE_DISMISS_TRIGGER]
+            ):
+                for trigger_statement in trigger_delete_statements:
+                    debug_print(
+                        "KoboUtilities:_dismiss_tiles - executing trigger_statement=",
+                        trigger_statement,
+                    )
+                    cursor.execute(trigger_statement)
+            if self.options[cfg.KEY_CREATE_DISMISS_TRIGGER]:
+                for trigger_statement in trigger_change_statements:
+                    debug_print(
+                        "KoboUtilities:_dismiss_tiles - executing trigger_statement=",
+                        trigger_statement,
+                    )
+                    cursor.execute(trigger_statement)
 
         return 1
 
@@ -6918,24 +6778,22 @@ class KoboUtilitiesAction(InterfaceAction):
             "(?, 'true', 'Extras', 2, strftime('%Y-%m-%dT%H:%m:%S'), X'00000000')"
         )
 
-        with self.device_database_connection() as connection:
-            cursor = connection.cursor()
+        connection = self.device_database_connection()
+        cursor = connection.cursor()
 
-            for extra_tile in self.options[cfg.KEY_TILE_OPTIONS]:
-                debug_print(
-                    "KoboUtilities:extra_tile=%s, selected=%s",
-                    extra_tile,
-                    self.options[cfg.KEY_TILE_OPTIONS][extra_tile],
-                )
-                if (
-                    self.options[cfg.KEY_TILE_OPTIONS][extra_tile]
-                    or self.options[cfg.KEY_DISMISS_CURRENT_EXTRAS]
-                ):
-                    cursor.execute(delete_tile, (extra_tile,))
-                if self.options[cfg.KEY_TILE_OPTIONS][extra_tile]:
-                    cursor.execute(insert_tile, (extra_tile,))
-
-            cursor.close()
+        for extra_tile in self.options[cfg.KEY_TILE_OPTIONS]:
+            debug_print(
+                "KoboUtilities:extra_tile=%s, selected=%s",
+                extra_tile,
+                self.options[cfg.KEY_TILE_OPTIONS][extra_tile],
+            )
+            if (
+                self.options[cfg.KEY_TILE_OPTIONS][extra_tile]
+                or self.options[cfg.KEY_DISMISS_CURRENT_EXTRAS]
+            ):
+                cursor.execute(delete_tile, (extra_tile,))
+            if self.options[cfg.KEY_TILE_OPTIONS][extra_tile]:
+                cursor.execute(insert_tile, (extra_tile,))
 
         return 1
 
@@ -7223,288 +7081,284 @@ class KoboUtilitiesAction(InterfaceAction):
 
     def _get_chapter_status(self, db, books):
         debug_print("Starting check of chapter status for {0} books".format(len(books)))
-        with self.device_database_connection(use_row_factory=True) as connection:
-            i = 0
-            book_format = "EPUB"
+        connection = self.device_database_connection(use_row_factory=True)
+        i = 0
+        book_format = "EPUB"
+        debug_print(
+            "_get_chapter_status - device format_map='{0}".format(
+                self.device.settings().format_map
+            )
+        )
+        for book in books:
+            self.increment_progressbar()
+            debug_print("\nHandling book: {0}".format(book))
             debug_print(
-                "_get_chapter_status - device format_map='{0}".format(
-                    self.device.settings().format_map
+                "Getting chapters for book number {0}, title={1}, author={2}".format(
+                    i, book["title"], book["author"]
                 )
             )
-            for book in books:
-                self.increment_progressbar()
-                debug_print("\nHandling book: {0}".format(book))
-                debug_print(
-                    "Getting chapters for book number {0}, title={1}, author={2}".format(
-                        i, book["title"], book["author"]
-                    )
-                )
-                book["library_chapters"] = []
-                book["kobo_chapters"] = []
-                book["kobo_database_chapters"] = []
-                book["kobo_format_status"] = False
-                book["kobo_database_status"] = False
+            book["library_chapters"] = []
+            book["kobo_chapters"] = []
+            book["kobo_database_chapters"] = []
+            book["kobo_format_status"] = False
+            book["kobo_database_status"] = False
+            book["can_update_toc"] = False
+
+            book_id = book["calibre_id"]
+
+            debug_print("Finding book on device...")
+            device_book_path = self.get_device_path_from_id(book_id)
+            if device_book_path is None:
+                book["comment"] = _("eBook is not on Kobo eReader")
+                book["good"] = False
+                book["icon"] = "window-close.png"
                 book["can_update_toc"] = False
+                continue
+            extension = os.path.splitext(device_book_path)[1]
+            ContentType = (
+                self.device.get_content_type_from_extension(extension)
+                if extension != ""
+                else self.device.get_content_type_from_path(device_book_path)
+            )
+            book["ContentID"] = self.device.contentid_from_path(
+                device_book_path, ContentType
+            )
+            if ".kepub.epub" in book["ContentID"]:
+                book["kobo_format"] = "KEPUB"
+            elif ".epub" in book["ContentID"]:
+                book["kobo_format"] = "EPUB"
+            else:
+                book["kobo_format"] = extension[1:].upper()
+                book["comment"] = _("eBook on Kobo eReader is not supported format")
+                book["good"] = True
+                book["icon"] = "window-close.png"
+                book["can_update_toc"] = False
+                book["kobo_format_status"] = True
+                continue
 
-                book_id = book["calibre_id"]
+            debug_print("Checking for book in library...")
+            if db.has_format(book_id, book["kobo_format"], index_is_id=True):
+                book["library_format"] = book["kobo_format"]
+            elif (
+                book["kobo_format"] == "KEPUB"
+                and "EPUB".lower() in self.device.settings().format_map
+                and db.has_format(book_id, "EPUB", index_is_id=True)
+            ):
+                book["library_format"] = "EPUB"
+            else:
+                book["comment"] = _(
+                    "No suitable format in library for book. The format of the device is {0}"
+                ).format(book["kobo_format"])
+                book["good"] = False
+                continue
 
-                debug_print("Finding book on device...")
-                device_book_path = self.get_device_path_from_id(book_id)
-                if device_book_path is None:
-                    book["comment"] = _("eBook is not on Kobo eReader")
-                    book["good"] = False
-                    book["icon"] = "window-close.png"
-                    book["can_update_toc"] = False
-                    continue
-                extension = os.path.splitext(device_book_path)[1]
-                ContentType = (
-                    self.device.get_content_type_from_extension(extension)
-                    if extension != ""
-                    else self.device.get_content_type_from_path(device_book_path)
+            debug_print("Getting path to book in library...")
+            pathtoebook = db.format_abspath(
+                book_id, book["library_format"], index_is_id=True
+            )
+            debug_print("Getting chapters from library...")
+            try:
+                self._get_chapter_list(
+                    book,
+                    pathtoebook,
+                    "library",
+                    format_on_device=book["kobo_format"],
                 )
-                book["ContentID"] = self.device.contentid_from_path(
-                    device_book_path, ContentType
+            except DRMError:
+                book["comment"] = _("eBook in library has DRM")
+                book["good"] = False
+                book["icon"] = "window-close.png"
+                continue
+
+            debug_print("Getting chapters from book on device...")
+            try:
+                self._get_chapter_list(
+                    book,
+                    device_book_path,
+                    "kobo",
+                    format_on_device=book["kobo_format"],
                 )
-                if ".kepub.epub" in book["ContentID"]:
-                    book["kobo_format"] = "KEPUB"
-                elif ".epub" in book["ContentID"]:
-                    book["kobo_format"] = "EPUB"
-                else:
-                    book["kobo_format"] = extension[1:].upper()
-                    book["comment"] = _("eBook on Kobo eReader is not supported format")
-                    book["good"] = True
-                    book["icon"] = "window-close.png"
-                    book["can_update_toc"] = False
-                    book["kobo_format_status"] = True
-                    continue
+            except DRMError:
+                book["comment"] = _("eBook on Kobo eReader has DRM")
+                book["good"] = False
+                book["icon"] = "window-close.png"
+                continue
 
-                debug_print("Checking for book in library...")
-                if db.has_format(book_id, book["kobo_format"], index_is_id=True):
-                    book["library_format"] = book["kobo_format"]
-                elif (
-                    book["kobo_format"] == "KEPUB"
-                    and "EPUB".lower() in self.device.settings().format_map
-                    and db.has_format(book_id, "EPUB", index_is_id=True)
-                ):
-                    book["library_format"] = "EPUB"
-                else:
-                    book["comment"] = _(
-                        "No suitable format in library for book. The format of the device is {0}"
-                    ).format(book["kobo_format"])
-                    book["good"] = False
-                    continue
-
-                debug_print("Getting path to book in library...")
-                pathtoebook = db.format_abspath(
-                    book_id, book["library_format"], index_is_id=True
+            debug_print("Getting chapters from device database...")
+            if book["kobo_format"] == "KEPUB":
+                book["kobo_database_chapters"] = self._get_database_chapters(
+                    connection, book["ContentID"], book["kobo_format"], 899
                 )
-                debug_print("Getting chapters from library...")
-                try:
-                    self._get_chapter_list(
-                        book,
-                        pathtoebook,
-                        "library",
-                        format_on_device=book["kobo_format"],
-                    )
-                except DRMError:
-                    book["comment"] = _("eBook in library has DRM")
-                    book["good"] = False
-                    book["icon"] = "window-close.png"
-                    continue
-
-                debug_print("Getting chapters from book on device...")
-                try:
-                    self._get_chapter_list(
-                        book,
-                        device_book_path,
-                        "kobo",
-                        format_on_device=book["kobo_format"],
-                    )
-                except DRMError:
-                    book["comment"] = _("eBook on Kobo eReader has DRM")
-                    book["good"] = False
-                    book["icon"] = "window-close.png"
-                    continue
-
-                debug_print("Getting chapters from device database...")
-                if book["kobo_format"] == "KEPUB":
-                    book["kobo_database_chapters"] = self._get_database_chapters(
-                        connection, book["ContentID"], book["kobo_format"], 899
-                    )
-                    debug_print(
-                        "_get_chapter_status - book['kobo_database_chapters']=",
-                        book["kobo_database_chapters"],
-                    )
-                    book["kobo_database_manifest"] = self._get_database_chapters(
-                        connection, book["ContentID"], book["kobo_format"], 9
-                    )
-                    debug_print(
-                        "_get_chapter_status - book['kobo_database_manifest']=",
-                        book["kobo_database_manifest"],
-                    )
-                else:
-                    book["kobo_database_chapters"] = self._get_database_chapters(
-                        connection, book["ContentID"], book["kobo_format"], 9
-                    )
-
-                koboDatabaseReadingLocation = self._get_database_current_chapter(
-                    book["ContentID"], connection
+                debug_print(
+                    "_get_chapter_status - book['kobo_database_chapters']=",
+                    book["kobo_database_chapters"],
                 )
-                if (
-                    koboDatabaseReadingLocation is not None
-                    and len(koboDatabaseReadingLocation) > 0
-                ):
-                    book["koboDatabaseReadingLocation"] = koboDatabaseReadingLocation
-                    if self.device.fwversion < self.device.min_fwversion_epub_location:
-                        reading_location_volumeIndex, reading_location_file = re.match(
-                            r"\((\d+)\)(.*)\#?.*", koboDatabaseReadingLocation
-                        ).groups()
-                        reading_location_volumeIndex = int(reading_location_volumeIndex)
+                book["kobo_database_manifest"] = self._get_database_chapters(
+                    connection, book["ContentID"], book["kobo_format"], 9
+                )
+                debug_print(
+                    "_get_chapter_status - book['kobo_database_manifest']=",
+                    book["kobo_database_manifest"],
+                )
+            else:
+                book["kobo_database_chapters"] = self._get_database_chapters(
+                    connection, book["ContentID"], book["kobo_format"], 9
+                )
+
+            koboDatabaseReadingLocation = self._get_database_current_chapter(
+                book["ContentID"], connection
+            )
+            if (
+                koboDatabaseReadingLocation is not None
+                and len(koboDatabaseReadingLocation) > 0
+            ):
+                book["koboDatabaseReadingLocation"] = koboDatabaseReadingLocation
+                if self.device.fwversion < self.device.min_fwversion_epub_location:
+                    reading_location_volumeIndex, reading_location_file = re.match(
+                        r"\((\d+)\)(.*)\#?.*", koboDatabaseReadingLocation
+                    ).groups()
+                    reading_location_volumeIndex = int(reading_location_volumeIndex)
+                    try:
+                        debug_print(
+                            "_get_chapter_status - reading_location_volumeIndex =%d, reading_location_file='%s'"
+                            % (reading_location_volumeIndex, reading_location_file)
+                        )
+                        debug_print(
+                            "_get_chapter_status - chapter location='%s'"
+                            % (
+                                book["kobo_database_chapters"][
+                                    reading_location_volumeIndex
+                                ]["path"],
+                            )
+                        )
+                    except:
+                        debug_print(
+                            "_get_chapter_status - exception logging reading location details."
+                        )
+                    new_toc_readingposition_index = self._get_readingposition_index(
+                        book, koboDatabaseReadingLocation
+                    )
+                    if new_toc_readingposition_index is not None:
                         try:
+                            real_path, chapter_position = book[
+                                "kobo_database_chapters"
+                            ][reading_location_volumeIndex]["path"].split("#")
                             debug_print(
-                                "_get_chapter_status - reading_location_volumeIndex =%d, reading_location_file='%s'"
-                                % (reading_location_volumeIndex, reading_location_file)
+                                "_get_chapter_status - chapter_location='%s'"
+                                % (chapter_position,)
+                            )
+                            book["kobo_database_chapters"][
+                                reading_location_volumeIndex
+                            ]["path"] = real_path
+                            new_chapter_position = "{0}#{1}".format(
+                                book["library_chapters"][new_toc_readingposition_index][
+                                    "path"
+                                ],
+                                chapter_position,
+                            )
+                            book["library_chapters"][new_toc_readingposition_index][
+                                "chapter_position"
+                            ] = new_chapter_position
+                            book["readingposition_index"] = (
+                                new_toc_readingposition_index
                             )
                             debug_print(
-                                "_get_chapter_status - chapter location='%s'"
-                                % (
-                                    book["kobo_database_chapters"][
-                                        reading_location_volumeIndex
-                                    ]["path"],
-                                )
+                                "_get_chapter_status - new chapter_location='%s'"
+                                % (new_chapter_position,)
                             )
                         except:
                             debug_print(
-                                "_get_chapter_status - exception logging reading location details."
+                                "_get_chapter_status - current chapter has not location. Not setting it."
                             )
-                        new_toc_readingposition_index = self._get_readingposition_index(
-                            book, koboDatabaseReadingLocation
-                        )
-                        if new_toc_readingposition_index is not None:
-                            try:
-                                real_path, chapter_position = book[
-                                    "kobo_database_chapters"
-                                ][reading_location_volumeIndex]["path"].split("#")
-                                debug_print(
-                                    "_get_chapter_status - chapter_location='%s'"
-                                    % (chapter_position,)
-                                )
-                                book["kobo_database_chapters"][
-                                    reading_location_volumeIndex
-                                ]["path"] = real_path
-                                new_chapter_position = "{0}#{1}".format(
-                                    book["library_chapters"][
-                                        new_toc_readingposition_index
-                                    ]["path"],
-                                    chapter_position,
-                                )
-                                book["library_chapters"][new_toc_readingposition_index][
-                                    "chapter_position"
-                                ] = new_chapter_position
-                                book["readingposition_index"] = (
-                                    new_toc_readingposition_index
-                                )
-                                debug_print(
-                                    "_get_chapter_status - new chapter_location='%s'"
-                                    % (new_chapter_position,)
-                                )
-                            except:
-                                debug_print(
-                                    "_get_chapter_status - current chapter has not location. Not setting it."
-                                )
+            debug_print(
+                "_get_chapter_status - len(book['library_chapters']) =",
+                len(book["library_chapters"]),
+            )
+            debug_print(
+                "_get_chapter_status - len(book['kobo_chapters']) =",
+                len(book["kobo_chapters"]),
+            )
+            debug_print(
+                "_get_chapter_status - len(book['kobo_database_chapters']) =",
+                len(book["kobo_database_chapters"]),
+            )
+            if len(book["library_chapters"]) == len(book["kobo_database_chapters"]):
                 debug_print(
-                    "_get_chapter_status - len(book['library_chapters']) =",
-                    len(book["library_chapters"]),
+                    "_get_chapter_status - ToC lengths the same in library and database."
                 )
-                debug_print(
-                    "_get_chapter_status - len(book['kobo_chapters']) =",
-                    len(book["kobo_chapters"]),
-                )
-                debug_print(
-                    "_get_chapter_status - len(book['kobo_database_chapters']) =",
-                    len(book["kobo_database_chapters"]),
-                )
-                if len(book["library_chapters"]) == len(book["kobo_database_chapters"]):
-                    debug_print(
-                        "_get_chapter_status - ToC lengths the same in library and database."
-                    )
-                    book["good"] = True
-                    book["icon"] = "ok.png"
-                    book["comment"] = "Chapters match in all places"
+                book["good"] = True
+                book["icon"] = "ok.png"
+                book["comment"] = "Chapters match in all places"
 
-                if len(book["library_chapters"]) != len(book["kobo_chapters"]):
-                    debug_print(
-                        "_get_chapter_status - ToC lengths different between library and device."
-                    )
-                    book["kobo_format_status"] = False
-                    book["comment"] = _("Book needs to be updated on Kobo eReader")
-                    book["icon"] = "toc.png"
-                else:
-                    book["kobo_format_status"] = self._compare_toc_entries(
+            if len(book["library_chapters"]) != len(book["kobo_chapters"]):
+                debug_print(
+                    "_get_chapter_status - ToC lengths different between library and device."
+                )
+                book["kobo_format_status"] = False
+                book["comment"] = _("Book needs to be updated on Kobo eReader")
+                book["icon"] = "toc.png"
+            else:
+                book["kobo_format_status"] = self._compare_toc_entries(
+                    book, book_format1="library", book_format2="kobo"
+                )
+                if book["kobo_format"] == "KEPUB":
+                    book["kobo_format_status"] = book[
+                        "kobo_format_status"
+                    ] and self._compare_manifest_entries(
                         book, book_format1="library", book_format2="kobo"
                     )
-                    if book["kobo_format"] == "KEPUB":
-                        book["kobo_format_status"] = book[
-                            "kobo_format_status"
-                        ] and self._compare_manifest_entries(
-                            book, book_format1="library", book_format2="kobo"
-                        )
-                    if book["kobo_format_status"]:
-                        book["comment"] = (
-                            "Chapters in the book on the device do not match the library"
-                        )
-                book["good"] = book["good"] and book["kobo_format_status"]
+                if book["kobo_format_status"]:
+                    book["comment"] = (
+                        "Chapters in the book on the device do not match the library"
+                    )
+            book["good"] = book["good"] and book["kobo_format_status"]
 
-                if len(book["kobo_database_chapters"]) == 0:
-                    debug_print(
-                        "_get_chapter_status - No chapters in database for book."
+            if len(book["kobo_database_chapters"]) == 0:
+                debug_print("_get_chapter_status - No chapters in database for book.")
+                book["can_update_toc"] = False
+                book["kobo_database_status"] = False
+                book["comment"] = "Book needs to be imported on the device"
+                book["icon"] = "window-close.png"
+                continue
+            elif len(book["kobo_chapters"]) != len(book["kobo_database_chapters"]):
+                debug_print(
+                    "_get_chapter_status - ToC lengths different between book on device and the database."
+                )
+                book["kobo_database_status"] = False
+                book["comment"] = "Chapters need to be updated in Kobo eReader database"
+                book["icon"] = "toc.png"
+                book["can_update_toc"] = True
+            else:
+                book["kobo_database_status"] = self._compare_toc_entries(
+                    book, book_format1="kobo", book_format2="kobo_database"
+                )
+                if book["kobo_format"] == "KEPUB":
+                    book["kobo_database_status"] = book[
+                        "kobo_database_status"
+                    ] and self._compare_manifest_entries(
+                        book, book_format1="kobo", book_format2="kobo_database"
                     )
-                    book["can_update_toc"] = False
-                    book["kobo_database_status"] = False
-                    book["comment"] = "Book needs to be imported on the device"
-                    book["icon"] = "window-close.png"
-                    continue
-                elif len(book["kobo_chapters"]) != len(book["kobo_database_chapters"]):
-                    debug_print(
-                        "_get_chapter_status - ToC lengths different between book on device and the database."
-                    )
-                    book["kobo_database_status"] = False
+                if book["kobo_database_status"]:
                     book["comment"] = (
                         "Chapters need to be updated in Kobo eReader database"
                     )
-                    book["icon"] = "toc.png"
-                    book["can_update_toc"] = True
-                else:
-                    book["kobo_database_status"] = self._compare_toc_entries(
-                        book, book_format1="kobo", book_format2="kobo_database"
+                book["can_update_toc"] = True
+            book["good"] = book["good"] and book["kobo_database_status"]
+
+            if book["good"]:
+                book["icon"] = "ok.png"
+                book["comment"] = "Chapters match in all places"
+            else:
+                book["icon"] = "toc.png"
+                if not book["kobo_format_status"]:
+                    book["comment"] = _("Book needs to be updated on Kobo eReader")
+                elif not book["kobo_database_status"]:
+                    book["comment"] = (
+                        "Chapters need to be updated in Kobo eReader database"
                     )
-                    if book["kobo_format"] == "KEPUB":
-                        book["kobo_database_status"] = book[
-                            "kobo_database_status"
-                        ] and self._compare_manifest_entries(
-                            book, book_format1="kobo", book_format2="kobo_database"
-                        )
-                    if book["kobo_database_status"]:
-                        book["comment"] = (
-                            "Chapters need to be updated in Kobo eReader database"
-                        )
-                    book["can_update_toc"] = True
-                book["good"] = book["good"] and book["kobo_database_status"]
 
-                if book["good"]:
-                    book["icon"] = "ok.png"
-                    book["comment"] = "Chapters match in all places"
-                else:
-                    book["icon"] = "toc.png"
-                    if not book["kobo_format_status"]:
-                        book["comment"] = _("Book needs to be updated on Kobo eReader")
-                    elif not book["kobo_database_status"]:
-                        book["comment"] = (
-                            "Chapters need to be updated in Kobo eReader database"
-                        )
-
-                debug_print("\nFinished with book\n")  # {0}\n".format(book))
-                i += 1
+            debug_print("\nFinished with book\n")  # {0}\n".format(book))
+            i += 1
 
     def _get_database_chapters(
         self, connection, koboContentId, book_format="EPUB", contentId=9
@@ -7548,7 +7402,6 @@ class KoboUtilitiesAction(InterfaceAction):
             debug_print("_get_database_chapters - chapter= ", chapter)
             chapters.append(chapter)
 
-        cursor.close()
         chapters.sort(key=lambda x: x["VolumeIndex"])
 
         return chapters
@@ -7580,7 +7433,6 @@ class KoboUtilitiesAction(InterfaceAction):
                 % (koboContentId,)
             )
             reading_location = None
-        cursor.close()
         debug_print(
             "KoboUtilities::_get_database_current_chapter - reading_location='%s'"
             % (reading_location,)
@@ -7718,24 +7570,22 @@ class KoboUtilitiesAction(InterfaceAction):
             _("Number of books to update {0}").format(len(books))
         )
         self.show_progressbar(len(books))
-        with self.device_database_connection() as connection:
-            for book in books:
-                debug_print("update_device_toc_for_books - book=", book)
-                debug_print(
-                    "update_device_toc_for_books - ContentID=", book["ContentID"]
+        connection = self.device_database_connection()
+        for book in books:
+            debug_print("update_device_toc_for_books - book=", book)
+            debug_print("update_device_toc_for_books - ContentID=", book["ContentID"])
+            self.increment_progressbar()
+
+            if len(book["kobo_chapters"]) > 0:
+                self.remove_all_toc_entries(connection, book["ContentID"])
+
+                self.update_device_toc_for_book(
+                    connection,
+                    book,
+                    book["ContentID"],
+                    book["title"],
+                    book["kobo_format"],
                 )
-                self.increment_progressbar()
-
-                if len(book["kobo_chapters"]) > 0:
-                    self.remove_all_toc_entries(connection, book["ContentID"])
-
-                    self.update_device_toc_for_book(
-                        connection,
-                        book,
-                        book["ContentID"],
-                        book["title"],
-                        book["kobo_format"],
-                    )
 
         self.hide_progressbar()
 
@@ -7828,7 +7678,6 @@ class KoboUtilitiesAction(InterfaceAction):
             chapterContentId = None
 
         debug_print("getDatabaseChapterId - chapterContentId=%s" % chapterContentId)
-        cursor.close()
         return chapterContentId
 
     def removeChapterFromDatabase(self, chapterContentId, bookID, connection):
@@ -7843,7 +7692,6 @@ class KoboUtilitiesAction(InterfaceAction):
             "delete from volume_shortcovers where volumeId = ? and shortcoverId = ?", t
         )
 
-        cursor.close()
         return
 
     def update_database_content_entry(self, connection, contentId, num_chapters):
@@ -7851,7 +7699,6 @@ class KoboUtilitiesAction(InterfaceAction):
         t = (contentId, num_chapters)
         cursor.execute("UPDATE content SET NumShortcovers = ? where ContentID = ?", t)
 
-        cursor.close()
         return
 
     def remove_all_toc_entries(self, connection, contentId):
@@ -7862,8 +7709,6 @@ class KoboUtilitiesAction(InterfaceAction):
 
         cursor.execute("DELETE FROM Content WHERE BookID = ?", t)
         cursor.execute("DELETE FROM volume_shortcovers WHERE volumeId = ?", t)
-
-        cursor.close()
 
         return
 

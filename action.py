@@ -72,8 +72,6 @@ from .dialogs import (
     ChangeReadingStatusOptionsDialog,
     CleanImagesDirOptionsDialog,
     CoverUploadOptionsDialog,
-    DismissTilesOptionsDialog,
-    DispayExtrasTilesDialog,
     FixDuplicateShelvesDialog,
     GetShelvesFromDeviceDialog,
     ManageSeriesDeviceDialog,
@@ -400,8 +398,7 @@ class KoboUtilitiesAction(InterfaceAction):
             haveKobo = self.haveKobo()
             haveKoboTouch = self.haveKoboTouch()
             debug_print(
-                "rebuild_menus - self.supports_ratings=%s, self.supports_tiles=%s"
-                % (self.supports_ratings, self.supports_tiles)
+                "rebuild_menus - self.supports_ratings=%s" % (self.supports_ratings)
             )
             self.set_toolbar_button_tooltip()
 
@@ -428,28 +425,6 @@ class KoboUtilitiesAction(InterfaceAction):
                     is_library_action=True,
                     is_device_action=True,
                 )
-
-                if self.device_fwversion < (4, 4, 0):
-                    self.dismiss_tiles_action = self.create_menu_item_ex(
-                        self.menu,
-                        _("&Dismiss tiles from home screen"),
-                        unique_name="Dismiss tiles from home screen",
-                        shortcut_name=_("Dismiss tiles from home screen"),
-                        triggered=self.dismiss_tiles,
-                        enabled=self.supports_tiles,
-                        is_library_action=True,
-                        is_device_action=True,
-                    )
-                    self.display_extras_tiles_action = self.create_menu_item_ex(
-                        self.menu,
-                        _("Display &Extras tiles on home screen"),
-                        unique_name="Display extras tiles on home screen",
-                        shortcut_name=_("Display Extras tiles on home screen"),
-                        triggered=self.display_extras_tiles,
-                        enabled=self.supports_tiles,
-                        is_library_action=True,
-                        is_device_action=True,
-                    )
 
                 self.menu.addSeparator()
 
@@ -1182,62 +1157,6 @@ class KoboUtilitiesAction(InterfaceAction):
         info_dialog(
             self.gui,
             _("Kobo Utilities") + " - " + _("Device library updated"),
-            result_message,
-            show=True,
-        )
-
-    def dismiss_tiles(self):
-        self.device = self.get_device()
-        if self.device is None:
-            return error_dialog(
-                self.gui,
-                _("Cannot mark tiles to be dismissed."),
-                _("No device connected."),
-                show=True,
-            )
-        self.device_path = self.get_device_path()
-
-        dlg = DismissTilesOptionsDialog(self.gui, self)
-        dlg.exec_()
-        if dlg.result() != dlg.Accepted:
-            return
-        self.options = dlg.options
-        debug_print("dismiss_tiles - self.options=", self.options)
-        result = self._dismiss_tiles()
-        result_message = (
-            _("Update successful") if result == 1 else _("Update unsuccessful")
-        )
-        info_dialog(
-            self.gui,
-            _("Kobo Utilities") + " - " + _("Dismiss Tiles from Home Screen"),
-            result_message,
-            show=True,
-        )
-
-    def display_extras_tiles(self):
-        self.device = self.get_device()
-        if self.device is None:
-            return error_dialog(
-                self.gui,
-                _("Cannot add Extras tiles to the home screen."),
-                _("No device connected."),
-                show=True,
-            )
-        self.device_path = self.get_device_path()
-
-        dlg = DispayExtrasTilesDialog(self.gui, self)
-        dlg.exec_()
-        if dlg.result() != dlg.Accepted:
-            return
-        self.options = dlg.options
-        debug_print("display_extras_tiles - self.options=", self.options)
-        result = self._display_extras_tiles()
-        result_message = (
-            _("Update successful") if result == 1 else _("Update unsuccessful")
-        )
-        info_dialog(
-            self.gui,
-            _("Kobo Utilities") + " - " + _("Display Extras tiles on home hcreen"),
             result_message,
             show=True,
         )
@@ -2695,7 +2614,6 @@ class KoboUtilitiesAction(InterfaceAction):
         self.supports_series = None
         self.supports_series_list = None
         self.supports_ratings = None
-        self.supports_tiles = None
         self.device_name = None
 
         # If there is a device connected, test if we can retrieve the mount point from Calibre
@@ -2758,10 +2676,6 @@ class KoboUtilitiesAction(InterfaceAction):
             or self.device.dbversion > 136
         )
         self.supports_ratings = self.haveKoboTouch() and self.device.dbversion > 36
-        self.supports_tiles = (
-            self.haveKoboTouch()
-            and self.device.dbversion >= self.device.min_dbversion_activity
-        )
         try:
             self.epub_location_like_kepub = (
                 self.haveKoboTouch()
@@ -6614,188 +6528,6 @@ class KoboUtilitiesAction(InterfaceAction):
 
         with open(config_file_path, "w") as config_file:
             koboConfig.write(config_file)
-
-    def _dismiss_tiles(self):
-        debug_print(
-            "_dismiss_tiles - self.options[cfg.KEY_TILE_OPTIONS]",
-            self.options[cfg.KEY_TILE_OPTIONS],
-        )
-        trigger_when_clause = ""
-        where_clause = ""
-        for option in self.options[cfg.KEY_TILE_OPTIONS]:
-            where_clause += (
-                ", '" + option + "'"
-                if self.options[cfg.KEY_TILE_OPTIONS][option]
-                else ""
-            )
-
-        recent_books_where = ""
-        recent_books_when = ""
-        if (
-            self.options[cfg.KEY_TILE_RECENT_NEW]
-            or self.options[cfg.KEY_TILE_RECENT_FINISHED]
-            or self.options[cfg.KEY_TILE_RECENT_IN_THE_CLOUD]
-        ):
-            recent_books_status = ", 0" if self.options[cfg.KEY_TILE_RECENT_NEW] else ""
-            recent_books_status += (
-                ", 2" if self.options[cfg.KEY_TILE_RECENT_FINISHED] else ""
-            )
-            recent_books_status = (
-                recent_books_status[1:] if len(recent_books_status) > 0 else ""
-            )
-            recent_books_status_clause = (
-                "c.ReadStatus in (%s)" % (recent_books_status)
-                if len(recent_books_status) > 0
-                else ""
-            )
-            recent_books_in_cloud_clause = (
-                "c.IsDownloaded = 'false'"
-                if self.options[cfg.KEY_TILE_RECENT_IN_THE_CLOUD]
-                else ""
-            )
-            if len(recent_books_status) > 0 and len(recent_books_in_cloud_clause) > 0:
-                recent_books_clause = (
-                    recent_books_status_clause + " OR " + recent_books_in_cloud_clause
-                )
-            elif len(recent_books_status) > 0:
-                recent_books_clause = recent_books_status_clause
-            elif len(recent_books_in_cloud_clause) > 0:
-                recent_books_clause = recent_books_in_cloud_clause
-            else:  # Should never reach here, but just in case...
-                recent_books_clause = "'' <> ''"
-            recent_books_where = (
-                "Type IN ('RecentBook') AND EXISTS (SELECT 1 FROM content c where c.contentId = Id and (%s))"
-                % recent_books_clause
-            )
-            recent_books_when = (
-                "NEW.Type IN ('RecentBook') AND EXISTS (SELECT 1 FROM content c where c.contentId = NEW.Id and (%s))"
-                % recent_books_clause
-            )
-
-        if len(where_clause) > 0 or len(recent_books_where) > 0:
-            if (
-                self.options[cfg.KEY_CHANGE_DISMISS_TRIGGER]
-                and self.options[cfg.KEY_CREATE_DISMISS_TRIGGER]
-            ):
-                trigger_when_clause = (
-                    "new.Type IN (" + where_clause[1:] + ")"
-                    if len(where_clause) > 0
-                    else ""
-                )
-                trigger_when_clause += (
-                    " OR "
-                    if len(trigger_when_clause) > 0 and len(recent_books_when) > 0
-                    else ""
-                )
-                trigger_when_clause += (
-                    recent_books_when if len(recent_books_when) > 0 else ""
-                )
-            where_clause = (
-                "type in (" + where_clause[1:] + ")" if len(where_clause) > 0 else ""
-            )
-            where_clause += (
-                " OR " if len(where_clause) > 0 and len(recent_books_where) > 0 else ""
-            )
-            where_clause += recent_books_where if len(recent_books_where) > 0 else ""
-            where_clause = "WHERE " + where_clause
-        else:
-            return 0
-
-        trigger_change_statements = ()
-        if (
-            self.options[cfg.KEY_CHANGE_DISMISS_TRIGGER]
-            and self.options[cfg.KEY_CREATE_DISMISS_TRIGGER]
-        ):
-            trigger_change_statements = (
-                "CREATE TRIGGER Activity_DismissTiles_INSERT\n"
-                "AFTER INSERT ON Activity\n"
-                "FOR EACH ROW\n"
-                "WHEN ( " + trigger_when_clause + ")\n"
-                "BEGIN\n"
-                "UPDATE Activity\n"
-                "SET Enabled    = 'false'\n"
-                "WHERE rowid = new.rowid;\n"
-                "END",
-                "CREATE TRIGGER Activity_DismissTiles_UPDATE\n"
-                "AFTER UPDATE ON Activity\n"
-                "FOR EACH ROW\n"
-                "WHEN ( " + trigger_when_clause + ")\n"
-                "BEGIN\n"
-                "UPDATE Activity\n"
-                "SET Enabled    = 'false'\n"
-                "WHERE rowid = new.rowid;\n"
-                "END",
-            )
-
-        trigger_delete_statements = (
-            "DROP TRIGGER IF EXISTS Activity_DismissTiles",
-            "DROP TRIGGER IF EXISTS Activity_DismissTiles_INSERT",
-            "DROP TRIGGER IF EXISTS Activity_DismissTiles_UPDATE",
-            "DROP TRIGGER IF EXISTS KTE_Activity_DismissNewBookTiles",
-        )
-
-        connection = self.device_database_connection()
-        update_query = "UPDATE Activity SET Enabled = 'false' " + where_clause
-
-        cursor = connection.cursor()
-
-        debug_print(
-            "KoboUtilities:_dismiss_tiles - executing update_query=", update_query
-        )
-        cursor.execute(update_query)
-
-        if self.options[cfg.KEY_CHANGE_DISMISS_TRIGGER]:
-            if (
-                self.options[cfg.KEY_DELETE_DISMISS_TRIGGER]
-                or self.options[cfg.KEY_CREATE_DISMISS_TRIGGER]
-            ):
-                for trigger_statement in trigger_delete_statements:
-                    debug_print(
-                        "KoboUtilities:_dismiss_tiles - executing trigger_statement=",
-                        trigger_statement,
-                    )
-                    cursor.execute(trigger_statement)
-            if self.options[cfg.KEY_CREATE_DISMISS_TRIGGER]:
-                for trigger_statement in trigger_change_statements:
-                    debug_print(
-                        "KoboUtilities:_dismiss_tiles - executing trigger_statement=",
-                        trigger_statement,
-                    )
-                    cursor.execute(trigger_statement)
-
-        return 1
-
-    def _display_extras_tiles(self):
-        debug_print(
-            "_display_extras_tiles - self.options[cfg.KEY_TILE_OPTIONS]",
-            self.options[cfg.KEY_TILE_OPTIONS],
-        )
-        delete_tile = 'DELETE FROM Activity WHERE Type LIKE "Extras" AND Id LIKE ?'
-        insert_tile = (
-            "INSERT INTO Activity "
-            "(Id, Enabled, Type, Action, Date, Data) "
-            "VALUES "
-            "(?, 'true', 'Extras', 2, strftime('%Y-%m-%dT%H:%m:%S'), X'00000000')"
-        )
-
-        connection = self.device_database_connection()
-        cursor = connection.cursor()
-
-        for extra_tile in self.options[cfg.KEY_TILE_OPTIONS]:
-            debug_print(
-                "KoboUtilities:extra_tile=%s, selected=%s",
-                extra_tile,
-                self.options[cfg.KEY_TILE_OPTIONS][extra_tile],
-            )
-            if (
-                self.options[cfg.KEY_TILE_OPTIONS][extra_tile]
-                or self.options[cfg.KEY_DISMISS_CURRENT_EXTRAS]
-            ):
-                cursor.execute(delete_tile, (extra_tile,))
-            if self.options[cfg.KEY_TILE_OPTIONS][extra_tile]:
-                cursor.execute(insert_tile, (extra_tile,))
-
-        return 1
 
     def _backup_annotation_files(self, books, dest_path):
         annotations_found = 0

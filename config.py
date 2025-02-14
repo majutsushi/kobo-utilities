@@ -7,6 +7,7 @@ __docformat__ = "restructuredtext en"
 import copy
 import traceback
 from functools import partial
+from typing import Any
 
 from calibre.constants import DEBUG as _DEBUG
 from calibre.gui2 import choose_dir, error_dialog, open_url, question_dialog
@@ -48,6 +49,7 @@ from .common_utils import (
     get_icon,
 )
 
+# Support for CreateNewCustomColumn was added in 5.35.0
 SUPPORTS_CREATE_CUSTOM_COLUMN = False
 try:
     from calibre.gui2.preferences.create_custom_column import CreateNewCustomColumn
@@ -55,6 +57,7 @@ try:
     debug_print("Kobo Utilities Configuration - CreateNewCustomColumn is supported")
     SUPPORTS_CREATE_CUSTOM_COLUMN = True
 except ImportError:
+    CreateNewCustomColumn: Any = object
     debug_print("Kobo Utilities Configuration - CreateNewCustomColumn is not supported")
     SUPPORTS_CREATE_CUSTOM_COLUMN = False
 
@@ -1135,7 +1138,7 @@ class ProfilesTab(QWidget):
                 available_columns[key] = column
         return available_columns
 
-    def create_custom_column(self, lookup_name=None):
+    def create_custom_column(self, lookup_name):
         debug_print("ProfilesTab:create_custom_column - lookup_name:", lookup_name)
         display_params = {
             "description": CUSTOM_COLUMN_DEFAULTS[lookup_name]["description"]
@@ -1350,6 +1353,10 @@ class DevicesTab(QWidget):
 
     def _add_device_clicked(self):
         devices = self.devices_table.get_data()
+        if self._connected_device_info is None:
+            debug_print("_add_device_clicked - self._connected_device_info is None")
+            return
+
         drive_info = self._connected_device_info[4]
         for location_info in drive_info.values():
             if location_info["location_code"] == "main":
@@ -1368,7 +1375,7 @@ class DevicesTab(QWidget):
         self.parent_dialog.profiles_tab.refresh_current_profile_info()
 
     def _rename_device_clicked(self):
-        (device_info, is_connected) = self.devices_table.get_selected_device_info()
+        (device_info, _is_connected) = self.devices_table.get_selected_device_info()
         if not device_info:
             return error_dialog(
                 self,
@@ -1398,7 +1405,7 @@ class DevicesTab(QWidget):
             self.devices_table.set_current_row_device_name(new_device_name)
             # Ensure the devices combo is refreshed for the current list
             self.parent_dialog.profiles_tab.refresh_current_profile_info()
-        except:
+        except Exception:
             return error_dialog(
                 self,
                 _("Rename failed"),
@@ -1635,7 +1642,7 @@ class NoWheelComboBox(QComboBox):
 
 class BoolColumnComboBox(NoWheelComboBox):
     def __init__(self, parent, selected=True):
-        NoWheelComboBox.__init__(self, parent)
+        NoWheelComboBox.__init__(self, parent)  # type: ignore[reportCallIssue]
         self.populate_combo(selected)
 
     def populate_combo(self, selected):

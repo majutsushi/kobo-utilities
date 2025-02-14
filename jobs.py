@@ -8,9 +8,7 @@ import os
 import re
 import shutil
 import time
-import zipfile
 from datetime import datetime
-from urllib.request import urlopen
 
 from calibre import prints
 from calibre.constants import DEBUG
@@ -45,10 +43,8 @@ def debug_print(*args):
 
 def do_device_database_backup(backup_options, cpus, notification=lambda x, _y: x):
     logger = Log()
-    JOBS_DEBUG = True
     debug_print("do_device_database_backup - start")
     logger("logger - do_device_database_backup - start")
-    server = Server(pool_size=cpus)
 
     def backup_file(backup_zip, file_to_add, basename=None):
         debug_print(
@@ -71,7 +67,6 @@ def do_device_database_backup(backup_options, cpus, notification=lambda x, _y: x
     dest_dir = backup_options[cfg.KEY_BACKUP_DEST_DIRECTORY]
     copies_to_keep = backup_options[cfg.KEY_BACKUP_COPIES_TO_KEEP]
     do_daily_backup = backup_options[cfg.KEY_DO_DAILY_BACKUP]
-    backup_each_connection = backup_options[cfg.KEY_BACKUP_EACH_CONNECTION]
     zip_database = backup_options[cfg.KEY_BACKUP_ZIP_DATABASE]
     database_file = backup_options["database_file"]
     device_path = backup_options["device_path"]
@@ -81,7 +76,6 @@ def do_device_database_backup(backup_options, cpus, notification=lambda x, _y: x
     bookreader_database_file = os.path.join(
         backup_options["device_path"], ".kobo", "BookReader.sqlite"
     )
-    bookreader_database_file_found = False
 
     backup_timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     import glob
@@ -128,6 +122,7 @@ def do_device_database_backup(backup_options, cpus, notification=lambda x, _y: x
     debug_print("do_device_database_backup - database_file=%s" % database_file)
     shutil.copyfile(database_file, backup_file_path)
 
+    bookreader_backup_file_path = None
     try:
         notification(0.25, _("Backing up database BookReader.sqlite"))
         bookreader_backup_file_name = bookreader_backup_file_template.format(
@@ -149,7 +144,6 @@ def do_device_database_backup(backup_options, cpus, notification=lambda x, _y: x
             % bookreader_database_file
         )
         shutil.copyfile(bookreader_database_file, bookreader_backup_file_path)
-        bookreader_database_file_found = True
     except Exception as e:
         debug_print(
             "do_device_database_backup - backup of database BookReader.sqlite failed. Exception: {0}".format(
@@ -210,7 +204,7 @@ def do_device_database_backup(backup_options, cpus, notification=lambda x, _y: x
             )
             os.unlink(backup_file_path)
 
-            if bookreader_database_file_found:
+            if bookreader_backup_file_path is not None:
                 debug_print(
                     "do_device_database_backup - adding database BookReader to zip file=%s"
                     % bookreader_backup_file_path
@@ -405,11 +399,7 @@ def _store_bookmarks(log, books, options):
     kepub_fetch_query = options["fetch_queries"]["kepub"]
     epub_fetch_query = options["fetch_queries"]["epub"]
 
-    kobo_chapteridbookmarked_column_name = options[
-        cfg.KEY_CURRENT_LOCATION_CUSTOM_COLUMN
-    ]
     kobo_percentRead_column_name = options[cfg.KEY_PERCENT_READ_CUSTOM_COLUMN]
-    rating_column_name = options[cfg.KEY_RATING_CUSTOM_COLUMN]
     last_read_column_name = options[cfg.KEY_LAST_READ_CUSTOM_COLUMN]
 
     connection = device_database_connection(
@@ -436,6 +426,7 @@ def _store_bookmarks(log, books, options):
         debug_print("_store_bookmarks - Current book: %s - %s" % (title, authors))
         debug_print("_store_bookmarks - contentIds='%s'" % (contentIDs))
         device_status = None
+        contentID = None
         for contentID in contentIDs:
             debug_print("_store_bookmarks - contentId='%s'" % (contentID))
             fetch_values = (contentID,)
@@ -444,6 +435,7 @@ def _store_bookmarks(log, books, options):
             else:
                 fetch_query = epub_fetch_query
             cursor.execute(fetch_query, fetch_values)
+            result = None
             try:
                 result = next(cursor)
                 debug_print("_store_bookmarks - device_status='%s'" % (device_status))
@@ -515,10 +507,12 @@ def _store_bookmarks(log, books, options):
             "_store_bookmarks - finished reading database for book - device_status=",
             device_status,
         )
+        kobo_chapteridbookmarked = None
+        kobo_adobe_location = None
         if device_status["MimeType"] == MIMETYPE_KOBO or epub_location_like_kepub:
             kobo_chapteridbookmarked = device_status["ChapterIDBookmarked"]
             kobo_adobe_location = None
-        else:
+        elif contentID is not None:
             kobo_chapteridbookmarked = (
                 device_status["ChapterIDBookmarked"][len(contentID) + 1 :]
                 if device_status["ChapterIDBookmarked"]
@@ -577,7 +571,7 @@ def _store_bookmarks(log, books, options):
                     "_store_bookmarks - current_last_read != new_last_read='%s'"
                     % (current_last_read != new_last_read)
                 )
-            except:
+            except Exception:
                 debug_print(
                     "_store_bookmarks - Exception raised when logging details of last read. Ignoring."
                 )
@@ -617,7 +611,7 @@ def _store_bookmarks(log, books, options):
                     "_store_bookmarks - current_percentRead != new_kobo_percentRead='%s'"
                     % (current_percentRead != new_kobo_percentRead)
                 )
-            except:
+            except Exception:
                 debug_print(
                     "_store_bookmarks - Exception raised when logging details of percent read. Ignoring."
                 )
@@ -648,7 +642,7 @@ def _store_bookmarks(log, books, options):
                     "_store_bookmarks - current_chapterid != new_chapterid='%s'"
                     % (current_chapterid != new_chapterid)
                 )
-            except:
+            except Exception:
                 debug_print(
                     "_store_bookmarks - Exception raised when logging details of percent read. Ignoring."
                 )

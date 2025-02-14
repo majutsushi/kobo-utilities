@@ -2602,7 +2602,7 @@ class KoboUtilitiesAction(InterfaceAction):
         self.device = None
         try:
             self.device = self.gui.device_manager.connected_device
-        except:
+        except Exception:
             debug_print("No device connected")
             self.device = None
 
@@ -2748,7 +2748,7 @@ class KoboUtilitiesAction(InterfaceAction):
         try:
             db_connection = self.device.device_database_connection()
         except AttributeError:
-            import apsw
+            import apsw  # type: ignore[reportMissingImports]
 
             db_connection = apsw.Connection(self.device_database_path())
 
@@ -2982,6 +2982,7 @@ class KoboUtilitiesAction(InterfaceAction):
         )
 
     def validate_profile(self, profile_name=None):
+        columns_config = None
         if profile_name:
             profile = cfg.get_profile_info(self.gui.current_db, profile_name)
             columns_config = profile.get(cfg.CUSTOM_COLUMNS_STORE_NAME, None)

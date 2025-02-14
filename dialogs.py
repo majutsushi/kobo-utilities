@@ -234,12 +234,6 @@ KEY_REMOVE_ANNOT_SELECTED = 4
 load_translations()
 
 
-def get_plugin_pref(store_name, option):
-    return cfg.plugin_prefs.get(
-        cfg.option, cfg.METADATA_OPTIONS_DEFAULTS[cfg.KEY_SET_TITLE]
-    )
-
-
 def have_rating_column(plugin_action):
     rating_column = plugin_action.get_rating_column()
     return not rating_column == ""
@@ -256,7 +250,7 @@ class AuthorTableWidgetItem(ReadOnlyTableWidgetItem):
 
 
 class QueueProgressDialog(QProgressDialog):
-    def __init__(self, gui, books, tdir, options, queue, db, plugin_action=None):
+    def __init__(self, gui, books, tdir, options, queue, db, plugin_action):
         QProgressDialog.__init__(self, "", "", 0, len(books), gui)
         debug_print("QueueProgressDialog::__init__")
         self.setMinimumWidth(500)
@@ -2844,7 +2838,7 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
                 )
                 try:
                     initial_series_index = int(first_book.series_index())
-                except:
+                except Exception:
                     initial_series_index = 1
         # Populate the series name combo as appropriate for that column
         self.initialize_series_name_combo(series_column, initial_series_name)
@@ -3094,7 +3088,7 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         elif name == "Original Series Name":
             self.books = sorted(self.books, key=lambda k: k.sort_key(sort_by_name=True))
         else:
-            self.books = sorted(self.books, key=lambda k: k.sort_key())
+            self.books = sorted(self.books, key=lambda k: k.sort_key())  # type: ignore[reportAttributeAccessIssue]
         self.renumber_series()
 
     def search_web(self, name):
@@ -3684,7 +3678,8 @@ class FixDuplicateShelvesDialog(SizePersistedDialog):
     def sort_by(self, name):
         if name == "PubDate":
             self.shelves = sorted(
-                self.shelves, key=lambda k: k.sort_key(sort_by_pubdate=True)
+                self.shelves,
+                key=lambda k: k.sort_key(sort_by_pubdate=True),  # type: ignore[reportAttributeAccessIssue]
             )
 
 
@@ -4277,11 +4272,11 @@ class TemplateConfig(QWidget):  # {{{
         t.setText(val or "")
         t.setCursorPosition(0)
         self.setMinimumWidth(300)
-        self.l = l = QGridLayout(self)
-        self.setLayout(l)
-        l.addWidget(t, 1, 0, 1, 1)
+        self.l = layout = QGridLayout(self)
+        self.setLayout(layout)
+        layout.addWidget(t, 1, 0, 1, 1)
         b = self.b = QPushButton(_("&Template editor"))
-        l.addWidget(b, 1, 1, 1, 1)
+        layout.addWidget(b, 1, 1, 1, 1)
         b.clicked.connect(self.edit_template)
 
     @property

@@ -848,7 +848,7 @@ class TextWithLengthDelegate(TextDelegate):
 
     def createEditor(self, parent, option, index):
         editor = super(TextWithLengthDelegate, self).createEditor(parent, option, index)
-        if self.text_length:
+        if editor is not None and self.text_length:
             editor.setMaxLength(self.text_length)
         return editor
 

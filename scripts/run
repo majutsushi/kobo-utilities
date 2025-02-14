@@ -21,7 +21,8 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from zipfile import ZIP_DEFLATED, ZipFile
 
-import requests
+# Ignore until https://github.com/microsoft/pylance-release/discussions/6522 is fixed
+import requests  # type: ignore[reportMissingModuleSource]
 
 PLUGIN_NAME = "KoboUtilities"
 CALIBRE_MINIMUM_URL = (

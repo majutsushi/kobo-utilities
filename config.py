@@ -7,7 +7,7 @@ __docformat__ = "restructuredtext en"
 import copy
 import traceback
 from functools import partial
-from typing import Any
+from typing import Any, Dict, Optional, cast
 
 from calibre.constants import DEBUG as _DEBUG
 from calibre.gui2 import choose_dir, error_dialog, open_url, question_dialog
@@ -430,7 +430,7 @@ plugin_prefs.defaults[READING_POSITION_CHANGES_STORE_NAME] = (
 load_translations()
 
 
-def get_plugin_pref(store_name, option):
+def get_plugin_pref(store_name: str, option: str):
     debug_print(
         "get_plugin_pref - start - store_name='%s', option='%s'" % (store_name, option)
     )
@@ -439,7 +439,7 @@ def get_plugin_pref(store_name, option):
     return c.get(option, default_value)
 
 
-def get_plugin_prefs(store_name, fill_defaults=False):
+def get_plugin_prefs(store_name: str, fill_defaults: bool = False):
     if fill_defaults:
         c = get_prefs(plugin_prefs, store_name)
     else:
@@ -447,7 +447,7 @@ def get_plugin_prefs(store_name, fill_defaults=False):
     return c
 
 
-def get_prefs(prefs_store, store_name):
+def get_prefs(prefs_store: Optional[Dict], store_name: str):
     debug_print("get_prefs - start - store_name='%s'" % (store_name,))
     store = {}
     if prefs_store is not None and store_name in prefs_store:
@@ -615,13 +615,13 @@ def get_profile_names(db, exclude_auto=True):
     return sorted(profile_names)
 
 
-def get_device_name(device_uuid, default_name=_("(Unknown device)")):
+def get_device_name(device_uuid: str, default_name: str = _("(Unknown device)")) -> str:
     device = get_device_config(device_uuid)
-    device_name = device["name"] if device else default_name
+    device_name = cast(str, device["name"]) if device else default_name
     return device_name
 
 
-def get_device_config(device_uuid):
+def get_device_config(device_uuid) -> Optional[Dict]:
     device_config = plugin_prefs[STORE_DEVICES].get(device_uuid, None)
     return device_config
 

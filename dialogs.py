@@ -354,32 +354,36 @@ class QueueProgressDialog(QProgressDialog):
                 current_time_spent_reading = None
                 current_rest_of_book_estimate = None
                 if kobo_chapteridbookmarked_column:
-                    current_chapterid = book.get_user_metadata(
+                    metadata = book.get_user_metadata(
                         kobo_chapteridbookmarked_column, True
-                    )["#value#"]
+                    )
+                    assert metadata is not None
+                    current_chapterid = metadata["#value#"]
                 if kobo_percentRead_column:
-                    current_percentRead = book.get_user_metadata(
-                        kobo_percentRead_column, True
-                    )["#value#"]
+                    metadata = book.get_user_metadata(kobo_percentRead_column, True)
+                    assert metadata is not None
+                    current_percentRead = metadata["#value#"]
                 if rating_column:
                     if rating_column == "rating":
                         current_rating = book.rating
                     else:
-                        current_rating = book.get_user_metadata(rating_column, True)[
-                            "#value#"
-                        ]
+                        metadata = book.get_user_metadata(rating_column, True)
+                        assert metadata is not None
+                        current_rating = metadata["#value#"]
                 if last_read_column:
-                    current_last_read = book.get_user_metadata(last_read_column, True)[
-                        "#value#"
-                    ]
+                    metadata = book.get_user_metadata(last_read_column, True)
+                    assert metadata is not None
+                    current_last_read = metadata["#value#"]
                 if time_spent_reading_column:
-                    current_time_spent_reading = book.get_user_metadata(
-                        time_spent_reading_column, True
-                    )["#value#"]
+                    metadata = book.get_user_metadata(time_spent_reading_column, True)
+                    assert metadata is not None
+                    current_time_spent_reading = metadata["#value#"]
                 if rest_of_book_estimate_column:
-                    current_rest_of_book_estimate = book.get_user_metadata(
+                    metadata = book.get_user_metadata(
                         rest_of_book_estimate_column, True
-                    )["#value#"]
+                    )
+                    assert metadata is not None
+                    current_rest_of_book_estimate = metadata["#value#"]
 
                 self.books_to_scan.append(
                     (
@@ -499,10 +503,12 @@ class ReaderOptionsDialog(SizePersistedDialog):
             self.plugin_action.device_fwversion,
         )
         self.line_spacings = LINE_SPACINGS
-        if self.plugin_action.device_fwversion >= (3, 2, 0):
-            self.line_spacings = LINE_SPACINGS_030200
-        elif self.plugin_action.device_fwversion >= (2, 9, 1):
-            self.line_spacings = LINE_SPACINGS_020901
+        device_fwversion = self.plugin_action.device_fwversion
+        if device_fwversion is not None:
+            if device_fwversion >= (3, 2, 0):
+                self.line_spacings = LINE_SPACINGS_030200
+            elif device_fwversion >= (2, 9, 1):
+                self.line_spacings = LINE_SPACINGS_020901
 
         self.font_list = self.get_font_list()
         self.initialize_controls()
@@ -842,7 +848,8 @@ class ReaderOptionsDialog(SizePersistedDialog):
         font_list = KOBO_FONTS[(0, 0, 0)]
         for fw_version, fw_font_list in sorted(KOBO_FONTS.items()):
             debug_print("ReaderOptionsDialog:get_font_list - fw_version=", fw_version)
-            if fw_version <= self.plugin_action.device_fwversion:
+            device_fwversion = self.plugin_action.device_fwversion
+            if device_fwversion is not None and fw_version <= device_fwversion:
                 debug_print(
                     "ReaderOptionsDialog:get_font_list - found version?=", fw_version
                 )

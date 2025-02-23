@@ -250,13 +250,12 @@ class AuthorTableWidgetItem(ReadOnlyTableWidgetItem):
 
 
 class QueueProgressDialog(QProgressDialog):
-    def __init__(self, gui, books, tdir, options, queue, db, plugin_action):
+    def __init__(self, gui, books, options, queue, db, plugin_action):
         QProgressDialog.__init__(self, "", "", 0, len(books), gui)
         debug_print("QueueProgressDialog::__init__")
         self.setMinimumWidth(500)
-        self.books, self.tdir, self.options, self.queue, self.db = (
+        self.books, self.options, self.queue, self.db = (
             books,
-            tdir,
             options,
             queue,
             db,
@@ -410,7 +409,7 @@ class QueueProgressDialog(QProgressDialog):
         self.hide()
 
         # Queue a job to process these ePub books
-        self.queue(self.tdir, self.options, self.books_to_scan)
+        self.queue(self.options, self.books_to_scan)
 
     def do_clean_images_dir_queue(self):
         debug_print("QueueProgressDialog::do_clean_images_dir_queue")
@@ -421,7 +420,7 @@ class QueueProgressDialog(QProgressDialog):
         self.hide()
 
         # Queue a job to process these ePub books
-        self.queue(self.tdir, self.options)
+        self.queue(self.options)
 
     def do_remove_annotations_queue(self):
         debug_print("QueueProgressDialog::do_remove_annotations_queue")

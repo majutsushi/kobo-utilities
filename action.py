@@ -35,7 +35,6 @@ from calibre.gui2.actions import InterfaceAction
 from calibre.gui2.device import device_signals
 from calibre.gui2.dialogs.message_box import ViewLog
 from calibre.gui2.library.views import DeviceBooksView
-from calibre.ptempfile import remove_dir
 from calibre.utils.config import config_dir
 from calibre.utils.icu import sort_key
 from calibre.utils.logging import default_log
@@ -1338,7 +1337,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 )
 
         if len(books_to_scan) > 0:
-            self._store_queue_job(None, self.options, books_to_scan)
+            self._store_queue_job(self.options, books_to_scan)
 
         self.hide_progressbar()
 
@@ -1456,7 +1455,6 @@ class KoboUtilitiesAction(InterfaceAction):
             QueueProgressDialog(
                 self.gui,
                 [],
-                None,
                 self.options,
                 self._store_queue_job,
                 self.gui.current_view().model().db,
@@ -1679,7 +1677,6 @@ class KoboUtilitiesAction(InterfaceAction):
         QueueProgressDialog(
             self.gui,
             [],
-            None,
             self.options,
             self._remove_annotations_job,
             self.gui.current_view().model().db,
@@ -2423,7 +2420,7 @@ class KoboUtilitiesAction(InterfaceAction):
         self.options["job_function"] = "clean_images_dir"
         debug_print("clean_images_dir - self.options=", self.options)
         QueueProgressDialog(
-            self.gui, [], None, self.options, self._clean_images_dir_job, None
+            self.gui, [], self.options, self._clean_images_dir_job, None
         )
 
     def getAnnotationForSelected(self):
@@ -2701,25 +2698,19 @@ class KoboUtilitiesAction(InterfaceAction):
 
         return db_connection
 
-    def _store_queue_job(self, tdir, options, books_to_modify):
+    def _store_queue_job(self, options: Dict[str, Any], books_to_modify: List[Tuple]):
         debug_print("KoboUtilitiesAction::_store_queue_job")
-        if not books_to_modify:
-            # All failed so cleanup our temp directory
-            remove_dir(tdir)
-            return
-
         cpus = 1  # self.gui.device_manager.server.pool_size
         from .jobs import do_store_locations
 
         args = [books_to_modify, options, cpus]
         desc = _("Storing reading positions for {0} books").format(len(books_to_modify))
-        job = self.gui.device_manager.create_job(
+        self.gui.device_manager.create_job(
             do_store_locations,
             self.Dispatcher(self._store_completed),
             description=desc,
             args=args,
         )
-        job._tdir = tdir
         self.gui.status_bar.show_message(self.giu_name + " - " + desc, 3000)
 
     def _store_completed(self, job):
@@ -2809,7 +2800,7 @@ class KoboUtilitiesAction(InterfaceAction):
             )
             return
 
-    def _clean_images_dir_job(self, tdir, options):
+    def _clean_images_dir_job(self, options):
         debug_print("KoboUtilitiesAction::_clean_images_dir_job")
 
         func = "arbitrary_n"
@@ -2820,13 +2811,12 @@ class KoboUtilitiesAction(InterfaceAction):
             (options, cpus),
         ]
         desc = _("Cleaning images directory")
-        job = self.gui.job_manager.run_job(
+        self.gui.job_manager.run_job(
             self.Dispatcher(self._clean_images_dir_completed),
             func,
             args=args,
             description=desc,
         )
-        job._tdir = tdir
         self.gui.status_bar.show_message(_("Cleaning images directory") + "...")
 
     def _clean_images_dir_completed(self, job):
@@ -2875,7 +2865,7 @@ class KoboUtilitiesAction(InterfaceAction):
             det_msg=details,
         )
 
-    def _remove_annotations_job(self, tdir, options, books):
+    def _remove_annotations_job(self, options, books):
         debug_print("KoboUtilitiesAction::_remove_annotations_job")
 
         func = "arbitrary_n"
@@ -2886,13 +2876,12 @@ class KoboUtilitiesAction(InterfaceAction):
             (options, books, cpus),
         ]
         desc = _("Removing annotations files")
-        job = self.gui.job_manager.run_job(
+        self.gui.job_manager.run_job(
             self.Dispatcher(self._remove_annotations_completed),
             func,
             args=args,
             description=desc,
         )
-        job._tdir = tdir
         self.gui.status_bar.show_message(_("Removing annotations files") + "...")
 
     def _remove_annotations_completed(self, job):

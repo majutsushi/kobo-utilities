@@ -4764,7 +4764,7 @@ class SortableReadOnlyTableWidgetItem(ReadOnlyTableWidgetItem):
 class AboutDialog(QDialog):
     def __init__(self, parent, icon, text):
         QDialog.__init__(self, parent)
-        self.resize(400, 250)
+        self.resize(500, 300)
         self.l = QGridLayout()
         self.setLayout(self.l)
         self.logo = QLabel()
@@ -4773,6 +4773,7 @@ class AboutDialog(QDialog):
         self.label = QLabel(text)
         self.label.setOpenExternalLinks(True)
         self.label.setWordWrap(True)
+        self.label.setTextFormat(Qt.MarkdownText)
         self.setWindowTitle(_("About " + DIALOG_NAME))
         self.setWindowIcon(icon)
         self.l.addWidget(self.logo, 0, 0)

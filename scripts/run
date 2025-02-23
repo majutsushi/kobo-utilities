@@ -79,7 +79,7 @@ def build() -> Path:
         path.unlink()
 
     with ZipFile(zip_name, "w", ZIP_DEFLATED) as zip_file:
-        zip_file.write("about.txt")
+        zip_file.write("about.md")
         zip_file.write("CHANGELOG.md")
         zip_file.writestr("plugin-import-name-koboutilities.txt", "")
         for f in Path.cwd().glob("koboutilities/**/*.py"):

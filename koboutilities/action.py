@@ -775,8 +775,8 @@ class KoboUtilitiesAction(InterfaceAction):
         # get_resources will return a dictionary mapping names to bytes. Names that
         # are not found in the zip file will not be in the returned dictionary.
 
-        about_text = "{0}{1}".format(
-            self.version, get_resources("about.txt").decode("utf-8")
+        about_text = "{0}\n\n{1}".format(
+            self.version, get_resources("about.md").decode("utf-8")
         )
         debug_print("KoboUtilities::about - self.version=", self.version)
         debug_print("KoboUtilities::about - about_text=", about_text)

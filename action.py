@@ -380,7 +380,6 @@ class KoboUtilitiesAction(InterfaceAction):
             # The config dialog can also be shown from within
             # Preferences->Plugins, which is why the do_user_config
             # method is defined on the base plugin class
-            do_user_config = self.interface_action_base_plugin.do_user_config
             self.menu.clear()
             for action in self.menu_actions.values():
                 self.gui.keyboard.unregister_shortcut(
@@ -1344,49 +1343,6 @@ class KoboUtilitiesAction(InterfaceAction):
         self.hide_progressbar()
 
         debug_print("auto_store_current_bookmark::do_books - Finish")
-
-    def auto_store_current_bookmark_using_dialog(self):
-        debug_print("auto_store_current_bookmark - start")
-        self.device = self.get_device()
-        self.device_path = self.get_device_path()
-
-        db = self.gui.current_db
-
-        self.options = {}
-        self.options[cfg.KEY_STORE_BOOKMARK] = True
-        self.options[cfg.KEY_READING_STATUS] = False
-        self.options[cfg.KEY_DATE_TO_NOW] = False
-        self.options[cfg.KEY_SET_RATING] = False
-        self.options[cfg.KEY_CLEAR_IF_UNREAD] = False
-        self.options[cfg.KEY_BACKGROUND_JOB] = True
-        self.options[cfg.KEY_PROMPT_TO_STORE] = self.current_device_profile[
-            cfg.STORE_OPTIONS_STORE_NAME
-        ][cfg.KEY_PROMPT_TO_STORE]
-        self.options[cfg.KEY_STORE_IF_MORE_RECENT] = self.current_device_profile[
-            cfg.STORE_OPTIONS_STORE_NAME
-        ][cfg.KEY_STORE_IF_MORE_RECENT]
-        self.options[cfg.KEY_DO_NOT_STORE_IF_REOPENED] = self.current_device_profile[
-            cfg.STORE_OPTIONS_STORE_NAME
-        ][cfg.KEY_DO_NOT_STORE_IF_REOPENED]
-
-        self.options["device_database_path"] = self.device_database_path()
-        self.options["job_function"] = "store_current_bookmark"
-        self.options["supports_ratings"] = self.supports_ratings
-        self.options["epub_location_like_kepub"] = self.epub_location_like_kepub
-        self.options["fetch_queries"] = self._get_fetch_query_for_firmware_version(
-            self.device_fwversion
-        )
-        self.options["allOnDevice"] = True
-
-        QueueProgressDialog(
-            self.gui,
-            [],
-            None,
-            self.options,
-            self._store_queue_job,
-            db,
-            plugin_action=self,
-        )
 
     def set_time_on_device(self):
         debug_print("set_time_on_device - start")
@@ -2719,11 +2675,7 @@ class KoboUtilitiesAction(InterfaceAction):
     def get_device_path_from_contentID(self, contentID, mimetype):
         if contentID.startswith("file:///mnt/sd/"):
             card = "carda"
-            device_prefix_path = self.device._card_a_prefix
-            book_path = contentID[len("file:///mnt/sd/")]
         else:
-            device_prefix_path = self.device._main_prefix
-            book_path = contentID[len("file:///mnt/sd/")]
             card = "main"
         return self.device.path_from_contentid(contentID, "6", mimetype, card, None)
 
@@ -2734,14 +2686,6 @@ class KoboUtilitiesAction(InterfaceAction):
             x = getattr(self.gui, x + "_view").model()
             paths += x.paths_for_db_ids(set([book_id]), as_map=True)[book_id]
         debug_print("get_contentIDs_from_id - paths=", paths)
-        return [r.contentID for r in paths]
-
-    def get_contentIDs_from_book(self, book):
-        paths = []
-        for x in ("memory", "card_a"):
-            x = getattr(self.gui, x + "_view").model()
-            paths += x.paths_for_db_ids(set([book_id]), as_map=True)[book_id]
-        debug_print("get_contentIDs_from_book - paths=", paths)
         return [r.contentID for r in paths]
 
     def device_database_connection(self, use_row_factory=False):
@@ -2796,10 +2740,6 @@ class KoboUtilitiesAction(InterfaceAction):
                 3000,
             )
         else:
-            msg = _(
-                "Kobo Utilities stored reading locations for <b>{0} book(s)</b>"
-            ).format(update_count)
-
             if options[cfg.KEY_PROMPT_TO_STORE]:
                 profileName = (
                     options["profileName"] if "profileName" in options else None
@@ -2962,7 +2902,6 @@ class KoboUtilitiesAction(InterfaceAction):
             )
             return
         annotations_removed = job.result
-        options = annotations_removed["options"]
         msg = annotations_removed["message"]
         self.gui.status_bar.show_message(_("Cleaning annotations completed"), 3000)
 
@@ -3554,13 +3493,6 @@ class KoboUtilitiesAction(InterfaceAction):
                 for format in formats.split(","):
                     fmts.append(format.lower())
             return fmts
-
-        def get_device_path_from_id(id_):
-            paths = []
-            for x in ("memory", "card_a", "card_b"):
-                x = getattr(self.gui, x + "_view").model()
-                paths += x.paths_for_db_ids(set([id_]), as_map=True)[id_]
-            return paths[0].path if paths else None
 
         def generate_annotation_paths(ids, db, device):
             # Generate path templates
@@ -4399,12 +4331,6 @@ class KoboUtilitiesAction(InterfaceAction):
             "WHERE _IsSynced = 'true' "
             "AND Name = ? "
             "AND id <> ?"
-        )
-        shelves_query = (
-            "SELECT * FROM Shelf "
-            "WHERE _IsSynced = 'true' "
-            "AND Name = ? "
-            "AND CreationDate = ?"
         )
 
         shelves_delete_timestamp = (
@@ -6197,8 +6123,6 @@ class KoboUtilitiesAction(InterfaceAction):
         count_books = 0
         books_with_shelves = 0
         books_without_shelves = 0
-        shelves_retrieved = 0
-        all_books = self.options[cfg.KEY_ALL_BOOKS]
         replace_shelves = self.options[cfg.KEY_REPLACE_SHELVES]
 
         total_books = len(books)
@@ -6816,7 +6740,6 @@ class KoboUtilitiesAction(InterfaceAction):
         debug_print("Starting check of chapter status for {0} books".format(len(books)))
         connection = self.device_database_connection(use_row_factory=True)
         i = 0
-        book_format = "EPUB"
         debug_print(
             "_get_chapter_status - device format_map='{0}".format(
                 self.device.settings().format_map

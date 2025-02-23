@@ -11,6 +11,7 @@ import re
 from configparser import ConfigParser
 from datetime import datetime
 from functools import partial
+from typing import Any
 from urllib.parse import quote_plus
 
 from calibre.ebooks.metadata import authors_to_string
@@ -1160,8 +1161,7 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         layout.addWidget(button_box)
 
     def ok_clicked(self):
-        self.new_prefs = {}
-        self.new_prefs = cfg.METADATA_OPTIONS_DEFAULTS
+        self.new_prefs: dict[str, Any] = cfg.METADATA_OPTIONS_DEFAULTS
         self.new_prefs[cfg.KEY_SET_TITLE] = (
             self.title_checkbox.checkState() == Qt.Checked
         )
@@ -1456,10 +1456,7 @@ class GetShelvesFromDeviceDialog(SizePersistedDialog):
             self.replace_shelves_checkbox.checkState() == Qt.Checked
         )
 
-        if (
-            not self.options[cfg.KEY_SHELVES_CUSTOM_COLUMN]
-            or self.options[cfg.KEY_SHELVES_CUSTOM_COLUMN] == ""
-        ):
+        if not self.options[cfg.KEY_SHELVES_CUSTOM_COLUMN]:
             return error_dialog(
                 self,
                 _("No shelf column selected"),

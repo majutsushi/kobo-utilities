@@ -56,13 +56,10 @@ plugin_name = None
 # classes if you need any zip images to be displayed on the configuration dialog.
 plugin_icon_resources = {}
 
-BASE_TIME = None
+BASE_TIME = time.time()
 
 
 def debug_print(*args):
-    global BASE_TIME
-    if BASE_TIME is None:
-        BASE_TIME = time.time()
     if DEBUG:
         prints("DEBUG: %6.1f" % (time.time() - BASE_TIME), *args)
 
@@ -537,51 +534,17 @@ class NoWheelComboBox(QComboBox):
 
 
 class CheckableTableWidgetItem(QTableWidgetItem):
-    def __init__(self, checked=False, is_tristate=False):
+    def __init__(self, checked=False):
         super(CheckableTableWidgetItem, self).__init__("")
         self.setFlags(
             Qt.ItemFlag.ItemIsSelectable
             | Qt.ItemFlag.ItemIsUserCheckable
             | Qt.ItemFlag.ItemIsEnabled
         )
-        if is_tristate:
-            self.setFlags(self.flags() | Qt.ItemIsTristate)
         if checked:
             self.setCheckState(Qt.Checked)
         else:
-            if is_tristate and checked is None:
-                self.setCheckState(Qt.PartiallyChecked)
-            else:
-                self.setCheckState(Qt.Unchecked)
-
-    def get_boolean_value(self):
-        """
-        Return a boolean value indicating whether checkbox is checked
-        If this is a tristate checkbox, a partially checked value is returned as None
-        """
-        if self.checkState() == Qt.PartiallyChecked:
-            return None
-        else:
-            return self.checkState() == Qt.Checked
-
-
-class ReadOnlyCheckableTableWidgetItem(ReadOnlyTableWidgetItem):
-    def __init__(self, text, checked=False, is_tristate=False):
-        super(ReadOnlyCheckableTableWidgetItem, self).__init__(text)
-        self.setFlags(
-            Qt.ItemFlag.ItemIsSelectable
-            | Qt.ItemFlag.ItemIsUserCheckable
-            | Qt.ItemFlag.ItemIsEnabled
-        )
-        if is_tristate:
-            self.setFlags(self.flags() | Qt.ItemIsTristate)
-        if checked:
-            self.setCheckState(Qt.Checked)
-        else:
-            if is_tristate and checked is None:
-                self.setCheckState(Qt.PartiallyChecked)
-            else:
-                self.setCheckState(Qt.Unchecked)
+            self.setCheckState(Qt.Unchecked)
 
     def get_boolean_value(self):
         """

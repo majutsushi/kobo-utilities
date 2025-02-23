@@ -30,13 +30,10 @@ from .common_utils import (
 # TODO: Sort out the logging
 logger = Log()  # logging.getLogger(__name__)
 JOBS_DEBUG = True
-BASE_TIME = None
+BASE_TIME = time.time()
 
 
 def debug_print(*args):
-    global BASE_TIME
-    if BASE_TIME is None:
-        BASE_TIME = time.time()
     if cfg.DEBUG or JOBS_DEBUG or DEBUG:  # or True:
         prints("DEBUG: %6.1f" % (time.time() - BASE_TIME), *args)
 

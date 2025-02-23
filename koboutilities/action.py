@@ -13,7 +13,7 @@ import threading
 import time
 from collections import OrderedDict, defaultdict
 from configparser import ConfigParser
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple, cast
 from urllib.parse import quote
 
@@ -219,7 +219,7 @@ class KoboUtilitiesAction(InterfaceAction):
         # The attribute in the super class gets assigned dynamically
         base = self.interface_action_base_plugin
         self.version = base.name + " v%d.%d.%d" % base.version
-        self.gui = cast(ui.Main, self.gui)
+        self.gui: ui.Main = self.gui
 
         self.menu = QMenu(self.gui)
         icon_resources = self.load_resources(PLUGIN_ICONS)
@@ -568,12 +568,12 @@ class KoboUtilitiesAction(InterfaceAction):
                     unique_name="Set Related Books",
                     shortcut_name=_("Set Related Books"),
                     triggered=self.set_related_books,
-                    enabled=(device is not None and device.supports_series),
+                    enabled=device.supports_series,
                     is_library_action=True,
                     is_device_action=True,
                     tooltip=(
                         None
-                        if (device is None or device.supports_series)
+                        if device.supports_series
                         else "Not supported for this device"
                     ),
                 )
@@ -1243,7 +1243,7 @@ class KoboUtilitiesAction(InterfaceAction):
         self.options[cfg.KEY_SET_RATING] = False
         self.options[cfg.KEY_CLEAR_IF_UNREAD] = False
         self.options[cfg.KEY_BACKGROUND_JOB] = True
-        if self.device is not None and self.device.profile is not None:
+        if self.device.profile is not None:
             self.options[cfg.KEY_PROMPT_TO_STORE] = self.device.profile[
                 cfg.STORE_OPTIONS_STORE_NAME
             ][cfg.KEY_PROMPT_TO_STORE]
@@ -3700,7 +3700,7 @@ class KoboUtilitiesAction(InterfaceAction):
                                     cfg.KEY_COVERS_KEEP_ASPECT_RATIO
                                 ],
                             )
-                    elif device is not None:
+                    else:
                         device.device._upload_cover(
                             path,
                             "",
@@ -5091,8 +5091,8 @@ class KoboUtilitiesAction(InterfaceAction):
                                 "_update_metadata: device_book_path=",
                                 device_book_path,
                             )
-                            new_timestamp = datetime.utcfromtimestamp(
-                                os.path.getmtime(device_book_path)
+                            new_timestamp = datetime.fromtimestamp(
+                                os.path.getmtime(device_book_path), tz=timezone.utc
                             )
                             debug_print(
                                 "_update_metadata: new_timestamp=", new_timestamp
@@ -7243,14 +7243,6 @@ class KoboUtilitiesAction(InterfaceAction):
                     % (library_chapter["path"], i)
                 )
                 break
-        if (
-            reading_location_volumeIndex is None
-            and len(book["library_chapters"]) >= reading_location_volumeIndex
-        ):
-            debug_print(
-                "_get_readingposition_index - now file name match, using current index."
-            )
-            new_toc_readingposition_index = reading_location_volumeIndex
 
         return new_toc_readingposition_index
 
@@ -7652,13 +7644,13 @@ class KoboUtilitiesAction(InterfaceAction):
             from calibre.utils.localization import get_lang
 
             lang = get_lang()
-            HELP_FILE = "KoboUtilities_Help_en.html"
+            help_file = "KoboUtilities_Help_en.html"
             if lang == "fr":
-                HELP_FILE = "KoboUtilities_Help_fr.html"
-            file_path = os.path.join(config_dir, "plugins", HELP_FILE).replace(
+                help_file = "KoboUtilities_Help_fr.html"
+            file_path = os.path.join(config_dir, "plugins", help_file).replace(
                 os.sep, "/"
             )
-            file_data = self.load_resources("help/" + HELP_FILE)["help/" + HELP_FILE]
+            file_data = self.load_resources("help/" + help_file)["help/" + help_file]
             debug_print("show_help - file_path:", file_path)
             with open(file_path, "wb") as f:
                 f.write(file_data)

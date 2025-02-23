@@ -50,7 +50,6 @@ from .common_utils import (
 )
 
 # Support for CreateNewCustomColumn was added in 5.35.0
-SUPPORTS_CREATE_CUSTOM_COLUMN = False
 try:
     from calibre.gui2.preferences.create_custom_column import CreateNewCustomColumn
 
@@ -59,7 +58,7 @@ try:
 except ImportError:
     CreateNewCustomColumn: Any = object
     debug_print("Kobo Utilities Configuration - CreateNewCustomColumn is not supported")
-    SUPPORTS_CREATE_CUSTOM_COLUMN = False
+    SUPPORTS_CREATE_CUSTOM_COLUMN = False  # type: ignore[reportConstantRedefinition]
 
 # Redefine the debug here so the jobs can see it.
 DEBUG = _DEBUG
@@ -101,7 +100,6 @@ READING_POSITION_CHANGES_STORE_NAME = "readingPositionChangesStore"
 
 KEY_STORE_BOOKMARK = "storeBookmarks"
 KEY_DATE_TO_NOW = "setDateToNow"
-KEY_SET_RATING = "setRating"
 KEY_CLEAR_IF_UNREAD = "clearIfUnread"
 KEY_BACKGROUND_JOB = "backgroundJob"
 KEY_SET_TITLE = "title"

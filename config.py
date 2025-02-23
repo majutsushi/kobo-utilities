@@ -641,7 +641,11 @@ class ProfilesTab(QWidget):
         self.library_config = get_library_config(self.plugin_action.gui.current_db)
         debug_print("ProfilesTab.__init__ - self.library_config", self.library_config)
         self.profiles = self.library_config.get(KEY_PROFILES, {})
-        self.current_device_profile = self.plugin_action.current_device_profile
+        self.current_device_profile = (
+            self.plugin_action.device.profile
+            if self.plugin_action.device is not None
+            else None
+        )
         self.profile_name = (
             self.current_device_profile["profileName"]
             if self.current_device_profile
@@ -1181,7 +1185,11 @@ class DevicesTab(QWidget):
 
         self.plugin_action = plugin_action
         self.gui = plugin_action.gui
-        self._connected_device_info = plugin_action.connected_device_info
+        self._connected_device_info = (
+            plugin_action.device.device_info
+            if plugin_action.device is not None
+            else None
+        )
         self.library_config = get_library_config(self.gui.current_db)
 
         self.individual_device_options = get_plugin_pref(
@@ -1458,7 +1466,10 @@ class DevicesTab(QWidget):
         else:
             devices = self.devices_table.get_data()
 
-        if self._connected_device_info is None or not self.plugin_action.haveKobo():
+        if (
+            self._connected_device_info is None
+            or not self.plugin_action.device is not None
+        ):
             self.add_device_btn.setEnabled(False)
         else:
             # Check to see whether we are connected to a device we already know about
@@ -1701,7 +1712,7 @@ class DevicesTableWidget(QTableWidget):
         device_uuid = device_config["uuid"]
         device_icon = "reader.png"
         is_connected = False
-        if connected_device_info is not None and self.plugin_action.haveKobo():
+        if connected_device_info is not None and self.plugin_action.device is not None:
             debug_print(
                 "DevicesTableWidget:populate_table_row - connected_device_info:",
                 connected_device_info,
@@ -1715,11 +1726,9 @@ class DevicesTableWidget(QTableWidget):
                         if connected_info["device_store_uuid"] == device_uuid:
                             is_connected = True
                             break
-        version_no = (
-            self.plugin_action.device_version_info()[2]
-            if is_connected and self.plugin_action.device_version_info()
-            else ""
-        )
+        device = self.plugin_action.device
+        version_info = device.version_info if device is not None else None
+        fw_version = version_info.fw_version if is_connected and version_info else ""
         connected_icon = "images/device_connected.png" if is_connected else None
         debug_print(
             "DevicesTableWidget:populate_table_row - connected_icon=%s" % connected_icon
@@ -1732,7 +1741,7 @@ class DevicesTableWidget(QTableWidget):
         type_widget = ReadOnlyTableWidgetItem(device_config["type"])
         serial_no = device_config.get("serial_no", "")
         serial_no_widget = ReadOnlyTableWidgetItem(serial_no)
-        version_no_widget = ReadOnlyTableWidgetItem(version_no)
+        version_no_widget = ReadOnlyTableWidgetItem(fw_version)
         self.setItem(row, 0, CheckableTableWidgetItem(device_config["active"]))
         self.setItem(row, 1, name_widget)
         self.setItem(row, 2, type_widget)

@@ -182,8 +182,21 @@ class DeviceDb:
 class TestKoboUtilities(unittest.TestCase):
     def setUp(self):
         self.plugin = KoboUtilitiesAction(None, None)
-        self.plugin.supports_ratings = True
-        self.plugin.epub_location_like_kepub = True
+        self.plugin.device = action.KoboDevice(
+            device=mock.MagicMock,
+            is_kobotouch=True,
+            profile={},
+            backup_config={},
+            device_info=[],
+            uuid="1234",
+            version_info=None,
+            supports_series=True,
+            supports_series_list=True,
+            supports_ratings=True,
+            epub_location_like_kepub=True,
+            name="test-device",
+            path="/",
+        )
         self.plugin.log = default_log
         self.queue = Queue()
         self.maxDiff = None

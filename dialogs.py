@@ -927,22 +927,24 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         self.published_checkbox.setCheckState(Qt.Checked if published else Qt.Unchecked)
 
         isbn = cfg.get_plugin_pref(cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_SET_ISBN)
-        self.isbn_checkbox.setCheckState(
-            Qt.Checked if isbn and self.plugin_action.supports_ratings else Qt.Unchecked
+        supports_ratings = (
+            self.plugin_action.device.supports_ratings
+            if self.plugin_action.device is not None
+            else False
         )
-        self.isbn_checkbox.setEnabled(self.plugin_action.supports_ratings)
+        self.isbn_checkbox.setCheckState(
+            Qt.Checked if isbn and supports_ratings else Qt.Unchecked
+        )
+        self.isbn_checkbox.setEnabled(supports_ratings)
 
         rating = cfg.get_plugin_pref(
             cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_SET_RATING
         )
         self.rating_checkbox.setCheckState(
-            Qt.Checked
-            if rating and self.plugin_action.supports_ratings
-            else Qt.Unchecked
+            Qt.Checked if rating and supports_ratings else Qt.Unchecked
         )
         self.rating_checkbox.setEnabled(
-            have_rating_column(self.plugin_action)
-            and self.plugin_action.supports_ratings
+            have_rating_column(self.plugin_action) and supports_ratings
         )
 
         series = cfg.get_plugin_pref(
@@ -950,10 +952,14 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         )
         self.series_checkbox.setCheckState(
             Qt.Checked
-            if series and self.plugin_action.supports_series
+            if series
+            and self.plugin_action.device
+            and self.plugin_action.device.supports_series
             else Qt.Unchecked
         )
-        self.series_checkbox.setEnabled(self.plugin_action.supports_series)
+        self.series_checkbox.setEnabled(
+            self.plugin_action.device and self.plugin_action.device.supports_series
+        )
 
         subtitle = cfg.get_plugin_pref(
             cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_SET_SUBTITLE
@@ -1511,8 +1517,8 @@ class BookmarkOptionsDialog(SizePersistedDialog):
         library_config = cfg.get_library_config(self.plugin_action.gui.current_db)
         self.profiles = library_config.get(cfg.KEY_PROFILES, {})
         self.profile_name = (
-            self.plugin_action.current_device_profile["profileName"]
-            if self.plugin_action.current_device_profile
+            self.plugin_action.device.profile["profileName"]
+            if self.plugin_action.device and self.plugin_action.device.profile
             else None
         )
         self.initialize_controls()
@@ -1529,7 +1535,9 @@ class BookmarkOptionsDialog(SizePersistedDialog):
         )
         self.set_rating_checkbox.setCheckState(
             Qt.Checked
-            if set_rating and self.plugin_action.supports_ratings
+            if set_rating
+            and self.plugin_action.device is not None
+            and self.plugin_action.device.supports_ratings
             else Qt.Unchecked
         )
 
@@ -1698,7 +1706,8 @@ class BookmarkOptionsDialog(SizePersistedDialog):
         self.set_rating_checkbox.setEnabled(
             checked
             and have_rating_column(self.plugin_action)
-            and self.plugin_action.supports_ratings
+            and self.plugin_action.device is not None
+            and self.plugin_action.device.supports_ratings
         )
         self.clear_if_unread_checkbox.setEnabled(not checked)
         self.store_if_more_recent_checkbox.setEnabled(not checked)
@@ -3318,12 +3327,14 @@ class ShowReadingPositionChangesDialog(SizePersistedDialog):
         self.help_anchor = "ShowReadingPositionChanges"
         self.db = db
 
+        assert self.plugin_action.device is not None
+
         self.profileName = (
-            self.plugin_action.current_device_profile["profileName"]
-            if not profileName
+            self.plugin_action.device.profile["profileName"]
+            if not profileName and self.plugin_action.device.profile is not None
             else profileName
         )
-        self.deviceName = cfg.get_device_name(self.plugin_action.device_uuid)
+        self.deviceName = cfg.get_device_name(self.plugin_action.device.uuid)
         self.options = cfg.get_plugin_prefs(cfg.READING_POSITION_CHANGES_STORE_NAME)
         library_config = cfg.get_library_config(self.plugin_action.gui.current_db)
         self.options = library_config.get(

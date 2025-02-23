@@ -33,7 +33,7 @@ unfixable = [
 # https://github.com/microsoft/pyright/blob/main/docs/configuration.md
 [tool.pyright]
 typeCheckingMode = "standard"
-include = ["*.py", "tests/*.py", "scripts/run"]
+include = ["koboutilities/**/*.py", "tests/*.py", "scripts/run"]
 exclude = ["**/__pycache__"]
 extraPaths = ["../calibre/src"]
 ignore = ["../calibre/src"]

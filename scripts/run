@@ -82,8 +82,8 @@ def build() -> Path:
         zip_file.write("about.txt")
         zip_file.write("CHANGELOG.md")
         zip_file.write("plugin-import-name-koboutilities.txt")
-        for f in Path.cwd().glob("*.py"):
-            zip_file.write(f, arcname=f.name)
+        for f in Path.cwd().glob("koboutilities/**/*.py"):
+            zip_file.write(f, arcname=f.relative_to(Path("koboutilities").absolute()))
         for f in Path("images").iterdir():
             zip_file.write(f)
         for f in Path("help").iterdir():

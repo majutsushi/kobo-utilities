@@ -1,6 +1,7 @@
 [tool.ruff]
 line-length = 88
 builtins = ["_", "I", "P", "load_translations", "get_resources", "get_icons"]
+exclude = ["calibre-repo"]
 
 [tool.ruff.lint]
 ignore = [
@@ -35,8 +36,8 @@ unfixable = [
 typeCheckingMode = "standard"
 include = ["koboutilities/**/*.py", "tests/*.py", "scripts/run"]
 exclude = ["**/__pycache__"]
-extraPaths = ["../calibre/src"]
-ignore = ["../calibre/src"]
+extraPaths = ["../calibre/src", "calibre-repo/src"]
+ignore = ["../calibre/src", "calibre-repo/src"]
 pythonVersion = "3.8"
 reportImportCycles = "warning"
 

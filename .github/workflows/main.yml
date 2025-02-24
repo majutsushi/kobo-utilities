@@ -22,9 +22,19 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - uses: astral-sh/ruff-action@v3
+      - uses: actions/checkout@v4
         with:
-          args: "format --check"
+          repository: kovidgoyal/calibre
+          path: 'calibre-repo'
+          fetch-depth: 0
+
+      - uses: jakebailey/pyright-action@v2
+        with:
+          pylance-version: latest-release
+
+      - uses: astral-sh/ruff-action@v3
+      - run: ruff check
+      - run: ruff format --check
 
       - name: Install dependencies
         run: |

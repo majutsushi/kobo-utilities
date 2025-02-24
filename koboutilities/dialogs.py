@@ -3568,17 +3568,18 @@ class ShowReadingPositionChangesTableWidget(QTableWidget):
                     current_last_read, is_read_only=True, default_to_today=False
                 ),
             )
-        self.setItem(
-            row,
-            6,
-            DateTableWidgetItem(
-                self.parent().plugin_action.convert_kobo_date(
-                    reading_position["DateLastRead"]
+        if reading_position["DateLastRead"] is not None:
+            self.setItem(
+                row,
+                6,
+                DateTableWidgetItem(
+                    self.parent().plugin_action.convert_kobo_date(
+                        reading_position["DateLastRead"]
+                    ),
+                    is_read_only=True,
+                    default_to_today=False,
                 ),
-                is_read_only=True,
-                default_to_today=False,
-            ),
-        )
+            )
         book_idColumn = RatingTableWidgetItem(book_id)
         self.setItem(row, 7, book_idColumn)
         self.blockSignals(False)

@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 2.18.2 - 24 Feb 2025
+
+- Fix error when displaying "Show Reading Position Changes" dialog
+  if a book doesn't have a last-read date set
+
 ## Version 2.18.1 - 12 Feb 2025
 
 - Fix error when compressing the device database

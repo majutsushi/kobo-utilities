@@ -2848,13 +2848,12 @@ class KoboUtilitiesAction(InterfaceAction):
 
         args = [backup_options, cpus]
         desc = _("Backing up Kobo device database")
-        job = self.gui.device_manager.create_job(
+        self.gui.device_manager.create_job(
             do_device_database_backup,
             self.Dispatcher(self._device_database_backup_completed),
             description=desc,
             args=args,
         )
-        job._tdir = None
         self.gui.status_bar.show_message(_("Kobo Utilities") + " - " + desc, 3000)
 
     def _device_database_backup_completed(self, job):

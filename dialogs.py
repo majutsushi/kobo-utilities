@@ -73,6 +73,7 @@ from .common_utils import (
     ReadOnlyTableWidgetItem,
     ReadOnlyTextIconWidgetItem,
     SizePersistedDialog,
+    convert_kobo_date,
     debug_print,
     get_icon,
 )
@@ -4001,9 +4002,7 @@ class ShowReadingPositionChangesTableWidget(QTableWidget):
                 row,
                 6,
                 DateTableWidgetItem(
-                    self.parent().plugin_action.convert_kobo_date(
-                        reading_position["DateLastRead"]
-                    ),
+                    convert_kobo_date(reading_position["DateLastRead"]),
                     is_read_only=True,
                     default_to_today=False,
                 ),

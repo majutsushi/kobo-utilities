@@ -7,6 +7,7 @@ __docformat__ = "restructuredtext en"
 import os
 import time
 from datetime import datetime
+from typing import Optional
 
 from calibre import prints
 from calibre.constants import DEBUG, iswindows
@@ -311,7 +312,10 @@ def check_device_database(database_path):
     return check_result
 
 
-def convert_kobo_date(kobo_date):
+def convert_kobo_date(kobo_date: Optional[str]) -> Optional[datetime]:
+    if kobo_date is None:
+        return None
+
     from calibre.utils.date import local_tz, utc_tz
 
     try:

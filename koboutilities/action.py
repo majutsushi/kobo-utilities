@@ -4803,15 +4803,11 @@ class KoboUtilitiesAction(InterfaceAction):
                         pubdate_string = strftime(
                             self.device_timestamp_string, newmi.pubdate
                         )
-                        if not (result["DateCreated"] == pubdate_string):
+                        if result["DateCreated"] != pubdate_string:
                             set_clause_columns.append("DateCreated=?")
                             debug_print(
                                 "_update_metadata: convert_kobo_date(result['DateCreated'])=",
                                 convert_kobo_date(result["DateCreated"]),
-                            )
-                            debug_print(
-                                "_update_metadata: convert_kobo_date(result['DateCreated']).__class__=",
-                                convert_kobo_date(result["DateCreated"]).__class__,
                             )
                             debug_print(
                                 "_update_metadata: newmi.pubdate  =", newmi.pubdate
@@ -7661,9 +7657,6 @@ class KoboUtilitiesAction(InterfaceAction):
         if anchor is not None and not anchor == "":
             url.setFragment(anchor)
         open_url(url)
-
-    def convert_kobo_date(self, kobo_date):
-        return convert_kobo_date(kobo_date)
 
     def progressbar(self, window_title, on_top=False):
         self.pb = ProgressBar(parent=self.gui, window_title=window_title, on_top=on_top)

@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 2.18.4 - 27 Feb 2025
+
+- Fix "attribute not found" error when displaying reading position changes dialog
+
 ## Version 2.18.3 - 27 Feb 2025
 
 - Fix error when updating metadata for a book that doesn't have a published date

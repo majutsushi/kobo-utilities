@@ -15,7 +15,7 @@ from queue import Queue
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional
 from unittest import mock
 
-import apsw  # type: ignore
+import apsw  # type: ignore[reportMissingImports]
 from calibre.devices.kobo.books import Book
 from calibre.devices.kobo.driver import KOBOTOUCH
 from calibre.ebooks.metadata import MetaInformation
@@ -201,7 +201,9 @@ class TestKoboUtilities(unittest.TestCase):
         self.queue = Queue()
         self.maxDiff = None
 
-    def test_store_bookmarks(self, _fwversion, _timestamp):
+    def test_store_bookmarks(self, fwversion, timestamp):
+        del fwversion
+        del timestamp
         book1 = TestBook(
             title="Title 1",
             authors=["Author 1"],
@@ -307,7 +309,7 @@ class TestKoboUtilities(unittest.TestCase):
             "device_database_connection",
             return_value=device_db.db_conn,
         ):
-            stored_locations = jobs._store_bookmarks(None, books_in_calibre, cfg)
+            stored_locations = jobs._store_bookmarks(books_in_calibre, cfg)
 
         pprint(stored_locations)
         self.assertNotIn(book1.calibre_id, stored_locations)
@@ -315,7 +317,9 @@ class TestKoboUtilities(unittest.TestCase):
         self.assertEqual(stored_locations[book2.calibre_id]["TimeSpentReading"], 450)
         self.assertEqual(stored_locations[book2.calibre_id]["RestOfBookEstimate"], 250)
 
-    def test_restore_current_bookmark(self, _fwversion, _timestamp):
+    def test_restore_current_bookmark(self, fwversion, timestamp):
+        del fwversion
+        del timestamp
         book1 = TestBook(
             title="Title A",
             authors=["Author A"],

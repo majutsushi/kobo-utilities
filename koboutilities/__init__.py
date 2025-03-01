@@ -64,6 +64,7 @@ class ActionKoboUtilities(InterfaceActionBase):
             from .config import ConfigWidget
 
             return ConfigWidget(self.actual_plugin_)
+        return None
 
     def save_settings(self, config_widget):
         """

@@ -9,5 +9,5 @@ def get_resources(name: str) -> bytes: ...
 @overload
 def get_resources(list_of_names: list[str]) -> dict[str, bytes]: ...
 
-I = get_image_path  # noqa: E741
+I = get_image_path
 P = get_path

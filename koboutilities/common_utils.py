@@ -86,8 +86,7 @@ def get_icon(icon_name):
         if pixmap is None:
             # Look in Calibre's cache for the icon
             return QIcon(I(icon_name))
-        else:
-            return QIcon(pixmap)
+        return QIcon(pixmap)
     return QIcon()
 
 
@@ -155,10 +154,7 @@ def create_menu_item(
     or register their menus only once. Use create_menu_action_unique for all else.
     """
     if shortcut is not None:
-        if len(shortcut) == 0:
-            shortcut = ()
-        else:
-            shortcut = _(shortcut)
+        shortcut = () if len(shortcut) == 0 else _(shortcut)
     ac = ia.create_action(spec=(menu_text, None, tooltip, shortcut), attr=menu_text)
     if image:
         ac.setIcon(get_icon(image))
@@ -201,10 +197,7 @@ def create_menu_action_unique(
             shortcut = False
         else:
             if shortcut is not None and shortcut is not False:
-                if len(shortcut) == 0:
-                    shortcut = None
-                else:
-                    shortcut = _(shortcut)
+                shortcut = None if len(shortcut) == 0 else _(shortcut)
 
     if shortcut_name is None:
         shortcut_name = menu_text.replace("&", "")
@@ -219,9 +212,12 @@ def create_menu_action_unique(
         triggered=triggered,
         shortcut_name=shortcut_name,
     )
-    if shortcut is False and orig_shortcut is not False:
-        if ac.calibre_shortcut_unique_name in ia.gui.keyboard.shortcuts:
-            kb.replace_action(ac.calibre_shortcut_unique_name, ac)
+    if (
+        shortcut is False
+        and orig_shortcut is not False
+        and ac.calibre_shortcut_unique_name in ia.gui.keyboard.shortcuts
+    ):
+        kb.replace_action(ac.calibre_shortcut_unique_name, ac)
     if image:
         ac.setIcon(get_icon(image))
     if is_checked is not None:
@@ -272,8 +268,8 @@ def call_plugin_callback(plugin_callback, parent, plugin_results=None):
         callback_func = getattr(
             plugin.load_actual_plugin(parent), plugin_callback["func_name"]
         )
-        args = plugin_callback["args"] if "args" in plugin_callback else []
-        kwargs = plugin_callback["kwargs"] if "kwargs" in plugin_callback else {}
+        args = plugin_callback.get("args", [])
+        kwargs = plugin_callback.get("kwargs", {})
         if "plugin_results" in kwargs and plugin_results:
             kwargs["plugin_results"] = plugin_results
         print("call_plugin_callback: about to call callback - kwargs=", kwargs)
@@ -483,7 +479,7 @@ class RatingTableWidgetItem(QTableWidgetItem):
 
 class DateTableWidgetItem(QTableWidgetItem):
     def __init__(self, date_read, is_read_only=False, default_to_today=False, fmt=None):
-        if date_read is None or date_read == UNDEFINED_DATE and default_to_today:
+        if date_read is None or (date_read == UNDEFINED_DATE and default_to_today):
             date_read = now()
         if is_read_only:
             super(DateTableWidgetItem, self).__init__(format_date(date_read, fmt))
@@ -517,10 +513,7 @@ class DateDelegate(_DateDelegate):
     def setEditorData(self, editor, index):
         val = index.model().data(index, Qt.DisplayRole)
         if val is None or val == UNDEFINED_QDATETIME:
-            if self.default_to_today:
-                val = self.default_date
-            else:
-                val = UNDEFINED_QDATETIME
+            val = self.default_date if self.default_to_today else UNDEFINED_QDATETIME
         editor.setDateTime(val)
 
     def setModelData(self, editor, model, index):
@@ -557,8 +550,7 @@ class CheckableTableWidgetItem(QTableWidgetItem):
         """
         if self.checkState() == Qt.PartiallyChecked:
             return None
-        else:
-            return self.checkState() == Qt.Checked
+        return self.checkState() == Qt.Checked
 
 
 class TextIconWidgetItem(QTableWidgetItem):
@@ -607,6 +599,7 @@ class KeyValueComboBox(QComboBox):
         for key, value in list(self.values.items()):
             if value == str(self.currentText()).strip():
                 return key
+        return None
 
 
 class ProfileComboBox(QComboBox):
@@ -651,6 +644,7 @@ class KeyComboBox(QComboBox):
         for key, _value in list(self.values.items()):
             if key == str(self.currentText()).strip():
                 return key
+        return None
 
 
 class SimpleComboBox(QComboBox):
@@ -673,6 +667,7 @@ class SimpleComboBox(QComboBox):
         for value in list(self.values):
             if value == str(self.currentText()).strip():
                 return value
+        return None
 
 
 class CustomColumnComboBox(QComboBox):

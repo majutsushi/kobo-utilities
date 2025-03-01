@@ -1,8 +1,5 @@
 # vim:fileencoding=UTF-8:ts=4:sw=4:sta:et:sts=4:ai
 
-# from constants import debug
-# from common_utils import debug_print
-
 __license__ = "GPL v3"
 __copyright__ = "2012-2020, David Forrester <davidfor@internode.on.net>"
 __docformat__ = "restructuredtext en"
@@ -11,6 +8,7 @@ import re
 from configparser import ConfigParser
 from datetime import datetime
 from functools import partial
+from types import MappingProxyType
 from typing import Any, Optional
 from urllib.parse import quote_plus
 
@@ -238,7 +236,7 @@ load_translations()
 
 def have_rating_column(plugin_action):
     rating_column = plugin_action.get_rating_column()
-    return not rating_column == ""
+    return rating_column != ""
 
 
 class AuthorTableWidgetItem(ReadOnlyTableWidgetItem):
@@ -729,11 +727,13 @@ class ReaderOptionsDialog(SizePersistedDialog):
             )
 
     def line_spacing_spin_changed(self, checked):
+        del checked
         self.custom_line_spacing_edit.setText(
             str(self.line_spacings[int(str(self.line_spacing_spin.value()))])
         )
 
     def left_margins_spin_changed(self, checked):
+        del checked
         if self.lock_margins_checkbox_is_checked():
             self.right_margins_spin.setProperty(
                 "value", int(str(self.left_margins_spin.value()))
@@ -1165,7 +1165,7 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
 
-    def ok_clicked(self):
+    def ok_clicked(self) -> None:
         new_prefs: dict[str, Any] = cfg.METADATA_OPTIONS_DEFAULTS
         new_prefs[cfg.KEY_SET_TITLE] = self.title_checkbox.checkState() == Qt.Checked
         new_prefs[cfg.KEY_USE_TITLE_SORT] = (
@@ -1217,13 +1217,13 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
             new_prefs[cfg.KEY_DESCRIPTION_USE_TEMPLATE]
             and not self.description_template_edit.validate()
         ):
-            return False
+            return
 
         if (
             new_prefs[cfg.KEY_SET_SUBTITLE]
             and not self.subtitle_template_edit.validate()
         ):
-            return False
+            return
 
         if new_prefs[cfg.KEY_SET_READING_DIRECTION]:
             new_prefs[cfg.KEY_READING_DIRECTION] = READING_DIRECTIONS[
@@ -1243,13 +1243,14 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
                 self.readingStatusGroupBox.readingStatus()
             )
             if new_prefs["readingStatus"] < 0:
-                return error_dialog(
+                error_dialog(
                     self,
                     "No reading status option selected",
                     "If you are changing the reading status, you must select an option to continue",
                     show=True,
                     show_copy_button=False,
                 )
+                return
             new_prefs[cfg.KEY_RESET_POSITION] = (
                 self.readingStatusGroupBox.reset_position_checkbox.checkState()
                 == Qt.Checked
@@ -1265,13 +1266,13 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
             )
             if (
                 new_prefs[key]
-                and not key == cfg.KEY_READING_STATUS
-                and not key == cfg.KEY_USE_PLUGBOARD
+                and key != cfg.KEY_READING_STATUS
+                and key != cfg.KEY_USE_PLUGBOARD
             ):
                 cfg.plugin_prefs[cfg.METADATA_OPTIONS_STORE_NAME] = new_prefs
                 self.accept()
                 return
-        return error_dialog(
+        error_dialog(
             self,
             _("No options selected"),
             _("You must select at least one option to continue."),
@@ -1281,12 +1282,12 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
 
     def title_checkbox_clicked(self, checked):
         self.title_sort_checkbox.setEnabled(
-            checked and not self.use_plugboard_checkbox.checkState() == Qt.Checked
+            checked and self.use_plugboard_checkbox.checkState() != Qt.Checked
         )
 
     def author_checkbox_clicked(self, checked):
         self.author_sort_checkbox.setEnabled(
-            checked and not self.use_plugboard_checkbox.checkState() == Qt.Checked
+            checked and self.use_plugboard_checkbox.checkState() != Qt.Checked
         )
 
     def description_checkbox_clicked(self, checked):
@@ -1443,7 +1444,7 @@ class GetShelvesFromDeviceDialog(SizePersistedDialog):
                 available_columns[key] = column
         return available_columns
 
-    def ok_clicked(self):
+    def ok_clicked(self) -> None:
         options = cfg.GET_SHELVES_OPTIONS_DEFAULTS
         options[cfg.KEY_SHELVES_CUSTOM_COLUMN] = (
             self.shelf_column_combo.get_selected_column()
@@ -1455,17 +1456,17 @@ class GetShelvesFromDeviceDialog(SizePersistedDialog):
         self.options = options
 
         if not options[cfg.KEY_SHELVES_CUSTOM_COLUMN]:
-            return error_dialog(
+            error_dialog(
                 self,
                 _("No shelf column selected"),
                 "You must select a column to populate from the shelves on the device",
                 show=True,
                 show_copy_button=False,
             )
+            return
 
         cfg.plugin_prefs[cfg.GET_SHELVES_OPTIONS_STORE_NAME] = options
         self.accept()
-        return
 
 
 class BookmarkOptionsDialog(SizePersistedDialog):
@@ -1753,7 +1754,7 @@ class ChangeReadingStatusOptionsDialog(SizePersistedDialog):
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
 
-    def ok_clicked(self):
+    def ok_clicked(self) -> None:
         self.options = self.plugin_action.default_options()
 
         self.options["setRreadingStatus"] = (
@@ -1762,13 +1763,14 @@ class ChangeReadingStatusOptionsDialog(SizePersistedDialog):
         if self.options["setRreadingStatus"]:
             self.options["readingStatus"] = self.readingStatusGroupBox.readingStatus()
             if self.options["readingStatus"] < 0:
-                return error_dialog(
+                error_dialog(
                     self,
                     "No reading status option selected",
                     "If you are changing the reading status, you must select an option to continue",
                     show=True,
                     show_copy_button=False,
                 )
+                return
             self.options["resetPosition"] = (
                 self.readingStatusGroupBox.reset_position_checkbox.checkState()
                 == Qt.Checked
@@ -1779,7 +1781,7 @@ class ChangeReadingStatusOptionsDialog(SizePersistedDialog):
             if self.options[key]:
                 self.accept()
                 return
-        return error_dialog(
+        error_dialog(
             self,
             _("No options selected"),
             _("You must select at least one option to continue."),
@@ -1839,9 +1841,9 @@ class BackupAnnotationsOptionsDialog(SizePersistedDialog):
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
 
-    def ok_clicked(self):
+    def ok_clicked(self) -> None:
         if len(self.dest_directory_edit.text()) == 0:
-            return error_dialog(
+            error_dialog(
                 self,
                 "No destination",
                 "You must enter a destination directory to save the annotation files in",
@@ -1936,7 +1938,7 @@ class RemoveAnnotationsOptionsDialog(SizePersistedDialog):
         self.annotation_clean_option_button_group.buttonClicked[int].connect(
             self._annotation_clean_option_radio_clicked
         )
-        for clean_option in annotation_clean_options.keys():
+        for clean_option in annotation_clean_options:
             clean_options = annotation_clean_options[clean_option]
             rdo = QRadioButton(clean_options[0], self)
             rdo.setToolTip(clean_options[1])
@@ -2246,7 +2248,7 @@ class BlockAnalyticsOptionsDialog(SizePersistedDialog):
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
 
-    def ok_clicked(self):
+    def ok_clicked(self) -> None:
         options = {}
         options[cfg.KEY_CREATE_ANALYTICSEVENTS_TRIGGER] = (
             self.create_trigger_radiobutton.isChecked()
@@ -2261,7 +2263,7 @@ class BlockAnalyticsOptionsDialog(SizePersistedDialog):
             if options[key]:
                 self.accept()
                 return
-        return error_dialog(
+        error_dialog(
             self,
             _("No options selected"),
             _("You must select at least one option to continue."),
@@ -3129,8 +3131,7 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         # Now encode the text using Python function with chosen encoding
         text = quote_plus(text.encode(encoding, "ignore"))
         # If we ended up with double spaces as plus signs (++) replace them
-        text = text.replace("++", "+")
-        return text
+        return text.replace("++", "+")
 
     def convert_author_to_search_text(self, author, encoding="utf-8"):
         # We want to convert the author name to FN LN format if it is stored LN, FN
@@ -3496,10 +3497,8 @@ class ShowReadingPositionChangesTableWidget(QTableWidget):
             "ShowReadingPositionChangesDialog:populate_table - reading_positions=",
             reading_positions,
         )
-        row = 0
-        for book_id, reading_position in reading_positions.items():
+        for row, (book_id, reading_position) in enumerate(reading_positions.items()):
             self.populate_table_row(row, book_id, reading_position)
-            row += 1
 
         self.resizeColumnToContents(0)
         self.resizeColumnToContents(1)
@@ -3655,7 +3654,7 @@ class FixDuplicateShelvesDialog(SizePersistedDialog):
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
 
-    def _ok_clicked(self):
+    def _ok_clicked(self) -> None:
         self.options = {}
 
         self.options[cfg.KEY_KEEP_NEWEST_SHELF] = (
@@ -3677,7 +3676,7 @@ class FixDuplicateShelvesDialog(SizePersistedDialog):
             )
             self.accept()
             return
-        return error_dialog(
+        error_dialog(
             self,
             _("No options selected"),
             _("You must select at least one option to continue."),
@@ -4090,7 +4089,7 @@ class SetRelatedBooksDialog(SizePersistedDialog):
         self.related_categories_option_button_group.buttonClicked[int].connect(
             self._related_categories_option_radio_clicked
         )
-        for clean_option in related_categories_options.keys():
+        for clean_option in related_categories_options:
             clean_options = related_categories_options[clean_option]
             rdo = QRadioButton(clean_options[0], self)
             rdo.setToolTip(clean_options[1])
@@ -4324,6 +4323,7 @@ class TemplateConfig(QWidget):  # {{{
 
 class UpdateBooksToCDialog(SizePersistedDialog):
     def __init__(self, parent, plugin_action, icon, books):
+        del icon
         super(UpdateBooksToCDialog, self).__init__(
             parent,
             "kobo utilities plugin:update book toc dialog",
@@ -4485,22 +4485,24 @@ class ToCBookListTableWidget(QTableWidget):
     READING_POSITION_COLUMN_NO = 12
     STATUS_COMMENT_COLUMN_NO = 13
 
-    HEADER_LABELS_DICT = {
-        STATUS_COLUMN_NO: "",
-        TITLE_COLUMN_NO: _("Title"),
-        AUTHOR_COLUMN_NO: _("Author"),
-        LIBRARY_CHAPTERS_COUNT_COLUMN_NO: _("Library ToC"),
-        LIBRARY_FORMAT_COLUMN_NO: _("Library Format"),
-        KOBO_DISC_CHAPTERS_COUNT_COLUMN_NO: _("Kobo ToC"),
-        KOBO_DISC_FORMAT_COLUMN_NO: _("Kobo Format"),
-        KOBO_DISC_STATUS_COLUMN_NO: _("Status"),
-        SEND_TO_DEVICE_COLUMN_NO: _("Send"),
-        KOBO_DATABASE_CHAPTERS_COUNT_COLUMN_NO: _("Kobo Database ToC"),
-        KOBO_DATABASE_STATUS_COLUMN_NO: _("Status"),
-        UPDATE_TOC_COLUMN_NO: _("ToC"),
-        READING_POSITION_COLUMN_NO: _("Reading Position"),
-        STATUS_COMMENT_COLUMN_NO: _("Comment"),
-    }
+    HEADER_LABELS_DICT = MappingProxyType(
+        {
+            STATUS_COLUMN_NO: "",
+            TITLE_COLUMN_NO: _("Title"),
+            AUTHOR_COLUMN_NO: _("Author"),
+            LIBRARY_CHAPTERS_COUNT_COLUMN_NO: _("Library ToC"),
+            LIBRARY_FORMAT_COLUMN_NO: _("Library Format"),
+            KOBO_DISC_CHAPTERS_COUNT_COLUMN_NO: _("Kobo ToC"),
+            KOBO_DISC_FORMAT_COLUMN_NO: _("Kobo Format"),
+            KOBO_DISC_STATUS_COLUMN_NO: _("Status"),
+            SEND_TO_DEVICE_COLUMN_NO: _("Send"),
+            KOBO_DATABASE_CHAPTERS_COUNT_COLUMN_NO: _("Kobo Database ToC"),
+            KOBO_DATABASE_STATUS_COLUMN_NO: _("Status"),
+            UPDATE_TOC_COLUMN_NO: _("ToC"),
+            READING_POSITION_COLUMN_NO: _("Reading Position"),
+            STATUS_COMMENT_COLUMN_NO: _("Comment"),
+        }
+    )
 
     def __init__(self, parent):
         QTableWidget.__init__(self, parent)
@@ -4550,7 +4552,6 @@ class ToCBookListTableWidget(QTableWidget):
         if "icon" in book:
             icon = get_icon(book["icon"])
 
-        # status_cell = CheckableTableWidgetItem(checked=not book['good'], icon=icon)
         status_cell = IconWidgetItem(None, icon, book_status)
         status_cell.setData(Qt.UserRole, book_status)
         self.setItem(row, 0, status_cell)

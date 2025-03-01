@@ -84,6 +84,7 @@ class SeriesBook(object):
     def id(self):
         if hasattr(self._mi, "id"):
             return self._mi.id
+        return None
 
     def authors(self):
         return self._mi.authors
@@ -100,6 +101,7 @@ class SeriesBook(object):
     def pubdate(self):
         if hasattr(self._mi, "pubdate"):
             return self._mi.pubdate
+        return None
 
     def set_pubdate(self, pubdate):
         self._mi.pubdate = pubdate
@@ -112,10 +114,7 @@ class SeriesBook(object):
     def is_series_changed(self):
         if self._mi.series != self._orig_series:
             return True
-        if self._mi.series_index != self._orig_series_index:
-            return True
-
-        return False
+        return self._mi.series_index != self._orig_series_index
 
     def orig_series_name(self):
         return self._orig_series
@@ -188,6 +187,5 @@ class SeriesBook(object):
             if series:
                 if sort_by_name:
                     return "%s%06.2f" % (series, series_number)
-                else:
-                    return "%06.2f%s" % (series_number, series)
+                return "%06.2f%s" % (series_number, series)
         return ""

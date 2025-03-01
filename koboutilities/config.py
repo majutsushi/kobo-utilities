@@ -194,9 +194,9 @@ KEY_REPLACE_SHELVES = "replaceShelves"
 KEY_SELECT_BOOKS_IN_LIBRARY = "selectBooksInLibrary"
 KEY_UPDATE_GOODREADS_PROGRESS = "updeateGoodreadsProgress"
 
-TOKEN_ANY_DEVICE = "*Any Device"
-TOKEN_CLEAR_SUBTITLE = "*Clear*"
-TOKEN_FILE_TIMESTAMP = "*filetimestamp"
+TOKEN_ANY_DEVICE = "*Any Device"  # noqa: S105
+TOKEN_CLEAR_SUBTITLE = "*Clear*"  # noqa: S105
+TOKEN_FILE_TIMESTAMP = "*filetimestamp"  # noqa: S105
 OTHER_SORTS = {TOKEN_FILE_TIMESTAMP: _("* File timestamp")}
 
 STORE_DEVICES = "Devices"
@@ -449,7 +449,7 @@ def get_prefs(prefs_store: Optional[Dict], store_name: str):
     debug_print("get_prefs - start - store_name='%s'" % (store_name,))
     store = {}
     if prefs_store is not None and store_name in prefs_store:
-        for key in plugin_prefs.defaults[store_name].keys():
+        for key in plugin_prefs.defaults[store_name]:
             store[key] = prefs_store[store_name].get(
                 key, plugin_prefs.defaults[store_name][key]
             )
@@ -556,8 +556,7 @@ def get_library_config(db):
 def get_profile_info(db, profile_name):
     library_config = get_library_config(db)
     profiles = library_config.get(KEY_PROFILES, {})
-    profile_map = profiles.get(profile_name, DEFAULT_PROFILE_VALUES)
-    return profile_map
+    return profiles.get(profile_name, DEFAULT_PROFILE_VALUES)
 
 
 def set_default_profile(db, profile_name):
@@ -568,12 +567,12 @@ def set_default_profile(db, profile_name):
 def get_book_profiles_for_device(db, device_uuid, exclude_auto=True):
     library_config = get_library_config(db)
     profiles_map = library_config[KEY_PROFILES]
-    device_profiles = {}
-    for profile_name, profile_info in profiles_map.items():
-        if profile_info[KEY_FOR_DEVICE] in [device_uuid, TOKEN_ANY_DEVICE]:
-            if not exclude_auto:
-                device_profiles[profile_name] = profile_info
-    return device_profiles
+    return {
+        profile_name: profile_info
+        for profile_name, profile_info in profiles_map.items()
+        if profile_info[KEY_FOR_DEVICE] in [device_uuid, TOKEN_ANY_DEVICE]
+        and not exclude_auto
+    }
 
 
 def get_book_profile_for_device(db, device_uuid, use_any_device=False):
@@ -586,7 +585,7 @@ def get_book_profile_for_device(db, device_uuid, use_any_device=False):
                 profile_info["profileName"] = profile_name
                 selected_profile = profile_info
                 break
-            elif use_any_device and profile_info[KEY_FOR_DEVICE] == TOKEN_ANY_DEVICE:
+            if use_any_device and profile_info[KEY_FOR_DEVICE] == TOKEN_ANY_DEVICE:
                 profile_info["profileName"] = profile_name
                 selected_profile = profile_info
 
@@ -615,13 +614,11 @@ def get_profile_names(db, exclude_auto=True):
 
 def get_device_name(device_uuid: str, default_name: str = _("(Unknown device)")) -> str:
     device = get_device_config(device_uuid)
-    device_name = cast(str, device["name"]) if device else default_name
-    return device_name
+    return cast(str, device["name"]) if device else default_name
 
 
 def get_device_config(device_uuid) -> Optional[Dict]:
-    device_config = plugin_prefs[STORE_DEVICES].get(device_uuid, None)
-    return device_config
+    return plugin_prefs[STORE_DEVICES].get(device_uuid, None)
 
 
 def set_library_config(db, library_config):
@@ -840,7 +837,7 @@ class ProfilesTab(QWidget):
         debug_print("END Validate, status = %s" % valid)
         return valid
 
-    def add_profile(self):
+    def add_profile(self) -> None:
         debug_print("ProfilesTab:add_profile - Start")
         # Display a prompt allowing user to specify a new profile
         new_profile_name, ok = QInputDialog.getText(
@@ -854,15 +851,16 @@ class ProfilesTab(QWidget):
             return
         new_profile_name = str(new_profile_name).strip()
         # Verify it does not clash with any other profiles in the profile
-        for profile_name in self.profiles.keys():
+        for profile_name in self.profiles:
             debug_print("ProfilesTab:add_profile - existing profile: ", profile_name)
             if profile_name.lower() == new_profile_name.lower():
-                return error_dialog(
+                error_dialog(
                     self,
                     _("Add failed"),
                     _("A profile with the same name already exists"),
                     show=True,
                 )
+                return
 
         # As we are about to switch profile, persist the current profiles details if any
         self.persist_profile_config()
@@ -876,7 +874,7 @@ class ProfilesTab(QWidget):
         self.refresh_current_profile_info()
         debug_print("ProfilesTab:add_profile - End")
 
-    def rename_profile(self):
+    def rename_profile(self) -> None:
         if not self.profile_name:
             return
         # Display a prompt allowing user to specify a rename profile
@@ -894,17 +892,18 @@ class ProfilesTab(QWidget):
         if new_profile_name == old_profile_name:
             return
         # Verify it does not clash with any other profiles in the profile
-        for profile_name in self.profiles.keys():
+        for profile_name in self.profiles:
             if profile_name == old_profile_name:
                 continue
             if profile_name.lower() == new_profile_name.lower():
-                return error_dialog(
+                error_dialog(
                     self,
                     _("Add failed"),
                     _("A profile with the same name already exists"),
                     show=True,
                     show_copy_button=False,
                 )
+                return
 
         # As we are about to rename profile, persist the current profiles details if any
         self.persist_profile_config()
@@ -915,17 +914,18 @@ class ProfilesTab(QWidget):
         self.select_profile_combo.populate_combo(self.profiles, new_profile_name)
         self.refresh_current_profile_info()
 
-    def delete_profile(self):
+    def delete_profile(self) -> None:
         if not self.profile_name:
             return
         if len(self.profiles) == 1:
-            return error_dialog(
+            error_dialog(
                 self,
                 _("Cannot delete"),
                 _("You must have at least one profile"),
                 show=True,
                 show_copy_button=False,
             )
+            return
         if not confirm(
             _(
                 "Do you want to delete the profile named '{0}'".format(
@@ -1380,16 +1380,17 @@ class DevicesTab(QWidget):
         # Ensure the devices combo is refreshed for the current list
         self.parent_dialog.profiles_tab.refresh_current_profile_info()
 
-    def _rename_device_clicked(self):
+    def _rename_device_clicked(self) -> None:
         (device_info, _is_connected) = self.devices_table.get_selected_device_info()
         if not device_info:
-            return error_dialog(
+            error_dialog(
                 self,
                 _("Rename failed"),
                 _("You must select a device first"),
                 show=True,
                 show_copy_button=False,
             )
+            return
 
         old_name = device_info["name"]
         new_device_name, ok = QInputDialog.getText(
@@ -1412,7 +1413,7 @@ class DevicesTab(QWidget):
             # Ensure the devices combo is refreshed for the current list
             self.parent_dialog.profiles_tab.refresh_current_profile_info()
         except Exception:
-            return error_dialog(
+            error_dialog(
                 self,
                 _("Rename failed"),
                 _("An error occured while renaming."),
@@ -1420,16 +1421,17 @@ class DevicesTab(QWidget):
                 show=True,
             )
 
-    def _delete_device_clicked(self):
+    def _delete_device_clicked(self) -> None:
         (device_info, _is_connected) = self.devices_table.get_selected_device_info()
         if not device_info:
-            return error_dialog(
+            error_dialog(
                 self,
                 _("Delete failed"),
                 _("You must select a device first"),
                 show=True,
                 show_copy_button=False,
             )
+            return
         name = device_info["name"]
         if not question_dialog(
             self,
@@ -1692,7 +1694,7 @@ class DevicesTableWidget(QTableWidget):
         self.setIconSize(QSize(32, 32))
 
         for row, uuid in enumerate(devices.keys()):
-            self.populate_table_row(row, uuid, devices[uuid], connected_device_info)
+            self.populate_table_row(row, devices[uuid], connected_device_info)
 
         self.resizeColumnsToContents()
         self.setMinimumColumnWidth(1, 100)
@@ -1702,7 +1704,7 @@ class DevicesTableWidget(QTableWidget):
         if self.columnWidth(col) < minimum:
             self.setColumnWidth(col, minimum)
 
-    def populate_table_row(self, row, uuid, device_config, connected_device_info):
+    def populate_table_row(self, row, device_config, connected_device_info):
         debug_print(
             "DevicesTableWidget:populate_table_row - device_config:", device_config
         )
@@ -1897,6 +1899,7 @@ class ConfigWidget(QWidget):
         return self.devices_tab.devices_table.get_data()
 
     def delete_device_from_lists(self, library_config, device_uuid):
+        del device_uuid
         set_library_config(self.plugin_action.gui.current_db, library_config)
 
     def save_settings(self):
@@ -1928,6 +1931,7 @@ class ConfigWidget(QWidget):
         d.exec_()
 
     def help_link_activated(self, url):
+        del url
         self.plugin_action.show_help(anchor="ConfigurationDialog")
 
     @property

@@ -2,9 +2,85 @@
 line-length = 88
 builtins = ["_", "I", "P", "load_translations", "get_resources", "get_icons"]
 exclude = ["calibre-repo"]
+target-version = "py38"
 
 [tool.ruff.lint]
+select = [
+  # pyflakes
+  "F",
+  # pycodestyle
+  "E",
+  "W",
+  # mccabe
+  # "C90",
+  # pep8-naming
+  # "N",
+  # pyupgrade
+  # "UP",
+  # flake8-2020
+  "YTT",
+  # flake8-bandit
+  "S",
+  # flake8-blind-except
+  # "BLE",
+  # flake8-bugbear
+  "B",
+  # flake8-builtins
+  "A",
+  # flake8-comprehensions
+  "C4",
+  # flake8-datetimez
+  "DTZ",
+  # flake8-executable
+  "EXE",
+  # flake8-implicit-str-concat
+  "ISC",
+  # flake8-import-conventions
+  "ICN",
+  # flake8-logging-format
+  "G",
+  # flake8-no-pep420
+  "INP",
+  # flake8-pie
+  "PIE",
+  # flake8-pytest-style
+  "PT",
+  # flake8-return
+  "RET",
+  # flake8-self
+  # "SLF",
+  # flake8-simplify
+  "SIM",
+  # flake8-type-checking
+  "TCH",
+  # flake8-unused-arguments
+  "ARG",
+  # flake8-use-pathlib
+  # "PTH",
+  # flake8-todos
+  # "TD",
+  # eradicate
+  # "ERA",
+  # pygrep-hooks
+  "PGH",
+  # pylint
+  "PLE",
+  # "PLR",
+  # "PLW",
+  # tryceratops
+  # "TRY",
+  # flynt
+  "FLY",
+  # Perflint
+  "PERF",
+  # refurb
+  "FURB",
+  # Ruff-specific rules
+  "RUF",
+]
+
 ignore = [
+  "S101",
   # Disable some rules that conflict with the formatter
   # https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
   "W191",

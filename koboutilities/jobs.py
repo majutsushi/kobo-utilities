@@ -38,7 +38,7 @@ def debug_print(*args):
         prints("DEBUG: %6.1f" % (time.time() - BASE_TIME), *args)
 
 
-def do_device_database_backup(backup_options, cpus, notification=lambda x, _y: x):
+def do_device_database_backup(backup_options):
     logger = Log()
     debug_print("do_device_database_backup - start")
     logger("logger - do_device_database_backup - start")
@@ -56,7 +56,6 @@ def do_device_database_backup(backup_options, cpus, notification=lambda x, _y: x
                 % (file_to_add, e)
             )
 
-    notification(0.01, _("Backing up the Kobo device database"))
     debug_print("do_device_database_backup - backup_options=", backup_options)
     device_name = backup_options["device_name"]
     serial_number = backup_options["serial_number"]
@@ -74,12 +73,13 @@ def do_device_database_backup(backup_options, cpus, notification=lambda x, _y: x
         backup_options["device_path"], ".kobo", "BookReader.sqlite"
     )
 
-    backup_timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    now = datetime.now()  # noqa: DTZ005
+    backup_timestamp = now.strftime("%Y%m%d-%H%M%S")
     import glob
 
     if do_daily_backup:
         backup_file_search = (
-            datetime.now().strftime(
+            now.strftime(
                 backup_file_template.format(
                     device_name, serial_number, "%Y%m%d-" + "[0-9]" * 6
                 )
@@ -87,7 +87,7 @@ def do_device_database_backup(backup_options, cpus, notification=lambda x, _y: x
             + ".sqlite"
         )
         backup_file_search = (
-            datetime.now().strftime(
+            now.strftime(
                 backup_file_template.format(
                     device_name, serial_number, "%Y%m%d-" + "[0-9]" * 6
                 )
@@ -106,10 +106,8 @@ def do_device_database_backup(backup_options, cpus, notification=lambda x, _y: x
 
         if len(backup_files) > 0:
             debug_print("auto_backup_device_database - Backup already done today")
-            notification(1, _("Backup already done"))
             return
 
-    notification(0.25, _("Backing up database KoboReader.sqlite"))
     backup_file_name = backup_file_template.format(
         device_name, serial_number, backup_timestamp
     )
@@ -121,7 +119,6 @@ def do_device_database_backup(backup_options, cpus, notification=lambda x, _y: x
 
     bookreader_backup_file_path = None
     try:
-        notification(0.25, _("Backing up database BookReader.sqlite"))
         bookreader_backup_file_name = bookreader_backup_file_template.format(
             device_name, serial_number, backup_timestamp
         )
@@ -148,10 +145,9 @@ def do_device_database_backup(backup_options, cpus, notification=lambda x, _y: x
             )
         )
 
-    notification(0.5, _("Performing check on the database"))
     try:
         check_result = check_device_database(backup_file_path)
-        if not check_result.split()[0] == "ok":
+        if check_result.split()[0] != "ok":
             debug_print("do_device_database_backup - database is corrupt!")
             raise Exception(check_result)
     except:
@@ -214,7 +210,6 @@ def do_device_database_backup(backup_options, cpus, notification=lambda x, _y: x
                 os.unlink(bookreader_backup_file_path)
 
     if copies_to_keep > 0:
-        notification(0.75, _("Removing old backups"))
         debug_print("do_device_database_backup - copies to keep:%s" % copies_to_keep)
 
         timestamp_filter = "{0}-{1}".format("[0-9]" * 8, "[0-9]" * 6)
@@ -286,7 +281,6 @@ def do_device_database_backup(backup_options, cpus, notification=lambda x, _y: x
     else:
         debug_print("do_device_database_backup - Manually managing backups")
 
-    notification(1, _("Kobo device database backup finished"))
     return
 
 
@@ -353,7 +347,7 @@ def do_store_locations_all(books, options):
     """
     Child job, to store location for all the books
     """
-    return _store_bookmarks(Log(), books, options)
+    return _store_bookmarks(books, options)
 
 
 def _store_current_bookmark(log, book_id, contentIDs, options):
@@ -384,7 +378,7 @@ def _store_current_bookmark(log, book_id, contentIDs, options):
     return result
 
 
-def _store_bookmarks(log, books, options):
+def _store_bookmarks(books, options):
     debug_print("_store_bookmarks - start")
     debug_print("DEBUG=", DEBUG)
     count_books = 0
@@ -531,10 +525,7 @@ def _store_bookmarks(log, books, options):
         elif device_status["ReadStatus"] == 2:
             new_kobo_percentRead = 100
 
-        if device_status["Rating"]:
-            new_kobo_rating = device_status["Rating"] * 2
-        else:
-            new_kobo_rating = 0
+        new_kobo_rating = device_status["Rating"] * 2 if device_status["Rating"] else 0
 
         if device_status["TimeSpentReading"]:
             new_time_spent_reading = device_status["TimeSpentReading"]
@@ -668,15 +659,12 @@ def _store_bookmarks(log, books, options):
                 "_store_bookmarks - current_rating != new_kobo_rating and new_kobo_rating > 0=",
                 current_rating != new_kobo_rating and new_kobo_rating > 0,
             )
-            reading_position_changed = (
-                reading_position_changed
-                or current_rating != new_kobo_rating
+            reading_position_changed = reading_position_changed or (
+                current_rating != new_kobo_rating
                 and not (current_rating is None and new_kobo_rating == 0)
             )
-            reading_position_changed = (
-                reading_position_changed
-                or current_rating != new_kobo_rating
-                and new_kobo_rating > 0
+            reading_position_changed = reading_position_changed or (
+                current_rating != new_kobo_rating and new_kobo_rating > 0
             )
 
             debug_print(
@@ -717,15 +705,14 @@ def _store_bookmarks(log, books, options):
 
 def value_changed(old_value, new_value):
     return (
-        old_value is not None
-        and new_value is None
-        or old_value is None
-        and new_value is not None
-        or not old_value == new_value
+        (old_value is not None and new_value is None)
+        or (old_value is None and new_value is not None)
+        or old_value != new_value
     )
 
 
 def do_clean_images_dir(options, cpus, notification=lambda x, _y: x):
+    del cpus
     main_image_path = options["main_image_path"]
     sd_image_path = options["sd_image_path"]
     device_database_path = options["device_database_path"]
@@ -793,15 +780,12 @@ def _get_file_imageIds(image_path):
                     imageid = filename.split(" - N3_")[0]
                     imageids_files[imageid] = path
                     continue
-                elif filename.find(" - AndroidBookLoadTablet_Aspect") > 0:
+                if filename.find(" - AndroidBookLoadTablet_Aspect") > 0:
                     imageid = filename.split(" - AndroidBookLoadTablet_Aspect")[0]
                     imageids_files[imageid] = path
                     continue
-                else:
-                    debug_print("_get_file_imageIds - path=%s" % (path))
-                    debug_print(
-                        "check_covers: not 'N3' file - filename=%s" % (filename)
-                    )
+                debug_print("_get_file_imageIds - path=%s" % (path))
+                debug_print("check_covers: not 'N3' file - filename=%s" % (filename))
 
     return imageids_files
 
@@ -853,12 +837,11 @@ def _get_imageId_set(device_database_path):
     cursor = connection.cursor()
 
     cursor.execute(imageId_query)
-    imageIDs = {row["ImageId"] for row in cursor}
-
-    return imageIDs
+    return {row["ImageId"] for row in cursor}
 
 
 def do_remove_annotations(options, books, cpus, notification=lambda x, _y: x):
+    del cpus
     annotations_dir = options["annotations_dir"]
     annotations_ext = options["annotations_ext"]
     device_path = options["device_path"]
@@ -888,9 +871,7 @@ def do_remove_annotations(options, books, cpus, notification=lambda x, _y: x):
     else:
         current_step += 1
         notification(current_step / steps, _("Getting annotations files."))
-        annotation_files = _get_annotation_files(
-            annotations_dir, annotations_ext, device_path
-        )
+        annotation_files = _get_annotation_files(annotations_dir, annotations_ext)
         msg = _("Found {0} annotation files.").format(len(annotation_files))
 
     if len(annotation_files.keys()) > 0:
@@ -909,7 +890,6 @@ def do_remove_annotations(options, books, cpus, notification=lambda x, _y: x):
             annotation_files = _check_annotation_files(
                 annotation_files,
                 annotations_dir,
-                annotations_ext,
                 device_path,
                 annotation_test_func,
             )
@@ -944,7 +924,7 @@ def do_remove_annotations(options, books, cpus, notification=lambda x, _y: x):
     return remove_annotations_result
 
 
-def _get_annotation_files(annotations_path, annotations_ext, device_path):
+def _get_annotation_files(annotations_path, annotations_ext):
     annotation_files = {}
     if annotations_path:
         for path, dirs, files in os.walk(annotations_path):
@@ -995,12 +975,11 @@ def _get_annotation_files_for_books(
 def _check_annotation_files(
     annotation_files,
     annotations_dir,
-    annotations_ext,
     device_path,
     annotation_test_func,
 ):
     annotation_files_to_remove = {}
-    for filename in annotation_files.keys():
+    for filename in annotation_files:
         debug_print(
             "_check_annotation_files - filename='%s', path='%s'"
             % (filename, annotation_files[filename])
@@ -1033,6 +1012,7 @@ def _annotation_file_is_empty(
 def _annotation_file_is_not_empty(
     annotation_filename, annotation_path, annotations_dir, device_path
 ):
+    del annotations_dir, device_path
     debug_print(
         "_annotation_file_is_not_empty - annotation_filename=", annotation_filename
     )

@@ -336,46 +336,11 @@ def do_store_locations(books_to_scan, options, cpus, notification=lambda x, _y: 
     return stored_locations, options
 
 
-def do_store_location_single(book_id, contentIDs, options):
-    """
-    Child job, to store location for this book
-    """
-    return _store_current_bookmark(Log(), book_id, contentIDs, options)
-
-
 def do_store_locations_all(books, options):
     """
     Child job, to store location for all the books
     """
     return _store_bookmarks(books, options)
-
-
-def _store_current_bookmark(log, book_id, contentIDs, options):
-    count_books = 0
-    result = None
-
-    connection = device_database_connection(
-        options["device_database_path"], use_row_factory=True
-    )
-    cursor = connection.cursor()
-    count_books += 1
-    kepub_fetch_query = options["fetch_queries"]["kepub"]
-    epub_fetch_query = options["fetch_queries"]["epub"]
-
-    for contentID in contentIDs:
-        log("store_current_bookmark - contentId='%s'" % (contentID))
-        fetch_values = (contentID,)
-        if contentID.endswith(".kepub.epub"):
-            fetch_query = kepub_fetch_query
-        else:
-            fetch_query = epub_fetch_query
-        cursor.execute(fetch_query, fetch_values)
-        try:
-            result = next(cursor)
-        except StopIteration:
-            result = None
-
-    return result
 
 
 def _store_bookmarks(books, options):

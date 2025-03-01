@@ -559,11 +559,6 @@ def get_profile_info(db, profile_name):
     return profiles.get(profile_name, DEFAULT_PROFILE_VALUES)
 
 
-def set_default_profile(db, profile_name):
-    library_config = get_library_config(db)
-    set_library_config(db, library_config)
-
-
 def get_book_profiles_for_device(db, device_uuid, exclude_auto=True):
     library_config = get_library_config(db)
     profiles_map = library_config[KEY_PROFILES]

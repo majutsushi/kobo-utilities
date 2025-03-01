@@ -11,7 +11,7 @@ import re
 from configparser import ConfigParser
 from datetime import datetime
 from functools import partial
-from typing import Any
+from typing import Any, Optional
 from urllib.parse import quote_plus
 
 from calibre.ebooks.metadata import authors_to_string
@@ -493,7 +493,7 @@ class QueueProgressDialog(QProgressDialog):
 
 
 class ReaderOptionsDialog(SizePersistedDialog):
-    def __init__(self, parent, plugin_action):
+    def __init__(self, parent, plugin_action, contentID: Optional[str]):
         SizePersistedDialog.__init__(
             self, parent, "kobo utilities plugin:reader font settings dialog"
         )
@@ -513,7 +513,7 @@ class ReaderOptionsDialog(SizePersistedDialog):
                 self.line_spacings = LINE_SPACINGS_020901
 
         self.font_list = self.get_font_list()
-        self.initialize_controls()
+        self.initialize_controls(contentID)
 
         debug_print("ReaderOptionsDialog:__init__")
 
@@ -527,12 +527,12 @@ class ReaderOptionsDialog(SizePersistedDialog):
             self.update_config_file_checkbox.setCheckState(Qt.Checked)
         if self.prefs.get(cfg.KEY_DO_NOT_UPDATE_IF_SET, False):
             self.do_not_update_if_set_checkbox.setCheckState(Qt.Checked)
-        self.get_book_settings_pushbutton.setEnabled(self.plugin_action.singleSelected)
+        self.get_book_settings_pushbutton.setEnabled(contentID is not None)
 
         # Cause our dialog size to be restored from prefs or created on first usage
         self.resize_dialog()
 
-    def initialize_controls(self):
+    def initialize_controls(self, contentID: Optional[str]):
         self.setWindowTitle(DIALOG_NAME)
         layout = QVBoxLayout(self)
         self.setLayout(layout)
@@ -660,7 +660,10 @@ class ReaderOptionsDialog(SizePersistedDialog):
         self.get_book_settings_pushbutton.setToolTip(
             _("Fetches the current for the selected book from the device.")
         )
-        self.get_book_settings_pushbutton.clicked.connect(self.get_book_settings)
+        if contentID is not None:
+            self.get_book_settings_pushbutton.clicked.connect(
+                partial(self.get_book_settings, contentID)
+            )
 
         # Dialog buttons
         button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
@@ -840,8 +843,8 @@ class ReaderOptionsDialog(SizePersistedDialog):
         )
         self.right_margins_spin.setProperty("value", right_margins)
 
-    def get_book_settings(self):
-        book_options = self.plugin_action.fetch_book_fonts()
+    def get_book_settings(self, contentID: str):
+        book_options = self.plugin_action.fetch_book_fonts(contentID)
 
         if len(book_options) > 0:
             self.change_settings(book_options)
@@ -871,6 +874,7 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         self.plugin_action = plugin_action
         self.help_anchor = "UpdateMetadata"
         self.test_book = book
+        self.new_prefs: dict[str, Any] = cfg.METADATA_OPTIONS_DEFAULTS
 
         self.initialize_controls()
 
@@ -1162,91 +1166,83 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         layout.addWidget(button_box)
 
     def ok_clicked(self):
-        self.new_prefs: dict[str, Any] = cfg.METADATA_OPTIONS_DEFAULTS
-        self.new_prefs[cfg.KEY_SET_TITLE] = (
-            self.title_checkbox.checkState() == Qt.Checked
-        )
-        self.new_prefs[cfg.KEY_USE_TITLE_SORT] = (
+        new_prefs: dict[str, Any] = cfg.METADATA_OPTIONS_DEFAULTS
+        new_prefs[cfg.KEY_SET_TITLE] = self.title_checkbox.checkState() == Qt.Checked
+        new_prefs[cfg.KEY_USE_TITLE_SORT] = (
             self.title_sort_checkbox.checkState() == Qt.Checked
         )
-        self.new_prefs[cfg.KEY_SET_AUTHOR] = (
-            self.author_checkbox.checkState() == Qt.Checked
-        )
-        self.new_prefs[cfg.KEY_USE_AUTHOR_SORT] = (
+        new_prefs[cfg.KEY_SET_AUTHOR] = self.author_checkbox.checkState() == Qt.Checked
+        new_prefs[cfg.KEY_USE_AUTHOR_SORT] = (
             self.author_sort_checkbox.checkState() == Qt.Checked
         )
-        self.new_prefs[cfg.KEY_SET_DESCRIPTION] = (
+        new_prefs[cfg.KEY_SET_DESCRIPTION] = (
             self.description_checkbox.checkState() == Qt.Checked
         )
-        self.new_prefs[cfg.KEY_DESCRIPTION_USE_TEMPLATE] = (
+        new_prefs[cfg.KEY_DESCRIPTION_USE_TEMPLATE] = (
             self.description_use_template_checkbox.checkState() == Qt.Checked
         )
-        self.new_prefs[cfg.KEY_DESCRIPTION_TEMPLATE] = (
+        new_prefs[cfg.KEY_DESCRIPTION_TEMPLATE] = (
             self.description_template_edit.template
         )
-        self.new_prefs[cfg.KEY_SET_PUBLISHER] = (
+        new_prefs[cfg.KEY_SET_PUBLISHER] = (
             self.publisher_checkbox.checkState() == Qt.Checked
         )
-        self.new_prefs[cfg.KEY_SET_PUBLISHED_DATE] = (
+        new_prefs[cfg.KEY_SET_PUBLISHED_DATE] = (
             self.published_checkbox.checkState() == Qt.Checked
         )
-        self.new_prefs[cfg.KEY_SET_ISBN] = self.isbn_checkbox.checkState() == Qt.Checked
-        self.new_prefs[cfg.KEY_SET_RATING] = (
-            self.rating_checkbox.checkState() == Qt.Checked
-        )
-        self.new_prefs[cfg.KEY_SET_SERIES] = (
-            self.series_checkbox.checkState() == Qt.Checked
-        )
-        self.new_prefs[cfg.KEY_USE_PLUGBOARD] = (
+        new_prefs[cfg.KEY_SET_ISBN] = self.isbn_checkbox.checkState() == Qt.Checked
+        new_prefs[cfg.KEY_SET_RATING] = self.rating_checkbox.checkState() == Qt.Checked
+        new_prefs[cfg.KEY_SET_SERIES] = self.series_checkbox.checkState() == Qt.Checked
+        new_prefs[cfg.KEY_USE_PLUGBOARD] = (
             self.use_plugboard_checkbox.checkState() == Qt.Checked
         )
-        self.new_prefs[cfg.KEY_SET_LANGUAGE] = (
+        new_prefs[cfg.KEY_SET_LANGUAGE] = (
             self.language_checkbox.checkState() == Qt.Checked
         )
-        self.new_prefs[cfg.KEY_UDPATE_KOBO_EPUBS] = (
+        new_prefs[cfg.KEY_UDPATE_KOBO_EPUBS] = (
             self.update_kepubs_checkbox.checkState() == Qt.Checked
         )
-        self.new_prefs[cfg.KEY_SET_SUBTITLE] = (
+        new_prefs[cfg.KEY_SET_SUBTITLE] = (
             self.subtitle_checkbox.checkState() == Qt.Checked
         )
-        self.new_prefs[cfg.KEY_SUBTITLE_TEMPLATE] = self.subtitle_template_edit.template
-        self.new_prefs[cfg.KEY_SET_READING_DIRECTION] = (
+        new_prefs[cfg.KEY_SUBTITLE_TEMPLATE] = self.subtitle_template_edit.template
+        new_prefs[cfg.KEY_SET_READING_DIRECTION] = (
             self.reading_direction_checkbox.checkState() == Qt.Checked
         )
-        self.new_prefs[cfg.KEY_SYNC_DATE] = (
+        new_prefs[cfg.KEY_SYNC_DATE] = (
             self.date_added_checkbox.checkState() == Qt.Checked
         )
 
         if (
-            self.new_prefs[cfg.KEY_DESCRIPTION_USE_TEMPLATE]
+            new_prefs[cfg.KEY_DESCRIPTION_USE_TEMPLATE]
             and not self.description_template_edit.validate()
         ):
             return False
 
         if (
-            self.new_prefs[cfg.KEY_SET_SUBTITLE]
+            new_prefs[cfg.KEY_SET_SUBTITLE]
             and not self.subtitle_template_edit.validate()
         ):
             return False
 
-        if self.new_prefs[cfg.KEY_SET_READING_DIRECTION]:
-            self.new_prefs[cfg.KEY_READING_DIRECTION] = READING_DIRECTIONS[
+        if new_prefs[cfg.KEY_SET_READING_DIRECTION]:
+            new_prefs[cfg.KEY_READING_DIRECTION] = READING_DIRECTIONS[
                 str(self.reading_direction_combo.currentText()).strip()
             ]
 
-        if self.new_prefs[cfg.KEY_SYNC_DATE]:
-            self.new_prefs[cfg.KEY_SYNC_DATE_COLUMN] = (
+        if new_prefs[cfg.KEY_SYNC_DATE]:
+            new_prefs[cfg.KEY_SYNC_DATE_COLUMN] = (
                 self.date_added_column_combo.get_selected_column()
             )
 
-        self.new_prefs[cfg.KEY_SET_READING_STATUS] = (
+        new_prefs[cfg.KEY_SET_READING_STATUS] = (
             self.readingStatusGroupBox.readingStatusIsChecked()
         )
         if self.readingStatusGroupBox.readingStatusIsChecked():
-            self.new_prefs[cfg.KEY_READING_STATUS] = (
+            new_prefs[cfg.KEY_READING_STATUS] = (
                 self.readingStatusGroupBox.readingStatus()
             )
-            if self.new_prefs["readingStatus"] < 0:
+            if new_prefs["readingStatus"] < 0:
                 return error_dialog(
                     self,
                     "No reading status option selected",
@@ -1254,23 +1250,25 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
                     show=True,
                     show_copy_button=False,
                 )
-            self.new_prefs[cfg.KEY_RESET_POSITION] = (
+            new_prefs[cfg.KEY_RESET_POSITION] = (
                 self.readingStatusGroupBox.reset_position_checkbox.checkState()
                 == Qt.Checked
             )
 
+        self.new_prefs = new_prefs
+
         # Only if the user has checked at least one option will we continue
-        for key in self.new_prefs:
+        for key in new_prefs:
             debug_print(
-                "UpdateMetadataOptionsDialog:ok_clicked - key='%s' self.new_prefs[key]=%s"
-                % (key, self.new_prefs[key])
+                "UpdateMetadataOptionsDialog:ok_clicked - key='%s' new_prefs[key]=%s"
+                % (key, new_prefs[key])
             )
             if (
-                self.new_prefs[key]
+                new_prefs[key]
                 and not key == cfg.KEY_READING_STATUS
                 and not key == cfg.KEY_USE_PLUGBOARD
             ):
-                cfg.plugin_prefs[cfg.METADATA_OPTIONS_STORE_NAME] = self.new_prefs
+                cfg.plugin_prefs[cfg.METADATA_OPTIONS_STORE_NAME] = new_prefs
                 self.accept()
                 return
         return error_dialog(
@@ -1355,6 +1353,7 @@ class GetShelvesFromDeviceDialog(SizePersistedDialog):
         )
         self.plugin_action = plugin_action
         self.help_anchor = "GetShelvesFromDevice"
+        self.options = cfg.GET_SHELVES_OPTIONS_DEFAULTS
 
         self.initialize_controls()
 
@@ -1445,19 +1444,17 @@ class GetShelvesFromDeviceDialog(SizePersistedDialog):
         return available_columns
 
     def ok_clicked(self):
-        self.options = {}
-        self.options = cfg.GET_SHELVES_OPTIONS_DEFAULTS
-        self.options[cfg.KEY_SHELVES_CUSTOM_COLUMN] = (
+        options = cfg.GET_SHELVES_OPTIONS_DEFAULTS
+        options[cfg.KEY_SHELVES_CUSTOM_COLUMN] = (
             self.shelf_column_combo.get_selected_column()
         )
-        self.options[cfg.KEY_ALL_BOOKS] = (
-            self.all_books_checkbox.checkState() == Qt.Checked
-        )
-        self.options[cfg.KEY_REPLACE_SHELVES] = (
+        options[cfg.KEY_ALL_BOOKS] = self.all_books_checkbox.checkState() == Qt.Checked
+        options[cfg.KEY_REPLACE_SHELVES] = (
             self.replace_shelves_checkbox.checkState() == Qt.Checked
         )
+        self.options = options
 
-        if not self.options[cfg.KEY_SHELVES_CUSTOM_COLUMN]:
+        if not options[cfg.KEY_SHELVES_CUSTOM_COLUMN]:
             return error_dialog(
                 self,
                 _("No shelf column selected"),
@@ -1466,7 +1463,7 @@ class GetShelvesFromDeviceDialog(SizePersistedDialog):
                 show_copy_button=False,
             )
 
-        cfg.plugin_prefs[cfg.GET_SHELVES_OPTIONS_STORE_NAME] = self.options
+        cfg.plugin_prefs[cfg.GET_SHELVES_OPTIONS_STORE_NAME] = options
         self.accept()
         return
 
@@ -1478,6 +1475,7 @@ class BookmarkOptionsDialog(SizePersistedDialog):
         )
         self.plugin_action = plugin_action
         self.help_anchor = "StoreCurrentBookmark"
+        self.options = {}
 
         # Set some default values from last time dialog was used.
         c = cfg.plugin_prefs[cfg.BOOKMARK_OPTIONS_STORE_NAME]
@@ -1690,9 +1688,9 @@ class BookmarkOptionsDialog(SizePersistedDialog):
         )
         cfg.plugin_prefs[cfg.BOOKMARK_OPTIONS_STORE_NAME] = new_prefs
         new_prefs["profileName"] = str(profile_name)
+        if new_prefs[cfg.KEY_DO_NOT_STORE_IF_REOPENED]:
+            new_prefs[cfg.KEY_CLEAR_IF_UNREAD] = False
         self.options = new_prefs
-        if self.options[cfg.KEY_DO_NOT_STORE_IF_REOPENED]:
-            self.options[cfg.KEY_CLEAR_IF_UNREAD] = False
         self.accept()
 
     def do_not_store_if_reopened_checkbox_clicked(self, checked):
@@ -2204,6 +2202,7 @@ class BlockAnalyticsOptionsDialog(SizePersistedDialog):
         )
         self.plugin_action = plugin_action
         self.help_anchor = "BlockAnalyticsEvents"
+        self.options = {}
 
         self.initialize_controls()
 
@@ -2248,17 +2247,18 @@ class BlockAnalyticsOptionsDialog(SizePersistedDialog):
         layout.addWidget(button_box)
 
     def ok_clicked(self):
-        self.options = {}
-        self.options[cfg.KEY_CREATE_ANALYTICSEVENTS_TRIGGER] = (
+        options = {}
+        options[cfg.KEY_CREATE_ANALYTICSEVENTS_TRIGGER] = (
             self.create_trigger_radiobutton.isChecked()
         )
-        self.options[cfg.KEY_DELETE_ANALYTICSEVENTS_TRIGGER] = (
+        options[cfg.KEY_DELETE_ANALYTICSEVENTS_TRIGGER] = (
             self.delete_trigger_radiobutton.isChecked()
         )
+        self.options = options
 
         # Only if the user has checked at least one option will we continue
-        for key in self.options:
-            if self.options[key]:
+        for key in options:
+            if options[key]:
                 self.accept()
                 return
         return error_dialog(
@@ -3324,6 +3324,7 @@ class ShowReadingPositionChangesDialog(SizePersistedDialog):
         self.block_events = True
         self.help_anchor = "ShowReadingPositionChanges"
         self.db = db
+        self.prefs = cfg.READING_POSITION_CHANGES_DEFAULTS
 
         assert self.plugin_action.device is not None
 
@@ -3417,16 +3418,17 @@ class ShowReadingPositionChangesDialog(SizePersistedDialog):
         layout.addWidget(button_box)
 
     def _ok_clicked(self):
-        self.prefs = cfg.READING_POSITION_CHANGES_DEFAULTS
-        self.prefs[cfg.KEY_SELECT_BOOKS_IN_LIBRARY] = (
+        prefs = cfg.READING_POSITION_CHANGES_DEFAULTS
+        prefs[cfg.KEY_SELECT_BOOKS_IN_LIBRARY] = (
             self.select_books_checkbox.checkState() == Qt.Checked
         )
-        self.prefs[cfg.KEY_UPDATE_GOODREADS_PROGRESS] = (
+        prefs[cfg.KEY_UPDATE_GOODREADS_PROGRESS] = (
             self.update_goodreads_progress_checkbox.checkState() == Qt.Checked
         )
 
         library_config = cfg.get_library_config(self.plugin_action.gui.current_db)
-        library_config[cfg.READING_POSITION_CHANGES_STORE_NAME] = self.prefs
+        library_config[cfg.READING_POSITION_CHANGES_STORE_NAME] = prefs
+        self.prefs = prefs
         cfg.set_library_config(self.plugin_action.gui.current_db, library_config)
 
         for i in range(len(self.reading_locations)):
@@ -3445,12 +3447,6 @@ class ShowReadingPositionChangesDialog(SizePersistedDialog):
                 del self.reading_locations[book_id]
         self.accept()
         return
-
-    def sort_by(self, name):
-        if name == "PubDate":
-            self.shelves = sorted(
-                self.shelves, key=lambda k: k.sort_key(sort_by_pubdate=True)
-            )
 
     def _select_all_clicked(self):
         self.reading_locations_table.toggle_checkmarks(Qt.Checked)
@@ -3969,6 +3965,7 @@ class OrderSeriesShelvesTableWidget(QTableWidget):
         QTableWidget.__init__(self, parent)
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.header_labels = [_("Shelf/Series Name"), _("Books on Shelf")]
+        self.shelves = {}
 
     def populate_table(self, shelves):
         self.clear()
@@ -4508,6 +4505,7 @@ class ToCBookListTableWidget(QTableWidget):
     def __init__(self, parent):
         QTableWidget.__init__(self, parent)
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.books = {}
 
     def populate_table(self, books):
         self.clear()

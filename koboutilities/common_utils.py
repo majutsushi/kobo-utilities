@@ -862,6 +862,11 @@ class ProgressBar(QDialog):
         self.progressBar.setValue(0)
         self.l.addWidget(self.progressBar)
 
+    def show_with_maximum(self, maximum_count):
+        self.set_maximum(maximum_count)
+        self.set_value(0)
+        self.show()
+
     def increment(self):
         self.progressBar.setValue(self.progressBar.value() + 1)
         self.refresh()

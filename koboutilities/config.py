@@ -1343,7 +1343,8 @@ class DevicesTab(QWidget):
         else:
             self.delete_device_btn.setEnabled(False)
 
-        self.rename_device_btn.setEnabled(self.devices_table.rowCount() > 1)
+        (device_info, is_connected) = self.devices_table.get_selected_device_info()
+        self.rename_device_btn.setEnabled(device_info is not None and is_connected)
 
         if self.individual_device_options:
             self.persist_devices_config()
@@ -1482,6 +1483,7 @@ class DevicesTab(QWidget):
             self.devices_table.itemSelectionChanged.connect(
                 self._devices_table_item_selection_changed
             )
+            self._devices_table_item_selection_changed()
 
     def toggle_backup_options_state(self, enabled):
         self.dest_directory_edit.setEnabled(enabled)

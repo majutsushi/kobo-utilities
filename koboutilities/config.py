@@ -1,5 +1,7 @@
 # vim:fileencoding=UTF-8:ts=4:sw=4:sta:et:sts=4:ai
 
+from __future__ import annotations
+
 __license__ = "GPL v3"
 __copyright__ = "2012-2022, David Forrester <davidfor@internode.on.net>"
 __docformat__ = "restructuredtext en"
@@ -7,7 +9,7 @@ __docformat__ = "restructuredtext en"
 import copy
 import traceback
 from functools import partial
-from typing import Any, Dict, Optional, cast
+from typing import TYPE_CHECKING, Any, Dict, Optional, cast
 
 from calibre.constants import DEBUG as _DEBUG
 from calibre.gui2 import choose_dir, error_dialog, open_url, question_dialog
@@ -48,6 +50,9 @@ from .common_utils import (
     debug_print,
     get_icon,
 )
+
+if TYPE_CHECKING:
+    from .action import KoboDevice, KoboUtilitiesAction
 
 # Support for CreateNewCustomColumn was added in 5.35.0
 try:
@@ -622,7 +627,7 @@ def set_library_config(db, library_config):
 
 
 class ProfilesTab(QWidget):
-    def __init__(self, parent_dialog, plugin_action):
+    def __init__(self, parent_dialog, plugin_action: KoboUtilitiesAction):
         self.parent_dialog = parent_dialog
         QWidget.__init__(self)
 
@@ -1169,7 +1174,7 @@ class ProfilesTab(QWidget):
 
 
 class DevicesTab(QWidget):
-    def __init__(self, parent_dialog, plugin_action):
+    def __init__(self, parent_dialog, plugin_action: KoboUtilitiesAction):
         self.current_device_info = None
         self.update_check_last_time = 0
 
@@ -1178,11 +1183,7 @@ class DevicesTab(QWidget):
 
         self.plugin_action = plugin_action
         self.gui = plugin_action.gui
-        self._connected_device_info = (
-            plugin_action.device.device_info
-            if plugin_action.device is not None
-            else None
-        )
+        self._connected_device = plugin_action.device
         self.library_config = get_library_config(self.gui.current_db)
 
         self.individual_device_options = get_plugin_pref(
@@ -1320,16 +1321,12 @@ class DevicesTab(QWidget):
 
     def on_device_connection_changed(self, is_connected):
         if not is_connected:
-            self._connected_device_info = None
+            self._connected_device = None
             self.update_from_connection_status()
 
     def on_device_metadata_available(self):
-        if self.plugin_action.have_kobo():
-            self._connected_device_info = (
-                self.gui.device_manager.get_current_device_information().get(
-                    "info", None
-                )
-            )
+        if self.plugin_action.device is not None:
+            self._connected_device = self.plugin_action.device
             self.update_from_connection_status()
 
     def _devices_table_item_selection_changed(self):
@@ -1354,15 +1351,15 @@ class DevicesTab(QWidget):
 
     def _add_device_clicked(self):
         devices = self.devices_table.get_data()
-        if self._connected_device_info is None:
-            debug_print("_add_device_clicked - self._connected_device_info is None")
+        if self._connected_device is None:
+            debug_print("_add_device_clicked - self._connected_device is None")
             return
 
-        drive_info = self._connected_device_info[4]
+        drive_info = self._connected_device.drive_info
         for location_info in drive_info.values():
             if location_info["location_code"] == "main":
                 new_device = {}
-                new_device["type"] = self._connected_device_info[0]
+                new_device["type"] = self._connected_device.device_type
                 new_device["active"] = True
                 new_device["uuid"] = location_info["device_store_uuid"]
                 new_device["name"] = location_info["device_name"]
@@ -1370,7 +1367,7 @@ class DevicesTab(QWidget):
                 new_device["serial_no"] = self.plugin_action.device_serial_no()
                 devices[new_device["uuid"]] = new_device
 
-        self.devices_table.populate_table(devices, self._connected_device_info)
+        self.devices_table.populate_table(devices, self._connected_device)
         self.update_from_connection_status(update_table=False)
         # Ensure the devices combo is refreshed for the current list
         self.parent_dialog.profiles_tab.refresh_current_profile_info()
@@ -1461,15 +1458,12 @@ class DevicesTab(QWidget):
         else:
             devices = self.devices_table.get_data()
 
-        if (
-            self._connected_device_info is None
-            or not self.plugin_action.device is not None
-        ):
+        if self._connected_device is None or self.plugin_action.device is None:
             self.add_device_btn.setEnabled(False)
         else:
             # Check to see whether we are connected to a device we already know about
             is_new_device = True
-            drive_info = self._connected_device_info[4]
+            drive_info = self._connected_device.drive_info
             if drive_info:
                 # This is a non iTunes device that we can check to see if we have the UUID for
                 device_uuid = drive_info["main"]["device_store_uuid"]
@@ -1477,12 +1471,12 @@ class DevicesTab(QWidget):
                     is_new_device = False
             else:
                 # This is a device without drive info like iTunes
-                device_type = self._connected_device_info[0]
+                device_type = self._connected_device.device_type
                 if device_type in devices:
                     is_new_device = False
             self.add_device_btn.setEnabled(is_new_device)
         if update_table:
-            self.devices_table.populate_table(devices, self._connected_device_info)
+            self.devices_table.populate_table(devices, self._connected_device)
             self.refresh_current_device_options()
         if first_time:
             self.devices_table.itemSelectionChanged.connect(
@@ -1664,14 +1658,14 @@ class BoolColumnComboBox(NoWheelComboBox):
 class DevicesTableWidget(QTableWidget):
     def __init__(self, parent):
         QTableWidget.__init__(self, parent)
-        self.plugin_action = parent.plugin_action
+        self.plugin_action: KoboUtilitiesAction = parent.plugin_action
         self.setSortingEnabled(False)
         self.setAlternatingRowColors(True)
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.setSelectionMode(QAbstractItemView.SingleSelection)
         self.setMinimumSize(380, 0)
 
-    def populate_table(self, devices, connected_device_info):
+    def populate_table(self, devices, connected_device: Optional[KoboDevice]):
         self.clear()
         self.setRowCount(len(devices))
         header_labels = [
@@ -1689,7 +1683,7 @@ class DevicesTableWidget(QTableWidget):
         self.setIconSize(QSize(32, 32))
 
         for row, uuid in enumerate(devices.keys()):
-            self.populate_table_row(row, devices[uuid], connected_device_info)
+            self.populate_table_row(row, devices[uuid], connected_device)
 
         self.resizeColumnsToContents()
         self.setMinimumColumnWidth(1, 100)
@@ -1699,7 +1693,9 @@ class DevicesTableWidget(QTableWidget):
         if self.columnWidth(col) < minimum:
             self.setColumnWidth(col, minimum)
 
-    def populate_table_row(self, row, device_config, connected_device_info):
+    def populate_table_row(
+        self, row, device_config, connected_device: Optional[KoboDevice]
+    ):
         debug_print(
             "DevicesTableWidget:populate_table_row - device_config:", device_config
         )
@@ -1707,13 +1703,13 @@ class DevicesTableWidget(QTableWidget):
         device_uuid = device_config["uuid"]
         device_icon = "reader.png"
         is_connected = False
-        if connected_device_info is not None and self.plugin_action.device is not None:
+        if connected_device is not None and self.plugin_action.device is not None:
             debug_print(
-                "DevicesTableWidget:populate_table_row - connected_device_info:",
-                connected_device_info,
+                "DevicesTableWidget:populate_table_row - connected_device:",
+                connected_device,
             )
-            if device_type == connected_device_info[0]:
-                drive_info = connected_device_info[4]
+            if device_type == connected_device.device_type:
+                drive_info = connected_device.drive_info
                 if not drive_info:
                     is_connected = False
                 else:
@@ -1775,7 +1771,7 @@ class DevicesTableWidget(QTableWidget):
 
 
 class OtherTab(QWidget):
-    def __init__(self, parent_dialog):
+    def __init__(self, parent_dialog: ConfigWidget):
         self.parent_dialog = parent_dialog
         QWidget.__init__(self)
         layout = QVBoxLayout()
@@ -1844,7 +1840,7 @@ class OtherTab(QWidget):
 
 
 class ConfigWidget(QWidget):
-    def __init__(self, plugin_action):
+    def __init__(self, plugin_action: KoboUtilitiesAction):
         debug_print("ConfigWidget - Initializing...")
         QWidget.__init__(self)
         self.plugin_action = plugin_action

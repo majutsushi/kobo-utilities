@@ -115,7 +115,7 @@ exclude = ["**/__pycache__"]
 extraPaths = ["../calibre/src", "calibre-repo/src"]
 ignore = ["../calibre/src", "calibre-repo/src"]
 pythonVersion = "3.8"
-reportImportCycles = "warning"
+# reportImportCycles = "warning"
 
 # Individual strict checks
 strictListInference = true

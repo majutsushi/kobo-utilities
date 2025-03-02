@@ -358,7 +358,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
         self.rebuild_menus()
 
-    def rebuild_menus(self):
+    def rebuild_menus(self) -> None:
         with self.menus_lock:
             # Show the config dialog
             # The config dialog can also be shown from within
@@ -2676,8 +2676,9 @@ class KoboUtilitiesAction(InterfaceAction):
             # No device actually connected or it isn't ready
             return None
         connected_device_info = current_device_information.get("info", None)
+        debug_print("KoboUtilities:get_device - device_info:", connected_device_info)
+        device_type = connected_device_info[0]
         drive_info = connected_device_info[4]
-        debug_print("KoboUtilities:get_device - drive_info:", drive_info)
         library_db = self.gui.library_view.model().db
         device_uuid = drive_info["main"]["device_store_uuid"]
         current_device_profile = cfg.get_book_profile_for_device(
@@ -2724,7 +2725,8 @@ class KoboUtilitiesAction(InterfaceAction):
             isinstance(device, KOBOTOUCH),
             current_device_profile,
             current_backup_config,
-            connected_device_info,
+            device_type,
+            drive_info,
             device_uuid,
             version_info,
             supports_series,
@@ -7684,7 +7686,8 @@ class KoboDevice:
     is_kobotouch: bool
     profile: Optional[Dict]
     backup_config: Dict
-    device_info: List[str]
+    device_type: str
+    drive_info: Dict[str, Dict[str, str]]
     uuid: str
     version_info: Optional[KoboVersionInfo]
     supports_series: bool

@@ -1,5 +1,7 @@
 # vim:fileencoding=UTF-8:ts=4:sw=4:sta:et:sts=4:ai
 
+from __future__ import annotations
+
 __license__ = "GPL v3"
 __copyright__ = "2012-2020, David Forrester <davidfor@internode.on.net>"
 __docformat__ = "restructuredtext en"
@@ -9,7 +11,7 @@ from configparser import ConfigParser
 from datetime import datetime
 from functools import partial
 from types import MappingProxyType
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 from urllib.parse import quote_plus
 
 from calibre.ebooks.metadata import authors_to_string
@@ -76,6 +78,9 @@ from .common_utils import (
     debug_print,
     get_icon,
 )
+
+if TYPE_CHECKING:
+    from .action import KoboUtilitiesAction
 
 # Checked with FW2.5.2
 LINE_SPACINGS = [1.3, 1.35, 1.4, 1.6, 1.775, 1.9, 2, 2.2, 3]
@@ -234,7 +239,7 @@ KEY_REMOVE_ANNOT_SELECTED = 4
 load_translations()
 
 
-def have_rating_column(plugin_action):
+def have_rating_column(plugin_action: KoboUtilitiesAction):
     rating_column = plugin_action.get_rating_column()
     return rating_column != ""
 
@@ -250,7 +255,9 @@ class AuthorTableWidgetItem(ReadOnlyTableWidgetItem):
 
 
 class QueueProgressDialog(QProgressDialog):
-    def __init__(self, gui, books, options, queue, db, plugin_action):
+    def __init__(
+        self, gui, books, options, queue, db, plugin_action: KoboUtilitiesAction
+    ):
         QProgressDialog.__init__(self, "", "", 0, len(books), gui)
         debug_print("QueueProgressDialog::__init__")
         self.setMinimumWidth(500)
@@ -491,7 +498,9 @@ class QueueProgressDialog(QProgressDialog):
 
 
 class ReaderOptionsDialog(SizePersistedDialog):
-    def __init__(self, parent, plugin_action, contentID: Optional[str]):
+    def __init__(
+        self, parent, plugin_action: KoboUtilitiesAction, contentID: Optional[str]
+    ):
         SizePersistedDialog.__init__(
             self, parent, "kobo utilities plugin:reader font settings dialog"
         )
@@ -867,7 +876,7 @@ class ReaderOptionsDialog(SizePersistedDialog):
 
 
 class UpdateMetadataOptionsDialog(SizePersistedDialog):
-    def __init__(self, parent, plugin_action, book):
+    def __init__(self, parent, plugin_action: KoboUtilitiesAction, book):
         SizePersistedDialog.__init__(
             self, parent, "kobo utilities plugin:update metadata settings dialog"
         )
@@ -1346,7 +1355,7 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
 
 
 class GetShelvesFromDeviceDialog(SizePersistedDialog):
-    def __init__(self, parent, plugin_action):
+    def __init__(self, parent, plugin_action: KoboUtilitiesAction):
         SizePersistedDialog.__init__(
             self,
             parent,
@@ -1470,7 +1479,7 @@ class GetShelvesFromDeviceDialog(SizePersistedDialog):
 
 
 class BookmarkOptionsDialog(SizePersistedDialog):
-    def __init__(self, parent, plugin_action):
+    def __init__(self, parent, plugin_action: KoboUtilitiesAction):
         SizePersistedDialog.__init__(
             self, parent, "kobo utilities plugin:bookmark options dialog"
         )
@@ -1722,7 +1731,7 @@ class BookmarkOptionsDialog(SizePersistedDialog):
 
 
 class ChangeReadingStatusOptionsDialog(SizePersistedDialog):
-    def __init__(self, parent, plugin_action):
+    def __init__(self, parent, plugin_action: KoboUtilitiesAction):
         SizePersistedDialog.__init__(
             self, parent, "kobo utilities plugin:change reading status settings dialog"
         )
@@ -1791,7 +1800,7 @@ class ChangeReadingStatusOptionsDialog(SizePersistedDialog):
 
 
 class BackupAnnotationsOptionsDialog(SizePersistedDialog):
-    def __init__(self, parent, plugin_action):
+    def __init__(self, parent, plugin_action: KoboUtilitiesAction):
         SizePersistedDialog.__init__(
             self,
             parent,
@@ -1868,7 +1877,7 @@ class BackupAnnotationsOptionsDialog(SizePersistedDialog):
 
 
 class RemoveAnnotationsOptionsDialog(SizePersistedDialog):
-    def __init__(self, parent, plugin_action):
+    def __init__(self, parent, plugin_action: KoboUtilitiesAction):
         SizePersistedDialog.__init__(
             self,
             parent,
@@ -1964,7 +1973,7 @@ class RemoveAnnotationsOptionsDialog(SizePersistedDialog):
 
 
 class CoverUploadOptionsDialog(SizePersistedDialog):
-    def __init__(self, parent, plugin_action):
+    def __init__(self, parent, plugin_action: KoboUtilitiesAction):
         SizePersistedDialog.__init__(
             self, parent, "kobo utilities plugin:cover upload settings dialog"
         )
@@ -2124,7 +2133,7 @@ class CoverUploadOptionsDialog(SizePersistedDialog):
 
 
 class RemoveCoverOptionsDialog(SizePersistedDialog):
-    def __init__(self, parent, plugin_action):
+    def __init__(self, parent, plugin_action: KoboUtilitiesAction):
         SizePersistedDialog.__init__(
             self, parent, "kobo utilities plugin:remove cover settings dialog"
         )
@@ -2198,7 +2207,7 @@ class RemoveCoverOptionsDialog(SizePersistedDialog):
 
 
 class BlockAnalyticsOptionsDialog(SizePersistedDialog):
-    def __init__(self, parent, plugin_action):
+    def __init__(self, parent, plugin_action: KoboUtilitiesAction):
         SizePersistedDialog.__init__(
             self, parent, "kobo utilities plugin:block analytics settings dialog"
         )
@@ -2273,7 +2282,7 @@ class BlockAnalyticsOptionsDialog(SizePersistedDialog):
 
 
 class CleanImagesDirOptionsDialog(SizePersistedDialog):
-    def __init__(self, parent, plugin_action):
+    def __init__(self, parent, plugin_action: KoboUtilitiesAction):
         SizePersistedDialog.__init__(
             self, parent, "kobo utilities plugin:clean images dir settings dialog"
         )
@@ -2655,7 +2664,14 @@ class SeriesTableWidget(QTableWidget):
 
 
 class ManageSeriesDeviceDialog(SizePersistedDialog):
-    def __init__(self, parent, plugin_action, books, all_series, series_columns):
+    def __init__(
+        self,
+        parent,
+        plugin_action: KoboUtilitiesAction,
+        books,
+        all_series,
+        series_columns,
+    ):
         SizePersistedDialog.__init__(
             self, parent, "kobo utilities plugin:series dialog"
         )
@@ -3311,7 +3327,7 @@ class ShowReadingPositionChangesDialog(SizePersistedDialog):
     def __init__(
         self,
         parent,
-        plugin_action,
+        plugin_action: KoboUtilitiesAction,
         reading_locations,
         db,
         profileName,
@@ -3587,7 +3603,7 @@ class ShowReadingPositionChangesTableWidget(QTableWidget):
 
 
 class FixDuplicateShelvesDialog(SizePersistedDialog):
-    def __init__(self, parent, plugin_action, shelves):
+    def __init__(self, parent, plugin_action: KoboUtilitiesAction, shelves):
         SizePersistedDialog.__init__(
             self,
             parent,
@@ -3753,7 +3769,7 @@ class DuplicateShelvesInDeviceDatabaseTableWidget(QTableWidget):
 
 
 class OrderSeriesShelvesDialog(SizePersistedDialog):
-    def __init__(self, parent, plugin_action, shelves):
+    def __init__(self, parent, plugin_action: KoboUtilitiesAction, shelves):
         super(OrderSeriesShelvesDialog, self).__init__(
             parent, "kobo utilities plugin:order series shelves dialog"
         )
@@ -4028,7 +4044,7 @@ class OrderSeriesShelvesTableWidget(QTableWidget):
 
 
 class SetRelatedBooksDialog(SizePersistedDialog):
-    def __init__(self, parent, plugin_action, related_types):
+    def __init__(self, parent, plugin_action: KoboUtilitiesAction, related_types):
         SizePersistedDialog.__init__(
             self, parent, "kobo utilities plugin:set related books dialog"
         )
@@ -4322,7 +4338,7 @@ class TemplateConfig(QWidget):  # {{{
 
 
 class UpdateBooksToCDialog(SizePersistedDialog):
-    def __init__(self, parent, plugin_action, icon, books):
+    def __init__(self, parent, plugin_action: KoboUtilitiesAction, icon, books):
         del icon
         super(UpdateBooksToCDialog, self).__init__(
             parent,

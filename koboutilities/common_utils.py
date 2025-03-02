@@ -1,5 +1,7 @@
 # vim:fileencoding=UTF-8:ts=4:sw=4:sta:et:sts=4:ai
 
+from __future__ import annotations
+
 __license__ = "GPL v3"
 __copyright__ = "2011, Grant Drake <grant.drake@gmail.com>, 2012-2022 updates by David Forrester <davidfor@internode.on.net>"
 __docformat__ = "restructuredtext en"
@@ -7,7 +9,7 @@ __docformat__ = "restructuredtext en"
 import os
 import time
 from datetime import datetime
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from calibre import prints
 from calibre.constants import DEBUG, iswindows
@@ -44,6 +46,9 @@ from qt.core import (
     QTextEdit,
     QVBoxLayout,
 )
+
+if TYPE_CHECKING:
+    from .action import KoboUtilitiesAction
 
 MIMETYPE_KOBO = "application/x-kobo-epub+zip"
 
@@ -412,7 +417,12 @@ class SizePersistedDialog(QDialog):
     restored when they are next opened.
     """
 
-    def __init__(self, parent, unique_pref_name, plugin_action=None):
+    def __init__(
+        self,
+        parent,
+        unique_pref_name,
+        plugin_action: Optional[KoboUtilitiesAction] = None,
+    ):
         super(SizePersistedDialog, self).__init__(parent)
         self.unique_pref_name = unique_pref_name
         self.geom = gprefs.get(unique_pref_name, None)

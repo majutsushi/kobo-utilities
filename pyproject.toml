@@ -107,6 +107,9 @@ unfixable = [
   "F841",
 ]
 
+[tool.ruff.lint.isort]
+required-imports = ["from __future__ import annotations"]
+
 # https://github.com/microsoft/pyright/blob/main/docs/configuration.md
 [tool.pyright]
 typeCheckingMode = "standard"

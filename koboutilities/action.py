@@ -378,7 +378,6 @@ class KoboUtilitiesAction(InterfaceAction):
             self.library_actions_map = []
             self.no_device_actions_map = []
 
-            self.device = self.get_device()
             device = self.device
             debug_print(
                 "rebuild_menus - device.supports_ratings=%s"
@@ -2664,7 +2663,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
         version_info = None
         device_version_info = device.device_version_info()
-        if device_version_info is not None:
+        if device_version_info:
             serial_no, _, fw_version, _, _, model_id = device_version_info
             version_info = KoboVersionInfo(serial_no, fw_version, model_id)
 

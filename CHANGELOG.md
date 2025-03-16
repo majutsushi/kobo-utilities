@@ -1,5 +1,13 @@
 # Changelog
 
+## Version 2.19.0 - 2025-03-16
+
+- Removed support for modifying home tiles
+  as it is not supported in current firmware versions
+- Fixed an issue that prevented device rename and delete buttons from being
+  enabled when only one device was registered
+- Fixed a potential exception when ejecting devices
+
 ## Version 2.18.4 - 27 Feb 2025
 
 - Fix "attribute not found" error when displaying reading position changes dialog

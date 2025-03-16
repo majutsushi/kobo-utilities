@@ -614,7 +614,7 @@ def get_profile_names(db, exclude_auto=True):
 
 def get_device_name(device_uuid: str, default_name: str = _("(Unknown device)")) -> str:
     device = get_device_config(device_uuid)
-    return cast(str, device["name"]) if device else default_name
+    return cast("str", device["name"]) if device else default_name
 
 
 def get_device_config(device_uuid) -> Optional[Dict]:

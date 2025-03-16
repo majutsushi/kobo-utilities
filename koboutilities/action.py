@@ -1,4 +1,5 @@
 # vim:fileencoding=UTF-8:ts=4:sw=4:sta:et:sts=4:ai
+from __future__ import annotations
 
 __license__ = "GPL v3"
 __copyright__ = "2012-2017, David Forrester <davidfor@internode.on.net>"
@@ -2740,7 +2741,7 @@ class KoboUtilitiesAction(InterfaceAction):
     @property
     def device_fwversion(self) -> Optional[Tuple[int, int, int]]:
         if self.device is not None:
-            return cast(Tuple[int, int, int], self.device.device.fwversion)
+            return cast("Tuple[int, int, int]", self.device.device.fwversion)
         return None
 
     def get_device_path_from_id(self, book_id):
@@ -3694,7 +3695,7 @@ class KoboUtilitiesAction(InterfaceAction):
                                     cfg.KEY_COVERS_LETTERBOX
                                 ],
                                 letterbox_color=cast(
-                                    str, self.options[cfg.KEY_COVERS_LETTERBOX_COLOR]
+                                    "str", self.options[cfg.KEY_COVERS_LETTERBOX_COLOR]
                                 ),
                                 png_covers=self.options[cfg.KEY_COVERS_PNG],
                             )

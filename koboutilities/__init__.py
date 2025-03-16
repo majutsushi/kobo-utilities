@@ -1,4 +1,5 @@
 # vim:fileencoding=UTF-8:ts=4:sw=4:sta:et:sts=4:ai
+from __future__ import annotations
 
 __license__ = "GPL v3"
 __copyright__ = "2013-2020, David Forrester <davidfor@internode.on.net>"

@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 2.19.1 - 2025-03-17
+
+- Fixed error when using epub files instead of kepub
+
 ## Version 2.19.0 - 2025-03-16
 
 - Removed support for modifying home tiles

@@ -1,3 +1,12 @@
+[project]
+name = "kobo-utilities"
+# Unused, see koboutilities/__init__.py
+version = "0.1.0"
+description = "A Calibre plugin providing additional functionality for Kobo eReaders"
+readme = "README.md"
+requires-python = "==3.8.5"
+dependencies = ["apsw==3.43.0"]
+
 [tool.ruff]
 line-length = 88
 builtins = ["_", "I", "P", "load_translations", "get_resources", "get_icons"]

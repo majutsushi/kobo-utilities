@@ -1,0 +1,31 @@
+version = 1
+revision = 1
+requires-python = "==3.8.5"
+
+[[package]]
+name = "apsw"
+version = "3.43.0.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/df/7c/ad6c4cd1afbd1180dd8d6aeb41eed01801c28ba3ba04eb360117d1587031/apsw-3.43.0.0.tar.gz", hash = "sha256:81d7db94047d8de91192b5ddac833f9ad131760d98fc478ab805965309d4a7d9", size = 386807 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f4/34/91f329433f092ffc2c4c2a07ed64feca1da5bc5c2653b39fd6b0a06ad989/apsw-3.43.0.0-cp38-cp38-macosx_10_9_universal2.whl", hash = "sha256:e4d2a2f56ee5c65f58ebde7e3441d09f625509afe8dc49654fc201e851ac147f", size = 2372022 },
+    { url = "https://files.pythonhosted.org/packages/36/b3/ae15b3d1cdf96f04641dd443b31040ea98505921e7835075c2052c8089a2/apsw-3.43.0.0-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:7859b20bccd318572920af7d002018a914a56c6edf4ec6869fcec56981512cd2", size = 1324850 },
+    { url = "https://files.pythonhosted.org/packages/09/41/d82c3f8f3d2dfa1f9940f1b8da0099a344a3a4f83950dc6161b10207e039/apsw-3.43.0.0-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:a7bb12f9bf8eaae2a42bb782bf40db165a85833068f1e956b066dc17f43ed5cc", size = 1245476 },
+    { url = "https://files.pythonhosted.org/packages/24/41/5a0492e9a4dc525a8b942135c6516d449ca040c3c6afa6ceff1895f224f4/apsw-3.43.0.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:708a79012b129ee9247db369375f9438fd091fe74be24618f97ff3d6d6965cb8", size = 4978407 },
+    { url = "https://files.pythonhosted.org/packages/ee/d1/671d64af18b5282bf941e314898812a07903fd6f980b43ed1eb21fcfd347/apsw-3.43.0.0-cp38-cp38-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:af6903a760906ae92b1622b42b05534e9ef5b47dc39faed0c3c60d7facdfa993", size = 4858168 },
+    { url = "https://files.pythonhosted.org/packages/09/49/b63c492b6c97ab669cd743b80bd123427c2176efc7dfa1cd9197398e232d/apsw-3.43.0.0-cp38-cp38-musllinux_1_1_i686.whl", hash = "sha256:42682b8da1404ab4d3aa62714d1c939239d3752c3b29c1b2ac6c35cc9544a498", size = 4811848 },
+    { url = "https://files.pythonhosted.org/packages/01/0f/7ca66ffe610222c18c43599cc3b0fb7bb2ac2cfc0592fd06a323301b20a4/apsw-3.43.0.0-cp38-cp38-musllinux_1_1_x86_64.whl", hash = "sha256:cde8086a0c6ec316b2b7a4f0f612b5a3b9982010ed56d5ec265b649180058ae9", size = 4944170 },
+    { url = "https://files.pythonhosted.org/packages/ad/88/4f959d4f4089d0fc2fe81a899d011db3562c00f937f847bf19e27440ffce/apsw-3.43.0.0-cp38-cp38-win32.whl", hash = "sha256:0c5de6484491d9d9e0272f56db66b6fdf19ffa2da1ce1783066ab2b31c899a8d", size = 995074 },
+    { url = "https://files.pythonhosted.org/packages/5e/46/6ddf3016b60f4e1a1e241c8599e701b367355066906c657f0d998b9ef115/apsw-3.43.0.0-cp38-cp38-win_amd64.whl", hash = "sha256:cf4b34aff6761b1e476e4afbb4ffc11e09e948d57f256bf83dd2fc26d15fcf5a", size = 1171513 },
+]
+
+[[package]]
+name = "kobo-utilities"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "apsw" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "apsw", specifier = "==3.43.0" }]

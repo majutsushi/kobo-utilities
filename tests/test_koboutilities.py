@@ -1,4 +1,5 @@
 # ruff: noqa: INP001, PT009
+from __future__ import annotations
 
 import dataclasses
 import os
@@ -194,7 +195,7 @@ class TestKoboUtilities(unittest.TestCase):
             supports_series=True,
             supports_series_list=True,
             supports_ratings=True,
-            epub_location_like_kepub=True,
+            epub_location_like_kepub=False,
             name="test-device",
             path="/",
         )
@@ -227,7 +228,7 @@ class TestKoboUtilities(unittest.TestCase):
             last_read=dt(2000, 1, 2, 12, 34, 56, tzinfo=timezone(timedelta(hours=0))),
             time_spent_reading=300,
             rest_of_book_estimate=400,
-            is_kepub=True,
+            is_kepub=False,
         )
         books_in_calibre = [
             (
@@ -296,7 +297,7 @@ class TestKoboUtilities(unittest.TestCase):
             config.KEY_LAST_READ_CUSTOM_COLUMN: "#last_read",
             config.KEY_TIME_SPENT_READING_COLUMN: "#time_spent_reading",
             config.KEY_REST_OF_BOOK_ESTIMATE_COLUMN: "#rest_of_book_estimate",
-            "epub_location_like_kepub": True,
+            "epub_location_like_kepub": False,
             "fetch_queries": {
                 "kepub": action.KEPUB_FETCH_QUERY,
                 "epub": action.EPUB_FETCH_QUERY,
@@ -355,7 +356,7 @@ class TestKoboUtilities(unittest.TestCase):
             last_read=None,
             time_spent_reading=100,
             rest_of_book_estimate=200,
-            is_kepub=True,
+            is_kepub=False,
         )
         books = [book1, book2, book3]
 
@@ -420,6 +421,7 @@ class TestKoboUtilities(unittest.TestCase):
         db_book2["Rating"] = int(book2.rating / 2)
         db_book2["FirstTimeReading"] = "false"
         db_book3 = device_books_before[book3.contentID]
+        db_book3["ChapterIDBookmarked"] = None
         db_book3["DateLastRead"] = None
         db_book3["TimeSpentReading"] = 0
         db_book3["RestOfBookEstimate"] = 0

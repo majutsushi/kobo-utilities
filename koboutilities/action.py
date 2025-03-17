@@ -3189,6 +3189,7 @@ class KoboUtilitiesAction(InterfaceAction):
         return rating_column
 
     def _update_database_columns(self, reading_locations):
+        assert self.device is not None
         debug_print("_update_database_columns - reading_locations=", reading_locations)
         debug_print(
             "_update_database_columns - start number of reading_locations= %d"
@@ -3284,7 +3285,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 )
                 if (
                     reading_location["MimeType"] == MIMETYPE_KOBO
-                    or self.epub_location_like_kepub
+                    or self.device.epub_location_like_kepub
                 ):
                     kobo_chapteridbookmarked = reading_location["ChapterIDBookmarked"]
                     kobo_adobe_location = None
@@ -5341,6 +5342,7 @@ class KoboUtilitiesAction(InterfaceAction):
         return rendered_comments
 
     def _store_current_bookmark(self, books, options=None):
+        assert self.device is not None
         if options:
             self.options = options
 
@@ -5523,7 +5525,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
                         if (
                             result["MimeType"] == MIMETYPE_KOBO
-                            or self.epub_location_like_kepub
+                            or self.device.epub_location_like_kepub
                         ):
                             kobo_chapteridbookmarked = result["ChapterIDBookmarked"]
                             kobo_adobe_location = None
@@ -5931,10 +5933,10 @@ class KoboUtilitiesAction(InterfaceAction):
                                     reading_location_parts,
                                 )
                                 debug_print(
-                                    "_restore_current_bookmark - self.epub_location_like_kepub=",
-                                    self.epub_location_like_kepub,
+                                    "_restore_current_bookmark - self.device.epub_location_like_kepub=",
+                                    self.device.epub_location_like_kepub,
                                 )
-                                if self.epub_location_like_kepub:
+                                if self.device.epub_location_like_kepub:
                                     kobo_chapteridbookmarked = (
                                         reading_location_parts[1]
                                         if len(reading_location_parts) == 2
@@ -6155,7 +6157,7 @@ class KoboUtilitiesAction(InterfaceAction):
                         cursor.execute(chapter_update, chapter_values)
                         if len(location_set_clause) > 0 and not (
                             result["MimeType"] == MIMETYPE_KOBO
-                            or self.epub_location_like_kepub
+                            or self.device.epub_location_like_kepub
                         ):
                             location_update += location_set_clause[1:]
                             location_update += (

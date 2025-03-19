@@ -1,4 +1,5 @@
 # vim:fileencoding=UTF-8:ts=4:sw=4:sta:et:sts=4:ai
+from __future__ import annotations
 
 __license__ = "GPL v3"
 __copyright__ = "2012-2017, David Forrester <davidfor@internode.on.net>"
@@ -22,9 +23,9 @@ from . import config as cfg
 from .common_utils import (
     BOOKMARK_SEPARATOR,
     MIMETYPE_KOBO,
+    DeviceDatabaseConnection,
     check_device_database,
     convert_kobo_date,
-    device_database_connection,
 )
 
 # TODO: Sort out the logging
@@ -300,7 +301,7 @@ def do_store_locations(books_to_scan, options, cpus, notification=lambda x, _y: 
         (books_to_scan, options),
     ]
     debug_print("do_store_locations - len(books_to_scan)=%d" % (len(books_to_scan)))
-    job = ParallelJob("arbitrary", "Store locations", done=None, args=args)
+    job: ParallelJob = ParallelJob("arbitrary", "Store locations", done=None, args=args)
     server.add_job(job)
 
     # This server is an arbitrary_n job, so there is a notifier available.
@@ -358,7 +359,7 @@ def _store_bookmarks(books, options):
     kobo_percentRead_column_name = options[cfg.KEY_PERCENT_READ_CUSTOM_COLUMN]
     last_read_column_name = options[cfg.KEY_LAST_READ_CUSTOM_COLUMN]
 
-    connection = device_database_connection(
+    connection = DeviceDatabaseConnection(
         options["device_database_path"], use_row_factory=True
     )
     cursor = connection.cursor()
@@ -793,7 +794,7 @@ def _remove_extra_files(
 
 
 def _get_imageId_set(device_database_path):
-    connection = device_database_connection(device_database_path, use_row_factory=True)
+    connection = DeviceDatabaseConnection(device_database_path, use_row_factory=True)
     imageId_query = (
         "SELECT DISTINCT ImageId "
         "FROM content "

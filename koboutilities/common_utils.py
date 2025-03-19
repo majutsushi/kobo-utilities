@@ -11,6 +11,7 @@ import time
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
+import apsw
 from calibre import prints
 from calibre.constants import DEBUG, iswindows
 from calibre.gui2 import (
@@ -285,30 +286,51 @@ def row_factory(cursor, row):
     return {k[0]: row[i] for i, k in enumerate(cursor.getdescription())}
 
 
-def device_database_connection(database_path, use_row_factory=False):
-    import apsw  # type: ignore[reportMissingImports]
+# This is necessary for Calibre 8 if the driver copies the database
+# to a temporary location due to filesystem limitations.
+# Without a lock the copying can lead to data loss.
+# In addition, transactions are generally useful when changing the device DB.
+class DeviceDatabaseConnection(apsw.Connection):
+    def __init__(self, database_path: str, use_row_factory: bool = False) -> None:
+        self.__lock = None
+        try:
+            from calibre.devices.kobo.db import kobo_db_lock
 
-    db_connection = apsw.Connection(database_path)
-    if use_row_factory:
-        db_connection.setrowtrace(row_factory)
+            self.__lock = kobo_db_lock
+        except ImportError:
+            pass
+        super().__init__(database_path)
+        if use_row_factory:
+            self.setrowtrace(row_factory)
 
-    return db_connection
+    def __enter__(self) -> apsw.Connection:
+        if self.__lock is not None:
+            self.__lock.acquire()
+        return super().__enter__()
+
+    def __exit__(self, exc_type, exc_value, tb) -> bool | None:
+        try:
+            suppress_exception = super().__exit__(exc_type, exc_value, tb)
+        finally:
+            if self.__lock is not None:
+                self.__lock.release()
+        return suppress_exception
 
 
-def check_device_database(database_path):
-    with device_database_connection(database_path) as connection:
-        check_query = "PRAGMA integrity_check"
-        cursor = connection.cursor()
+def check_device_database(database_path: str):
+    connection = DeviceDatabaseConnection(database_path)
+    check_query = "PRAGMA integrity_check"
+    cursor = connection.cursor()
 
-        check_result = ""
-        cursor.execute(check_query)
-        result = cursor.fetchall()
-        if result is not None:
-            for line in result:
-                debug_print("_check_device_database - result line=", line)
-                check_result += "\n" + line[0]
-        else:
-            check_result = _("Execution of '%s' failed") % check_query
+    check_result = ""
+    cursor.execute(check_query)
+    result = cursor.fetchall()
+    if result:
+        for line in result:
+            debug_print("_check_device_database - result line=", line)
+            check_result += "\n" + str(line[0])
+    else:
+        check_result = _("Execution of '%s' failed") % check_query
 
     return check_result
 

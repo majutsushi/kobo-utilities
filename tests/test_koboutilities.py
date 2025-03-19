@@ -13,7 +13,7 @@ from enum import Enum
 from pathlib import Path
 from pprint import pprint
 from queue import Queue
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, cast
 from unittest import mock
 
 import apsw  # type: ignore[reportMissingImports]
@@ -164,7 +164,10 @@ class DeviceDb:
         """
         return {
             book["ContentID"]: book
-            for book in self.cursor.execute(test_query).fetchall()
+            # Inferred type doesn't account for row factory
+            for book in cast(
+                "List[Dict[str, Any]]", self.cursor.execute(test_query).fetchall()
+            )
         }
 
 
@@ -198,6 +201,8 @@ class TestKoboUtilities(unittest.TestCase):
             epub_location_like_kepub=False,
             name="test-device",
             path="/",
+            db_path="/kobo.sqlite",
+            is_db_copied=False,
         )
         self.plugin.log = default_log
         self.queue = Queue()
@@ -308,7 +313,7 @@ class TestKoboUtilities(unittest.TestCase):
         # Run tested function
         with mock.patch.object(
             jobs,
-            "device_database_connection",
+            "DeviceDatabaseConnection",
             return_value=device_db.db_conn,
         ):
             stored_locations = jobs._store_bookmarks(books_in_calibre, cfg)

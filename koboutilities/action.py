@@ -21,6 +21,7 @@ from urllib.parse import quote
 import apsw
 from calibre import strftime
 from calibre.constants import DEBUG
+from calibre.constants import numeric_version as calibre_version
 from calibre.devices.kobo.books import Book
 from calibre.devices.kobo.driver import KOBO, KOBOTOUCH
 from calibre.devices.usbms.driver import USBMS
@@ -725,32 +726,44 @@ class KoboUtilitiesAction(InterfaceAction):
             )
 
             self.menu.addSeparator()
-            driverMenu = self.menu.addMenu(_("Driver"))
-            self.create_menu_item_ex(
-                driverMenu,
-                _("&Configure current Driver") + " - " + self.device_driver_name,
-                unique_name="Configure Driver",
-                shortcut_name=_("Configure Driver"),
-                image="config.png",
-                triggered=self.configure_device,
-                enabled=True,
-                is_library_action=True,
-                is_device_action=True,
-                is_no_device_action=True,
-            )
-            self.create_menu_item_ex(
-                driverMenu,
-                _("Switch between main and extended driver"),
-                unique_name="Switch between main and extended driver",
-                shortcut_name=_("Switch between main and extended driver"),
-                image="config.png",
-                triggered=self.switch_device_driver,
-                enabled=True,
-                is_library_action=True,
-                is_device_action=True,
-                is_no_device_action=True,
-            )
-            driverMenu.addSeparator()
+
+            def create_configure_driver_item(menu, menu_text):
+                self.create_menu_item_ex(
+                    menu,
+                    menu_text,
+                    unique_name="Configure Driver",
+                    shortcut_name=_("Configure Driver"),
+                    image="config.png",
+                    triggered=self.configure_device,
+                    enabled=True,
+                    is_library_action=True,
+                    is_device_action=True,
+                    is_no_device_action=True,
+                )
+
+            # Calibre 8 integrates the functionality of the KoboTouchExtended driver
+            # and disables the plugin, so there is no need to switch between drivers
+            if calibre_version >= (8, 0, 0):  # type: ignore[reportOperatorIssue]
+                create_configure_driver_item(self.menu, _("&Configure driver..."))
+            else:
+                driver_menu = self.menu.addMenu(_("Driver"))
+                create_configure_driver_item(
+                    driver_menu,
+                    _("&Configure current Driver") + " - " + self.device_driver_name,
+                )
+                self.create_menu_item_ex(
+                    driver_menu,
+                    _("Switch between main and extended driver"),
+                    unique_name="Switch between main and extended driver",
+                    shortcut_name=_("Switch between main and extended driver"),
+                    image="config.png",
+                    triggered=self.switch_device_driver,
+                    enabled=True,
+                    is_library_action=True,
+                    is_device_action=True,
+                    is_no_device_action=True,
+                )
+            self.menu.addSeparator()
 
             self.create_menu_item_ex(
                 self.menu,

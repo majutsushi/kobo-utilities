@@ -47,7 +47,7 @@ from .common_utils import (
     ReadOnlyTableWidgetItem,
     ReadOnlyTextIconWidgetItem,
     SimpleComboBox,
-    debug_print,
+    debug,
     get_icon,
 )
 
@@ -58,11 +58,11 @@ if TYPE_CHECKING:
 try:
     from calibre.gui2.preferences.create_custom_column import CreateNewCustomColumn
 
-    debug_print("Kobo Utilities Configuration - CreateNewCustomColumn is supported")
+    debug("CreateNewCustomColumn is supported")
     SUPPORTS_CREATE_CUSTOM_COLUMN = True
 except ImportError:
     CreateNewCustomColumn: Any = object
-    debug_print("Kobo Utilities Configuration - CreateNewCustomColumn is not supported")
+    debug("CreateNewCustomColumn is not supported")
     SUPPORTS_CREATE_CUSTOM_COLUMN = False  # type: ignore[reportConstantRedefinition]
 
 # Redefine the debug here so the jobs can see it.
@@ -434,9 +434,7 @@ load_translations()
 
 
 def get_plugin_pref(store_name: str, option: str):
-    debug_print(
-        "get_plugin_pref - start - store_name='%s', option='%s'" % (store_name, option)
-    )
+    debug("start - store_name='%s', option='%s'" % (store_name, option))
     c = plugin_prefs[store_name]
     default_value = plugin_prefs.defaults[store_name][option]
     return c.get(option, default_value)
@@ -451,7 +449,7 @@ def get_plugin_prefs(store_name: str, fill_defaults: bool = False):
 
 
 def get_prefs(prefs_store: Optional[Dict], store_name: str):
-    debug_print("get_prefs - start - store_name='%s'" % (store_name,))
+    debug("start - store_name='%s'" % (store_name,))
     store = {}
     if prefs_store is not None and store_name in prefs_store:
         for key in plugin_prefs.defaults[store_name]:
@@ -472,7 +470,7 @@ def get_pref(store, store_name, option, defaults=None):
 
 
 def migrate_library_config_if_required(db, library_config):
-    debug_print("migrate_library_config_if_required - start")
+    debug("start")
     schema_version = library_config.get(KEY_SCHEMA_VERSION, 0)
     if schema_version == DEFAULT_SCHEMA_VERSION:
         return
@@ -511,7 +509,7 @@ def migrate_library_config_if_required(db, library_config):
             KEY_DO_NOT_STORE_IF_REOPENED,
             defaults=OLD_COMMON_OPTIONS_DEFAULTS,
         )
-        debug_print("migrate_library_config_if_required - store_prefs:", store_prefs)
+        debug("store_prefs:", store_prefs)
 
         column_prefs = {}
         if library_config.get("currentReadingLocationColumn"):
@@ -530,18 +528,14 @@ def migrate_library_config_if_required(db, library_config):
         if library_config.get("lastReadColumn"):
             column_prefs[KEY_LAST_READ_CUSTOM_COLUMN] = library_config["lastReadColumn"]
             del library_config["lastReadColumn"]
-        debug_print("migrate_library_config_if_required - column_prefs:", column_prefs)
+        debug("column_prefs:", column_prefs)
         if len(column_prefs) > 0:
             profile_config[CUSTOM_COLUMNS_STORE_NAME] = column_prefs
-            debug_print(
-                "migrate_library_config_if_required - profile_config:", profile_config
-            )
+            debug("profile_config:", profile_config)
             profile_config[STORE_OPTIONS_STORE_NAME] = store_prefs
             new_profiles = {"Migrated": profile_config}
             library_config[KEY_PROFILES] = new_profiles
-        debug_print(
-            "migrate_library_config_if_required - library_config:", library_config
-        )
+        debug("library_config:", library_config)
 
     set_library_config(db, library_config)
 
@@ -554,7 +548,7 @@ def get_library_config(db):
             PREFS_NAMESPACE, PREFS_KEY_SETTINGS, copy.deepcopy(DEFAULT_LIBRARY_VALUES)
         )
     migrate_library_config_if_required(db, library_config)
-    debug_print("get_library_config - library_config:", library_config)
+    debug("library_config:", library_config)
     return library_config
 
 
@@ -622,7 +616,7 @@ def get_device_config(device_uuid) -> Optional[Dict]:
 
 
 def set_library_config(db, library_config):
-    debug_print("set_library_config - library_config:", library_config)
+    debug("library_config:", library_config)
     db.prefs.set_namespaced(PREFS_NAMESPACE, PREFS_KEY_SETTINGS, library_config)
 
 
@@ -634,7 +628,7 @@ class ProfilesTab(QWidget):
         self.plugin_action = plugin_action
         self.help_anchor = "ConfigurationDialog"
         self.library_config = get_library_config(self.plugin_action.gui.current_db)
-        debug_print("ProfilesTab.__init__ - self.library_config", self.library_config)
+        debug("self.library_config", self.library_config)
         self.profiles = self.library_config.get(KEY_PROFILES, {})
         self.current_device_profile = (
             self.plugin_action.device.profile
@@ -832,13 +826,13 @@ class ProfilesTab(QWidget):
 
     # Called by Calibre before save_settings
     def validate(self):
-        debug_print("BEGIN Validate")
+        debug("BEGIN Validate")
         valid = True
-        debug_print("END Validate, status = %s" % valid)
+        debug("END Validate, status = %s" % valid)
         return valid
 
     def add_profile(self) -> None:
-        debug_print("ProfilesTab:add_profile - Start")
+        debug("Start")
         # Display a prompt allowing user to specify a new profile
         new_profile_name, ok = QInputDialog.getText(
             self,
@@ -852,7 +846,7 @@ class ProfilesTab(QWidget):
         new_profile_name = str(new_profile_name).strip()
         # Verify it does not clash with any other profiles in the profile
         for profile_name in self.profiles:
-            debug_print("ProfilesTab:add_profile - existing profile: ", profile_name)
+            debug("existing profile: ", profile_name)
             if profile_name.lower() == new_profile_name.lower():
                 error_dialog(
                     self,
@@ -866,13 +860,11 @@ class ProfilesTab(QWidget):
         self.persist_profile_config()
         self.profile_name = new_profile_name
         self.profiles[new_profile_name] = copy.deepcopy(DEFAULT_PROFILE_VALUES)
-        debug_print(
-            "ProfilesTab:add_profile - new profile: ", self.profiles[new_profile_name]
-        )
+        debug("new profile: ", self.profiles[new_profile_name])
         # Now update the profiles combobox
         self.select_profile_combo.populate_combo(self.profiles, new_profile_name)
         self.refresh_current_profile_info()
-        debug_print("ProfilesTab:add_profile - End")
+        debug("End")
 
     def rename_profile(self) -> None:
         if not self.profile_name:
@@ -942,7 +934,7 @@ class ProfilesTab(QWidget):
         self.refresh_current_profile_info()
 
     def refresh_current_profile_info(self):
-        debug_print("ProfilesTab:refresh_current_profile_info - Start")
+        debug("Start")
         # Get configuration for the selected profile
         self.profile_name = str(self.select_profile_combo.currentText()).strip()
         profile_map = get_profile_info(
@@ -1050,17 +1042,15 @@ class ProfilesTab(QWidget):
         )
         self.do_not_store_if_reopened_checkbox.setEnabled(store_on_connect)
 
-        debug_print("ProfilesTab:refresh_current_profile_info - end")
+        debug("end")
 
     def persist_profile_config(self):
-        debug_print("ProfilesTab:persist_profile_config - Start")
+        debug("Start")
         if not self.profile_name:
             return
 
         profile_config = self.profiles[self.profile_name]
-        debug_print(
-            "ProfilesTab:persist_profile_config - profile_config:", profile_config
-        )
+        debug("profile_config:", profile_config)
 
         profile_config[KEY_FOR_DEVICE] = self.device_combo.get_selected_device()
 
@@ -1078,14 +1068,14 @@ class ProfilesTab(QWidget):
             self.do_not_store_if_reopened_checkbox.checkState() == Qt.Checked
         )
         profile_config[STORE_OPTIONS_STORE_NAME] = store_prefs
-        debug_print("ProfilesTab:persist_profile_config - store_prefs:", store_prefs)
+        debug("store_prefs:", store_prefs)
 
         column_prefs = {}
         column_prefs[KEY_CURRENT_LOCATION_CUSTOM_COLUMN] = (
             self.current_Location_combo.get_selected_column()
         )
-        debug_print(
-            "ProfilesTab:persist_profile_config - column_prefs[KEY_CURRENT_LOCATION_CUSTOM_COLUMN]:",
+        debug(
+            "column_prefs[KEY_CURRENT_LOCATION_CUSTOM_COLUMN]:",
             column_prefs[KEY_CURRENT_LOCATION_CUSTOM_COLUMN],
         )
         column_prefs[KEY_PERCENT_READ_CUSTOM_COLUMN] = (
@@ -1105,7 +1095,7 @@ class ProfilesTab(QWidget):
 
         self.profiles[self.profile_name] = profile_config
 
-        debug_print("ProfilesTab:persist_profile_config - end")
+        debug("end")
 
     def get_number_custom_columns(self):
         column_types = ["float", "int"]
@@ -1141,7 +1131,7 @@ class ProfilesTab(QWidget):
         return available_columns
 
     def create_custom_column(self, lookup_name):
-        debug_print("ProfilesTab:create_custom_column - lookup_name:", lookup_name)
+        debug("lookup_name:", lookup_name)
         display_params = {
             "description": CUSTOM_COLUMN_DEFAULTS[lookup_name]["description"]
         }
@@ -1162,7 +1152,7 @@ class ProfilesTab(QWidget):
             generate_unused_lookup_name=True,
             freeze_lookup_name=False,
         )
-        debug_print("ProfilesTab:create_custom_column - result:", result)
+        debug("result:", result)
         if result[0] == CreateNewCustomColumn.Result.COLUMN_ADDED:
             self.custom_columns[lookup_name]["combo_box"].populate_combo(
                 self.custom_columns[lookup_name]["current_columns"](), result[1]
@@ -1330,12 +1320,12 @@ class DevicesTab(QWidget):
             self.update_from_connection_status()
 
     def _devices_table_item_selection_changed(self):
-        debug_print(
-            "_devices_table_item_selection_changed - len(self.devices_table.selectedIndexes())=",
+        debug(
+            "len(self.devices_table.selectedIndexes())=",
             len(self.devices_table.selectedIndexes()),
         )
-        debug_print(
-            "_devices_table_item_selection_changed - self.devices_table.selectedIndexes()=",
+        debug(
+            "self.devices_table.selectedIndexes()=",
             self.devices_table.selectedIndexes(),
         )
         if len(self.devices_table.selectedIndexes()) > 0:
@@ -1353,7 +1343,7 @@ class DevicesTab(QWidget):
     def _add_device_clicked(self):
         devices = self.devices_table.get_data()
         if self._connected_device is None:
-            debug_print("_add_device_clicked - self._connected_device is None")
+            debug("self._connected_device is None")
             return
 
         drive_info = self._connected_device.drive_info
@@ -1580,7 +1570,7 @@ class DevicesTab(QWidget):
             self.backup_each_connection_checkbox_clicked(backup_each_connection)
 
     def persist_devices_config(self):
-        debug_print("DevicesTab:persist_devices_config - Start")
+        debug("Start")
 
         backup_prefs = {}
         backup_prefs[KEY_DO_DAILY_BACKUP] = (
@@ -1598,7 +1588,7 @@ class DevicesTab(QWidget):
             if self.copies_to_keep_checkbox.checkState() == Qt.Checked
             else -1
         )
-        debug_print("DevicesTab:persist_devices_config - backup_prefs:", backup_prefs)
+        debug("backup_prefs:", backup_prefs)
 
         if self.individual_device_options:
             if self.current_device_info:
@@ -1610,7 +1600,7 @@ class DevicesTab(QWidget):
         new_prefs[KEY_INDIVIDUAL_DEVICE_OPTIONS] = self.individual_device_options
         plugin_prefs[COMMON_OPTIONS_STORE_NAME] = new_prefs
 
-        debug_print("DevicesTab:persist_devices_config - end")
+        debug("end")
 
 
 class DeviceColumnComboBox(QComboBox):
@@ -1698,18 +1688,13 @@ class DevicesTableWidget(QTableWidget):
     def populate_table_row(
         self, row, device_config, connected_device: Optional[KoboDevice]
     ):
-        debug_print(
-            "DevicesTableWidget:populate_table_row - device_config:", device_config
-        )
+        debug("device_config:", device_config)
         device_type = device_config["type"]
         device_uuid = device_config["uuid"]
         device_icon = "reader.png"
         is_connected = False
         if connected_device is not None and self.plugin_action.device is not None:
-            debug_print(
-                "DevicesTableWidget:populate_table_row - connected_device:",
-                connected_device,
-            )
+            debug("connected_device:", connected_device)
             if device_type == connected_device.device_type:
                 drive_info = connected_device.drive_info
                 if not drive_info:
@@ -1723,9 +1708,7 @@ class DevicesTableWidget(QTableWidget):
         version_info = device.version_info if device is not None else None
         fw_version = version_info.fw_version if is_connected and version_info else ""
         connected_icon = "images/device_connected.png" if is_connected else None
-        debug_print(
-            "DevicesTableWidget:populate_table_row - connected_icon=%s" % connected_icon
-        )
+        debug("connected_icon=%s" % connected_icon)
 
         name_widget = ReadOnlyTextIconWidgetItem(
             device_config["name"], get_icon(device_icon)
@@ -1743,7 +1726,7 @@ class DevicesTableWidget(QTableWidget):
         self.setItem(row, 5, ReadOnlyTextIconWidgetItem("", get_icon(connected_icon)))
 
     def get_data(self):
-        debug_print("DevicesTableWidget::get_data - start")
+        debug("start")
         devices = {}
         for row in range(self.rowCount()):
             (device_config, _is_connected) = self.item(row, 1).data(Qt.UserRole)
@@ -1843,7 +1826,7 @@ class OtherTab(QWidget):
 
 class ConfigWidget(QWidget):
     def __init__(self, plugin_action: KoboUtilitiesAction):
-        debug_print("ConfigWidget - Initializing...")
+        debug("Initializing...")
         QWidget.__init__(self)
         self.plugin_action = plugin_action
         layout = QVBoxLayout(self)

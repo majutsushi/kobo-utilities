@@ -75,7 +75,7 @@ from .common_utils import (
     ReadOnlyTextIconWidgetItem,
     SizePersistedDialog,
     convert_kobo_date,
-    debug_print,
+    debug,
     get_icon,
 )
 
@@ -259,7 +259,7 @@ class QueueProgressDialog(QProgressDialog):
         self, gui, books, options, queue, db, plugin_action: KoboUtilitiesAction
     ):
         QProgressDialog.__init__(self, "", "", 0, len(books), gui)
-        debug_print("QueueProgressDialog::__init__")
+        debug("init")
         self.setMinimumWidth(500)
         self.books, self.options, self.queue, self.db = (
             books,
@@ -285,7 +285,7 @@ class QueueProgressDialog(QProgressDialog):
         self.exec_()
 
     def do_books(self):
-        debug_print("QueueProgressDialog::do_books - Start")
+        debug("Start")
 
         library_db = self.db
 
@@ -308,10 +308,7 @@ class QueueProgressDialog(QProgressDialog):
             rest_of_book_estimate_column
         )
 
-        debug_print(
-            "QueueProgressDialog::do_books - kobo_percentRead_column='%s'"
-            % kobo_percentRead_column
-        )
+        debug("kobo_percentRead_column='%s'" % kobo_percentRead_column)
         self.setLabelText(_("Preparing the list of books ..."))
         self.setValue(1)
         search_condition = ""
@@ -321,9 +318,7 @@ class QueueProgressDialog(QProgressDialog):
             )
         if self.options["allOnDevice"]:
             search_condition = "ondevice:True {0}".format(search_condition)
-            debug_print(
-                "QueueProgressDialog::do_books - search_condition=", search_condition
-            )
+            debug("search_condition=", search_condition)
             onDeviceIds = set(
                 library_db.search_getting_ids(
                     search_condition,
@@ -408,11 +403,11 @@ class QueueProgressDialog(QProgressDialog):
                 )
             self.setValue(self.i)
 
-        debug_print("QueueProgressDialog::do_books - Finish")
+        debug("Finish")
         return self.do_queue()
 
     def do_queue(self):
-        debug_print("QueueProgressDialog::do_queue")
+        debug("start")
         if self.gui is None:
             # There is a nasty QT bug with the timers/logic above which can
             # result in the do_queue method being called twice
@@ -423,7 +418,7 @@ class QueueProgressDialog(QProgressDialog):
         self.queue(self.options, self.books_to_scan)
 
     def do_clean_images_dir_queue(self):
-        debug_print("QueueProgressDialog::do_clean_images_dir_queue")
+        debug("start")
         if self.gui is None:
             # There is a nasty QT bug with the timers/logic above which can
             # result in the do_queue method being called twice
@@ -434,7 +429,7 @@ class QueueProgressDialog(QProgressDialog):
         self.queue(self.options)
 
     def do_remove_annotations_queue(self):
-        debug_print("QueueProgressDialog::do_remove_annotations_queue")
+        debug("start")
         if self.gui is None:
             # There is a nasty QT bug with the timers/logic above which can
             # result in the do_queue method being called twice
@@ -469,10 +464,7 @@ class QueueProgressDialog(QProgressDialog):
                         )
                         for path in device_book_paths
                     ]
-                debug_print(
-                    "QueueProgressDialog::do_remove_annotations_queue -- device_book_paths:",
-                    device_book_paths,
-                )
+                debug("device_book_paths:", device_book_paths)
                 book.paths = device_book_paths
                 book.contentIDs = contentIDs
                 if len(book.contentIDs):
@@ -507,9 +499,8 @@ class ReaderOptionsDialog(SizePersistedDialog):
         self.plugin_action = plugin_action
         self.help_anchor = "SetReaderFonts"
 
-        debug_print(
-            "ReaderOptionsDialog:__init__ - self.plugin_action.device_fwversion=",
-            self.plugin_action.device_fwversion,
+        debug(
+            "self.plugin_action.device_fwversion=", self.plugin_action.device_fwversion
         )
         self.line_spacings = LINE_SPACINGS
         device_fwversion = self.plugin_action.device_fwversion
@@ -522,12 +513,10 @@ class ReaderOptionsDialog(SizePersistedDialog):
         self.font_list = self.get_font_list()
         self.initialize_controls(contentID)
 
-        debug_print("ReaderOptionsDialog:__init__")
-
         # Set some default values from last time dialog was used.
         self.prefs = cfg.plugin_prefs[cfg.READING_OPTIONS_STORE_NAME]
         self.change_settings(self.prefs)
-        debug_print("ReaderOptionsDialog:__init__ - ", self.prefs)
+        debug("prefs", self.prefs)
         if self.prefs.get(cfg.KEY_READING_LOCK_MARGINS, False):
             self.lock_margins_checkbox.click()
         if self.prefs.get(cfg.KEY_UPDATE_CONFIG_FILE, False):
@@ -691,16 +680,16 @@ class ReaderOptionsDialog(SizePersistedDialog):
             self.prefs[cfg.KEY_READING_LINE_HEIGHT] = float(
                 str(self.custom_line_spacing_edit.text())
             )
-            debug_print(
-                "ReaderOptionsDialog:ok_clicked - custom -self.prefs[cfg.KEY_READING_LINE_HEIGHT]=",
+            debug(
+                "custom -self.prefs[cfg.KEY_READING_LINE_HEIGHT]=",
                 self.prefs[cfg.KEY_READING_LINE_HEIGHT],
             )
         else:
             self.prefs[cfg.KEY_READING_LINE_HEIGHT] = self.line_spacings[
                 int(str(self.line_spacing_spin.value()))
             ]
-            debug_print(
-                "ReaderOptionsDialog:ok_clicked - spin - self.prefs[cfg.KEY_READING_LINE_HEIGHT]=",
+            debug(
+                "spin - self.prefs[cfg.KEY_READING_LINE_HEIGHT]=",
                 self.prefs[cfg.KEY_READING_LINE_HEIGHT],
             )
         self.prefs[cfg.KEY_READING_LEFT_MARGIN] = int(
@@ -758,7 +747,7 @@ class ReaderOptionsDialog(SizePersistedDialog):
         koboConfig = ConfigParser(allow_no_value=True)
         device = self.parent().device_manager.connected_device
         device_path = self.parent().device_manager.connected_device._main_prefix
-        debug_print("get_device_settings - device_path=", device_path)
+        debug("device_path=", device_path)
         koboConfig.read(
             device.normalize_path(device_path + ".kobo/Kobo/Kobo eReader.conf")
         )
@@ -802,7 +791,7 @@ class ReaderOptionsDialog(SizePersistedDialog):
             cfg.KEY_READING_FONT_FAMILY,
             cfg.READING_OPTIONS_DEFAULTS[cfg.KEY_READING_FONT_FAMILY],
         )
-        debug_print("ReaderOptionsDialog:change_settings - font_face=", font_face)
+        debug("font_face=", font_face)
         self.font_choice.select_text(font_face)
 
         justification = reader_settings.get(
@@ -821,21 +810,14 @@ class ReaderOptionsDialog(SizePersistedDialog):
             cfg.KEY_READING_LINE_HEIGHT,
             cfg.READING_OPTIONS_DEFAULTS[cfg.KEY_READING_LINE_HEIGHT],
         )
-        debug_print(
-            "ReaderOptionsDialog:change_settings - line_spacing='%s'" % line_spacing
-        )
+        debug("line_spacing='%s'" % line_spacing)
         if line_spacing in self.line_spacings:
             line_spacing_index = self.line_spacings.index(line_spacing)
-            debug_print(
-                "ReaderOptionsDialog:change_settings - line_spacing_index=",
-                line_spacing_index,
-            )
+            debug("line_spacing_index=", line_spacing_index)
             self.custom_line_spacing_checkbox.setCheckState(Qt.Checked)
         else:
             self.custom_line_spacing_checkbox.setCheckState(Qt.Unchecked)
-            debug_print(
-                "ReaderOptionsDialog:change_settings - line_spacing_index not found"
-            )
+            debug("line_spacing_index not found")
             line_spacing_index = 0
         self.custom_line_spacing_checkbox.click()
         self.custom_line_spacing_edit.setText(str(line_spacing))
@@ -861,16 +843,14 @@ class ReaderOptionsDialog(SizePersistedDialog):
     def get_font_list(self):
         font_list = KOBO_FONTS[(0, 0, 0)]
         for fw_version, fw_font_list in sorted(KOBO_FONTS.items()):
-            debug_print("ReaderOptionsDialog:get_font_list - fw_version=", fw_version)
+            debug("fw_version=", fw_version)
             device_fwversion = self.plugin_action.device_fwversion
             if device_fwversion is not None and fw_version <= device_fwversion:
-                debug_print(
-                    "ReaderOptionsDialog:get_font_list - found version?=", fw_version
-                )
+                debug("found version?=", fw_version)
                 font_list = fw_font_list
             else:
                 break
-        debug_print("ReaderOptionsDialog:get_font_list - font_list=", font_list)
+        debug("font_list=", font_list)
 
         return font_list
 
@@ -1269,10 +1249,7 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
 
         # Only if the user has checked at least one option will we continue
         for key in new_prefs:
-            debug_print(
-                "UpdateMetadataOptionsDialog:ok_clicked - key='%s' new_prefs[key]=%s"
-                % (key, new_prefs[key])
-            )
+            debug("key='%s' new_prefs[key]=%s" % (key, new_prefs[key]))
             if (
                 new_prefs[key]
                 and key != cfg.KEY_READING_STATUS
@@ -2845,13 +2822,13 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         keep_button.clicked.connect(self.restore_original_series)
 
     def reject(self):
-        debug_print("ManageSeriesDeviceDialog:reject")
+        debug("start")
         for book in self.books:
             book.revert_changes()
         super(ManageSeriesDeviceDialog, self).reject()
 
     def series_column_changed(self):
-        debug_print("series_column_changed - start")
+        debug("start")
         series_column = self.series_column_combo.selected_value()
         SeriesBook.series_column = series_column
         # Choose a series name and series index from the first book in the list
@@ -2860,14 +2837,9 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         if len(self.books) > 0:
             first_book = self.books[0]
             initial_series_name = first_book.series_name()
-            debug_print(
-                "series_column_changed - initial_series_name='%s'" % initial_series_name
-            )
+            debug("initial_series_name='%s'" % initial_series_name)
             if initial_series_name is not None:
-                debug_print(
-                    "series_column_changed first_book.series_index()='%s'"
-                    % first_book.series_index()
-                )
+                debug("first_book.series_index()='%s'" % first_book.series_index())
                 try:
                     initial_series_index = int(first_book.series_index())
                 except Exception:
@@ -3452,16 +3424,10 @@ class ShowReadingPositionChangesDialog(SizePersistedDialog):
         for i in range(len(self.reading_locations)):
             self.reading_locations_table.selectRow(i)
             enabled = self.reading_locations_table.item(i, 0).checkState() == Qt.Checked
-            debug_print(
-                "ShowReadingPositionChangesDialog:_ok_clicked - row=%d, enabled=%s"
-                % (i, enabled)
-            )
+            debug("row=%d, enabled=%s" % (i, enabled))
             if not enabled:
                 book_id = self.reading_locations_table.item(i, 7).data(Qt.DisplayRole)
-                debug_print(
-                    "ShowReadingPositionChangesDialog:_ok_clicked - row=%d, book_id=%s"
-                    % (i, book_id)
-                )
+                debug("row=%d, book_id=%s" % (i, book_id))
                 del self.reading_locations[book_id]
         self.accept()
         return
@@ -3510,10 +3476,7 @@ class ShowReadingPositionChangesTableWidget(QTableWidget):
         self.verticalHeader().setDefaultSectionSize(24)
         self.horizontalHeader().setStretchLastSection(True)
 
-        debug_print(
-            "ShowReadingPositionChangesDialog:populate_table - reading_positions=",
-            reading_positions,
-        )
+        debug("reading_positions=", reading_positions)
         for row, (book_id, reading_position) in enumerate(reading_positions.items()):
             self.populate_table_row(row, book_id, reading_position)
 
@@ -3688,9 +3651,7 @@ class FixDuplicateShelvesDialog(SizePersistedDialog):
         )
         # Only if the user has checked at least one option will we continue
         if have_options:
-            debug_print(
-                "FixDuplicateShelvesDialog:_ok_clicked - - options=%s" % self.options
-            )
+            debug("options=%s" % self.options)
             self.accept()
             return
         error_dialog(
@@ -4294,7 +4255,7 @@ class TemplateConfig(QWidget):  # {{{
     def __init__(self, val=None, mi=None):
         QWidget.__init__(self)
         self.mi = mi
-        debug_print("TemplateConfig: mi=", self.mi)
+        debug("mi=", self.mi)
         self.t = t = QLineEdit(self)
         t.setText(val or "")
         t.setCursorPosition(0)
@@ -4431,7 +4392,7 @@ class UpdateBooksToCDialog(SizePersistedDialog):
     def send_books_clicked(self):
         books_to_send = self.books_table.books_to_send
         ids_to_sync = [book["calibre_id"] for book in books_to_send]
-        debug_print("send_books_clicked - ids_to_sync=", ids_to_sync)
+        debug("ids_to_sync=", ids_to_sync)
         if not question_dialog(
             self.parent,
             _("Update Books"),
@@ -4453,7 +4414,7 @@ class UpdateBooksToCDialog(SizePersistedDialog):
     def update_button_clicked(self):
         books_to_send = self.books_to_update_toc
         ids_to_sync = [book["calibre_id"] for book in books_to_send]
-        debug_print("update_button_clicked - ids_to_sync=", ids_to_sync)
+        debug("ids_to_sync=", ids_to_sync)
         if not question_dialog(
             self.parent,
             _("Update Books"),
@@ -4734,9 +4695,7 @@ class ToCBookListTableWidget(QTableWidget):
     def select_checkmarks_send(self):
         for i in range(self.rowCount()):
             rnum = self.item(i, 1).data(Qt.UserRole)
-            debug_print(
-                "select_checkmarks_send - rnum=%s, book=%s" % (rnum, self.books[rnum])
-            )
+            debug("rnum=%s, book=%s" % (rnum, self.books[rnum]))
             self.item(i, self.SEND_TO_DEVICE_COLUMN_NO).setCheckState(
                 Qt.Unchecked if self.books[rnum]["kobo_format_status"] else Qt.Checked
             )
@@ -4744,10 +4703,7 @@ class ToCBookListTableWidget(QTableWidget):
     def select_checkmarks_update_toc(self):
         for i in range(self.rowCount()):
             book_no = self.item(i, 1).data(Qt.UserRole)
-            debug_print(
-                "select_checkmarks_update_toc - book_no=%s, book=%s"
-                % (book_no, self.books[book_no])
-            )
+            debug("book_no=%s, book=%s" % (book_no, self.books[book_no]))
             check_for_toc = (
                 not self.books[book_no]["kobo_database_status"]
                 and self.books[book_no]["can_update_toc"]

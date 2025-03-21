@@ -1,4 +1,5 @@
 # vim:fileencoding=UTF-8:ts=4:sw=4:sta:et:sts=4:ai
+from __future__ import annotations
 
 __license__ = "GPL v3"
 __copyright__ = "2011, Grant Drake <grant.drake@gmail.com>"
@@ -10,7 +11,7 @@ from calibre.ebooks.metadata import fmt_sidx
 from calibre.ebooks.metadata.book.base import Metadata
 from calibre.utils.date import format_date
 
-from .common_utils import debug_print
+from .common_utils import debug
 
 
 def get_indent_for_index(series_index):
@@ -23,7 +24,7 @@ class SeriesBook(object):
     series_column = "Series"
 
     def __init__(self, mi, series_columns):
-        debug_print("SeriesBook:__init__ - mi.series_index=", mi.series_index)
+        debug("mi.series_index=", mi.series_index)
         self._orig_mi = Metadata(_("Unknown"), other=mi)
         self._mi = mi
         self._orig_title = mi.title
@@ -45,18 +46,15 @@ class SeriesBook(object):
         self._orig_series_index_string = None
         self._series_index_format = None
         try:
-            debug_print(
-                "SeriesBook:get_series_index - self._mi.kobo_series_number=%s"
-                % self._mi.kobo_series_number
-            )
+            debug("self._mi.kobo_series_number=%s" % self._mi.kobo_series_number)
             self._orig_series_index = (
                 float(self._mi.kobo_series_number)
                 if self._mi.kobo_series_number is not None
                 else None
             )
         except ValueError:
-            debug_print(
-                "SeriesBook:get_series_index - non numeric series - self._mi.kobo_series_number=%s"
+            debug(
+                "non numeric series - self._mi.kobo_series_number=%s"
                 % self._mi.kobo_series_number
             )
             numbers = re.findall(r"\d*\.?\d+", self._mi.kobo_series_number)
@@ -66,13 +64,10 @@ class SeriesBook(object):
                 self._series_index_format = self._mi.kobo_series_number.replace(
                     numbers[0], "%g", 1
                 )
-            debug_print(
-                "SeriesBook:get_series_index - self._orig_series_index=",
-                self._orig_series_index,
-            )
+            debug("self._orig_series_index=", self._orig_series_index)
 
     def revert_changes(self):
-        debug_print("SeriesBook:revert_changes")
+        debug("start")
         self._mi.title = self._orig_title
         if hasattr(self._mi, "pubdate"):
             self._mi.pubdate = self._orig_pubdate
@@ -120,14 +115,8 @@ class SeriesBook(object):
         return self._orig_series
 
     def orig_series_index(self):
-        debug_print(
-            "SeriesBook:orig_series_index - self._orig_series_index=",
-            self._orig_series_index,
-        )
-        debug_print(
-            "SeriesBook:orig_series_index - self._orig_series_index.__class__=",
-            self._orig_series_index.__class__,
-        )
+        debug("self._orig_series_index=", self._orig_series_index)
+        debug("self._orig_series_index.__class__=", self._orig_series_index.__class__)
         return self._orig_series_index
 
     def orig_series_index_string(self):
@@ -182,8 +171,8 @@ class SeriesBook(object):
             series_number = (
                 self.orig_series_index() if self.orig_series_index() is not None else -1
             )
-            debug_print("sort_key - series_number=", series_number)
-            debug_print("sort_key - series_number.__class__=", series_number.__class__)
+            debug("series_number=", series_number)
+            debug("series_number.__class__=", series_number.__class__)
             if series:
                 if sort_by_name:
                     return "%s%06.2f" % (series, series_number)

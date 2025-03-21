@@ -6,6 +6,7 @@ __license__ = "GPL v3"
 __copyright__ = "2011, Grant Drake <grant.drake@gmail.com>, 2012-2022 updates by David Forrester <davidfor@internode.on.net>"
 __docformat__ = "restructuredtext en"
 
+import inspect
 import os
 import time
 from datetime import datetime
@@ -66,9 +67,19 @@ plugin_icon_resources = {}
 BASE_TIME = time.time()
 
 
-def debug_print(*args):
+def debug(*args):
     if DEBUG:
-        prints("DEBUG: %6.1f" % (time.time() - BASE_TIME), *args)
+        log_time = time.time() - BASE_TIME
+        frame = inspect.currentframe()
+        assert frame is not None
+        frame = frame.f_back
+        assert frame is not None
+        code = frame.f_code
+        filename = code.co_filename.replace("calibre_plugins.", "")
+        prints(
+            f"[{log_time:.2f}] [{filename}:{code.co_name}:{frame.f_lineno}]",
+            *args,
+        )
 
 
 def set_plugin_icon_resources(name, resources):
@@ -327,7 +338,7 @@ def check_device_database(database_path: str):
     result = cursor.fetchall()
     if result:
         for line in result:
-            debug_print("_check_device_database - result line=", line)
+            debug("result line=", line)
             check_result += "\n" + str(line[0])
     else:
         check_result = _("Execution of '%s' failed") % check_query
@@ -371,11 +382,7 @@ def convert_kobo_date(kobo_date: Optional[str]) -> Optional[datetime]:
                     except ValueError:
                         # The date is in some unknown format. Return now in the local timezone
                         converted_date = datetime.now(tz=local_tz)
-                        debug_print(
-                            "convert_kobo_date - datetime.now() - kobo_date={0}'".format(
-                                kobo_date
-                            )
-                        )
+                        debug("datetime.now() - kobo_date={0}'".format(kobo_date))
     return converted_date
 
 
@@ -718,10 +725,7 @@ class CustomColumnComboBox(QComboBox):
         if initial_items is None:
             initial_items = [""]
         super(CustomColumnComboBox, self).__init__(parent)
-        debug_print(
-            "CustomColumnComboBox::__init__ - create_column_callback=",
-            create_column_callback,
-        )
+        debug("create_column_callback=", create_column_callback)
         self.create_column_callback = create_column_callback
         self.current_index = 0
         if create_column_callback is not None:
@@ -762,9 +766,7 @@ class CustomColumnComboBox(QComboBox):
                 if display_name == selected_column:
                     selected_idx = len(self.column_names) - 1
 
-        debug_print(
-            "CustomColumnComboBox::create_column_callback=", self.create_column_callback
-        )
+        debug("create_column_callback=", self.create_column_callback)
         if self.create_column_callback is not None:
             self.addItem(self.CREATE_NEW_COLUMN_ITEM)
 
@@ -774,22 +776,20 @@ class CustomColumnComboBox(QComboBox):
         return self.column_names[self.currentIndex()]
 
     def current_text_changed(self, new_text):
-        debug_print(
-            "CustomColumnComboBox::current_text_changed - new_text='%s'" % new_text
-        )
-        debug_print(
-            "CustomColumnComboBox::current_text_changed - new_text == self.CREATE_NEW_COLUMN_ITEM='%s'"
+        debug("new_text='%s'" % new_text)
+        debug(
+            "new_text == self.CREATE_NEW_COLUMN_ITEM='%s'"
             % (new_text == self.CREATE_NEW_COLUMN_ITEM)
         )
         if (
             new_text == self.CREATE_NEW_COLUMN_ITEM
             and self.create_column_callback is not None
         ):
-            debug_print("CustomColumnComboBox::current_text_changed - calling callback")
+            debug("calling callback")
             result = self.create_column_callback()
             if not result:
-                debug_print(
-                    "CustomColumnComboBox::current_text_changed - column not created, setting back to original value - ",
+                debug(
+                    "column not created, setting back to original value - ",
                     self.current_index,
                 )
                 self.setCurrentIndex(self.current_index)

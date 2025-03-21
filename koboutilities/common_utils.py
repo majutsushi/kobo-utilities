@@ -8,12 +8,10 @@ __docformat__ = "restructuredtext en"
 
 import inspect
 import os
-import time
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
 import apsw
-from calibre import prints
 from calibre.constants import DEBUG, iswindows
 from calibre.gui2 import (
     UNDEFINED_QDATETIME,
@@ -21,6 +19,7 @@ from calibre.gui2 import (
     error_dialog,
     gprefs,
     info_dialog,
+    timed_print,
 )
 from calibre.gui2.actions import menu_action_unique_name
 from calibre.gui2.keyboard import ShortcutConfig
@@ -64,20 +63,17 @@ plugin_name = None
 # classes if you need any zip images to be displayed on the configuration dialog.
 plugin_icon_resources = {}
 
-BASE_TIME = time.time()
-
 
 def debug(*args):
     if DEBUG:
-        log_time = time.time() - BASE_TIME
         frame = inspect.currentframe()
         assert frame is not None
         frame = frame.f_back
         assert frame is not None
         code = frame.f_code
         filename = code.co_filename.replace("calibre_plugins.", "")
-        prints(
-            f"[{log_time:.2f}] [{filename}:{code.co_name}:{frame.f_lineno}]",
+        timed_print(
+            f"[DEBUG] [{filename}:{code.co_name}:{frame.f_lineno}]",
             *args,
         )
 

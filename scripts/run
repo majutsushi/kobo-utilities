@@ -10,6 +10,7 @@
 # ///
 #
 # ruff: noqa: S603, S607
+from __future__ import annotations
 
 import argparse
 import logging
@@ -51,13 +52,13 @@ def main(args: argparse.Namespace) -> int:
         update_calibre()
     elif args.command == "install":
         plugin_zip = build()
-        subprocess.run(["calibre-debug", "--shutdown-running-calibre"], check=True)
-        subprocess.run(["calibre-customize", "--add-plugin", plugin_zip], check=True)
+        run_calibre(["calibre-debug", "--shutdown-running-calibre"])
+        run_calibre(["calibre-customize", "--add-plugin", plugin_zip])
     elif args.command == "install-and-debug":
         plugin_zip = build()
-        subprocess.run(["calibre-debug", "--shutdown-running-calibre"], check=True)
-        subprocess.run(["calibre-customize", "--add-plugin", plugin_zip], check=True)
-        subprocess.run(["calibre-debug", "--gui"], check=True)
+        run_calibre(["calibre-debug", "--shutdown-running-calibre"])
+        run_calibre(["calibre-customize", "--add-plugin", plugin_zip])
+        run_calibre(["calibre-debug", "--gui"])
     else:
         log.error("Unknown command: %s", args.command)
         return 1
@@ -165,6 +166,20 @@ def update_calibre() -> None:
         if asset["name"].endswith(pkg_suffix):
             log.info("Found Calibre asset %s", asset["name"])
             download(asset["browser_download_url"], pkg_suffix, CALIBRE_LATEST_BIN_PATH)
+
+
+def run_calibre(cmd: list[str | Path]) -> None:
+    if "CALIBRE_DIRECTORY" in os.environ:
+        subprocess.run(
+            cmd,
+            check=True,
+            env={
+                **os.environ,
+                "PATH": f"{os.getenv('CALIBRE_DIRECTORY')}:{os.getenv('PATH')}",
+            },
+        )
+    else:
+        subprocess.run(cmd, check=True)
 
 
 def download(url: str, pkg_suffix: str, bin_path: Path) -> None:

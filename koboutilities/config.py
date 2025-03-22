@@ -142,7 +142,6 @@ KEY_COVERS_DITHERED = "dithered_covers"
 KEY_COVERS_KEEP_ASPECT_RATIO = "keep_cover_aspect"
 KEY_COVERS_LETTERBOX = "letterbox"
 KEY_COVERS_LETTERBOX_COLOR = "letterbox_color"
-KEY_DRIVER_SUPPORTS_COVERS_LETTERBOX_COLOR = "driver_supports_cover_letterbox_colors"
 KEY_COVERS_PNG = "png_covers"
 KEY_COVERS_UPDLOAD_KEPUB = "kepub_covers"
 
@@ -166,9 +165,6 @@ KEY_SORT_DESCENDING = "sortDescending"
 KEY_SORT_UPDATE_CONFIG = "updateConfig"
 
 KEY_ORDER_SHELVES_SERIES = 0
-KEY_ORDER_SHELVES_AUTHORS = 1
-KEY_ORDER_SHELVES_OTHER = 2
-KEY_ORDER_SHELVES_ALL = 3
 KEY_ORDER_SHELVES_TYPE = "orderShelvesType"
 
 KEY_ORDER_SHELVES_BY_SERIES = 0
@@ -558,17 +554,6 @@ def get_profile_info(db, profile_name):
     return profiles.get(profile_name, DEFAULT_PROFILE_VALUES)
 
 
-def get_book_profiles_for_device(db, device_uuid, exclude_auto=True):
-    library_config = get_library_config(db)
-    profiles_map = library_config[KEY_PROFILES]
-    return {
-        profile_name: profile_info
-        for profile_name, profile_info in profiles_map.items()
-        if profile_info[KEY_FOR_DEVICE] in [device_uuid, TOKEN_ANY_DEVICE]
-        and not exclude_auto
-    }
-
-
 def get_book_profile_for_device(db, device_uuid, use_any_device=False):
     library_config = get_library_config(db)
     profiles_map = library_config.get(KEY_PROFILES, None)
@@ -588,22 +573,6 @@ def get_book_profile_for_device(db, device_uuid, use_any_device=False):
             selected_profile, STORE_OPTIONS_STORE_NAME
         )
     return selected_profile
-
-
-def get_profile_names(db, exclude_auto=True):
-    library_config = get_library_config(db)
-    profiles = library_config[KEY_PROFILES]
-    if not exclude_auto:
-        return sorted(profiles.keys())
-
-    profile_names = []
-    for profile_name, profile_info in profiles.items():
-        if (
-            profile_info.get(KEY_FOR_DEVICE, DEFAULT_PROFILE_VALUES[KEY_FOR_DEVICE])
-            == "POPMANUAL"
-        ):
-            profile_names.append(profile_name)
-    return sorted(profile_names)
 
 
 def get_device_name(device_uuid: str, default_name: str = _("(Unknown device)")) -> str:
@@ -1157,7 +1126,6 @@ class ProfilesTab(QWidget):
             self.custom_columns[lookup_name]["combo_box"].populate_combo(
                 self.custom_columns[lookup_name]["current_columns"](), result[1]
             )
-            self.parent_dialog.must_restart = True
             return True
 
         return False
@@ -1166,7 +1134,6 @@ class ProfilesTab(QWidget):
 class DevicesTab(QWidget):
     def __init__(self, parent_dialog, plugin_action: KoboUtilitiesAction):
         self.current_device_info = None
-        self.update_check_last_time = 0
 
         self.parent_dialog = parent_dialog
         QWidget.__init__(self)
@@ -1626,27 +1593,6 @@ class DeviceColumnComboBox(QComboBox):
         return self.device_ids[self.currentIndex()]
 
 
-class NoWheelComboBox(QComboBox):
-    def wheelEvent(self, event):
-        # Disable the mouse wheel on top of the combo box changing selection as plays havoc in a grid
-        event.ignore()
-
-
-class BoolColumnComboBox(NoWheelComboBox):
-    def __init__(self, parent, selected=True):
-        NoWheelComboBox.__init__(self, parent)  # type: ignore[reportCallIssue]
-        self.populate_combo(selected)
-
-    def populate_combo(self, selected):
-        self.clear()
-        self.addItem(QIcon(I("ok.png")), "Y")
-        self.addItem(QIcon(I("list_remove.png")), "N")
-        if selected:
-            self.setCurrentIndex(0)
-        else:
-            self.setCurrentIndex(1)
-
-
 class DevicesTableWidget(QTableWidget):
     def __init__(self, parent):
         QTableWidget.__init__(self, parent)
@@ -1833,7 +1779,6 @@ class ConfigWidget(QWidget):
         self.setLayout(layout)
         self.help_anchor = "ConfigurationDialog"
 
-        self.must_restart = False
         self._get_create_new_custom_column_instance = None
         self.supports_create_custom_column = SUPPORTS_CREATE_CUSTOM_COLUMN
 
@@ -1865,13 +1810,6 @@ class ConfigWidget(QWidget):
         self.plugin_action.plugin_device_metadata_available.connect(
             self.devices_tab.on_device_metadata_available
         )
-
-    def disconnect_signals(self):
-        self.plugin_action.plugin_device_connection_changed.disconnect()
-        self.plugin_action.plugin_device_metadata_available.disconnect()
-
-    def refresh_devices_dropdown(self):
-        self.profiles_tab.refresh_current_profile_info()
 
     def get_devices_list(self):
         return self.devices_tab.devices_table.get_data()

@@ -193,17 +193,6 @@ KOBO_EPOCH_CONF_NAME = "epoch.conf"
 load_translations()
 
 
-# Implementation of QtQHash for strings. This doesn't seem to be in the Python implementation.
-def qhash(inputstr):
-    h = 0x00000000
-    for c in inputstr:
-        h = (h << 4) + ord(c)
-        h ^= (h & 0xF0000000) >> 23
-        h &= 0x0FFFFFFF
-
-    return h
-
-
 class KoboUtilitiesAction(InterfaceAction):
     interface_action_base_plugin: ActionKoboUtilities
 
@@ -367,7 +356,6 @@ class KoboUtilitiesAction(InterfaceAction):
             device = self.device
             self.set_toolbar_button_tooltip()
 
-            debug("have device.")
             self.create_menu_item_ex(
                 self.menu,
                 _("&Set Reader Font for Selected Books"),
@@ -2184,7 +2172,6 @@ class KoboUtilitiesAction(InterfaceAction):
                 book.series_index_string = seriesBook.series_index_string()
                 book.kobo_series_number = seriesBook.series_index_string()
                 book.kobo_series = seriesBook.series_name()
-                book._new_book = True
                 book.contentIDs = [book.contentID]
                 books.append(book)
                 self.options["title"] = (
@@ -2251,17 +2238,6 @@ class KoboUtilitiesAction(InterfaceAction):
             if typ == "series":
                 series_columns[key] = column
         return series_columns
-
-    def get_selected_books(self, rows, series_columns):
-        db = self.gui.library_view.model().db
-        idxs = [row.row() for row in rows]
-        books = []
-        for idx in idxs:
-            mi = db.get_metadata(idx)
-            book = SeriesBook(mi, series_columns)
-            books.append(book)
-        # Sort books by the current series
-        return sorted(books, key=lambda k: k.sort_key())
 
     def upload_covers(self) -> None:
         current_view = self.gui.current_view()
@@ -2822,12 +2798,13 @@ class KoboUtilitiesAction(InterfaceAction):
 
     def _clean_images_dir_job(self, options):
         debug("Start")
+        from .jobs import do_clean_images_dir
 
         func = "arbitrary_n"
         cpus = self.gui.job_manager.server.pool_size
         args = [
-            "calibre_plugins.koboutilities.jobs",
-            "do_clean_images_dir",
+            do_clean_images_dir.__module__,
+            do_clean_images_dir.__name__,
             (options, cpus),
         ]
         desc = _("Cleaning images directory")
@@ -2887,12 +2864,13 @@ class KoboUtilitiesAction(InterfaceAction):
 
     def _remove_annotations_job(self, options, books):
         debug("Start")
+        from .jobs import do_remove_annotations
 
         func = "arbitrary_n"
         cpus = self.gui.job_manager.server.pool_size
         args = [
-            "calibre_plugins.koboutilities.jobs",
-            "do_remove_annotations",
+            do_remove_annotations.__module__,
+            do_remove_annotations.__name__,
             (options, books, cpus),
         ]
         desc = _("Removing annotations files")
@@ -3770,18 +3748,6 @@ class KoboUtilitiesAction(InterfaceAction):
                 total_books += 1
 
         return removed_covers, not_on_device_books, total_books
-
-    def _get_imageid_set(self):
-        connection = self.device_database_connection(use_row_factory=True)
-        imageId_query = (
-            "SELECT DISTINCT ImageId "
-            "FROM content "
-            "WHERE BookID IS NULL"
-        )  # fmt: skip
-        cursor = connection.cursor()
-
-        cursor.execute(imageId_query)
-        return {row["ImageId"] for row in cursor}
 
     def _check_book_in_database(self, books):
         connection = self.device_database_connection()
@@ -6379,12 +6345,10 @@ class KoboUtilitiesAction(InterfaceAction):
 
     def _get_manifest_entries(self, container):
         debug("start")
-        total_spine_size = 0
         manifest_entries = []
         for spine_name, _spine_linear in container.spine_names:
             spine_path = container.name_to_href(spine_name, container.opf_name)
             file_size = container.filesize(spine_name)
-            total_spine_size += file_size
             manifest_entries.append(
                 {"path": spine_path, "file_size": file_size, "name": spine_name}
             )

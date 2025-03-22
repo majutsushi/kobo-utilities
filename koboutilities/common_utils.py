@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING, Optional
 import apsw
 from calibre.constants import DEBUG, iswindows
 from calibre.gui2 import (
-    UNDEFINED_QDATETIME,
     Application,
     error_dialog,
     gprefs,
@@ -22,7 +21,6 @@ from calibre.gui2 import (
 )
 from calibre.gui2.actions import menu_action_unique_name
 from calibre.gui2.keyboard import ShortcutConfig
-from calibre.gui2.library.delegates import DateDelegate as _DateDelegate
 from calibre.gui2.library.delegates import TextDelegate
 from calibre.utils.config import config_dir
 from calibre.utils.date import UNDEFINED_DATE, format_date, now
@@ -40,7 +38,6 @@ from qt.core import (
     QListWidget,
     QPixmap,
     QProgressBar,
-    QStyledItemDelegate,
     Qt,
     QTableWidgetItem,
     QTextEdit,
@@ -159,38 +156,6 @@ def get_local_images_dir(subfolder=None):
     return images_dir
 
 
-def create_menu_item(
-    ia,
-    parent_menu,
-    menu_text,
-    image=None,
-    tooltip=None,
-    shortcut=(),
-    triggered=None,
-    is_checked=None,
-):
-    """
-    Create a menu action with the specified criteria and action
-    Note that if no shortcut is specified, will not appear in Preferences->Keyboard
-    This method should only be used for actions which either have no shortcuts,
-    or register their menus only once. Use create_menu_action_unique for all else.
-    """
-    if shortcut is not None:
-        shortcut = () if len(shortcut) == 0 else _(shortcut)
-    ac = ia.create_action(spec=(menu_text, None, tooltip, shortcut), attr=menu_text)
-    if image:
-        ac.setIcon(get_icon(image))
-    if triggered is not None:
-        ac.triggered.connect(triggered)
-    if is_checked is not None:
-        ac.setCheckable(True)
-        if is_checked:
-            ac.setChecked(True)
-
-    parent_menu.addAction(ac)
-    return ac
-
-
 def create_menu_action_unique(
     ia,
     parent_menu,
@@ -253,49 +218,6 @@ def create_menu_action_unique(
     if favourites_menu_unique_name:
         ac.favourites_menu_unique_name = favourites_menu_unique_name
     return ac
-
-
-def call_plugin_callback(plugin_callback, parent, plugin_results=None):
-    """
-    This function executes a callback to a calling plugin. Because this
-    can be called after a job has been run, the plugin and callback function
-    are passed as strings.
-
-    The parameters are:
-
-      plugin_callback - This is a dictionary definging the callbak function.
-          The elements are:
-              plugin_name - name of the plugin to be called
-              func_name - name of the functio to be called
-              args - Arguments to be passedd to the callback function. Will be
-                  passed as "*args" so must be a collection if it is supplied.
-              kwargs - Keyword arguments to be passedd to the callback function.
-                  Will be passed as "**kargs" so must be a dictionary if it
-                  is supplied.
-
-      parent - parent gui needed to find the plugin.
-
-      plugin_results - Results to be passed to the plugin.
-
-    If the kwargs dictionary contains an entry for "plugin_results", the value
-    will be replaced by the parameter "plugin_results". This allows the results
-    of the called plugin to be passed to the callback.
-    """
-    print("call_plugin_callback: have callback:", plugin_callback)
-    from calibre.customize.ui import find_plugin
-
-    plugin = find_plugin(plugin_callback["plugin_name"])
-    if plugin is not None:
-        print("call_plugin_callback: have plugin for callback:", plugin)
-        callback_func = getattr(
-            plugin.load_actual_plugin(parent), plugin_callback["func_name"]
-        )
-        args = plugin_callback.get("args", [])
-        kwargs = plugin_callback.get("kwargs", {})
-        if "plugin_results" in kwargs and plugin_results:
-            kwargs["plugin_results"] = plugin_results
-        print("call_plugin_callback: about to call callback - kwargs=", kwargs)
-        callback_func(*args, **kwargs)
 
 
 def row_factory(cursor, row):
@@ -479,25 +401,13 @@ class SizePersistedDialog(QDialog):
         else:
             self.restoreGeometry(self.geom)
 
-    def dialog_closing(self, result):  # noqa: ARG002
+    def dialog_closing(self, result):
+        del result
         geom = bytearray(self.saveGeometry())
         gprefs[self.unique_pref_name] = geom
-        self.persist_custom_prefs()
 
-    def persist_custom_prefs(self):
-        """
-        Invoked when the dialog is closing. Override this function to call
-        save_custom_pref() if you have a setting you want persisted that you can
-        retrieve in your __init__() using load_custom_pref() when next opened
-        """
-
-    def load_custom_pref(self, name, default=None):
-        return gprefs.get(self.unique_pref_name + ":" + name, default)
-
-    def save_custom_pref(self, name, value):
-        gprefs[self.unique_pref_name + ":" + name] = value
-
-    def help_link_activated(self, url):  # noqa: ARG002
+    def help_link_activated(self, url):
+        del url
         if self.plugin_action is not None:
             self.plugin_action.show_help(anchor=self.help_anchor)
 
@@ -540,46 +450,6 @@ class DateTableWidgetItem(QTableWidgetItem):
         else:
             super(DateTableWidgetItem, self).__init__("")
             self.setData(Qt.DisplayRole, QDateTime(date_read))
-
-
-class DateDelegate(_DateDelegate):
-    """
-    Delegate for dates. Because this delegate stores the
-    format as an instance variable, a new instance must be created for each
-    column. This differs from all the other delegates.
-    """
-
-    def __init__(self, parent, fmt="dd MMM yyyy", default_to_today=True):
-        super(DateDelegate, self).__init__(parent)
-        self.format = fmt
-        self.default_to_today = default_to_today
-
-    def createEditor(self, parent, option, index):
-        qde = QStyledItemDelegate.createEditor(self, parent, option, index)
-        qde.setDisplayFormat(self.format)
-        qde.setMinimumDateTime(UNDEFINED_QDATETIME)
-        qde.setSpecialValueText(_("Undefined"))
-        qde.setCalendarPopup(True)
-        return qde
-
-    def setEditorData(self, editor, index):
-        val = index.model().data(index, Qt.DisplayRole)
-        if val is None or val == UNDEFINED_QDATETIME:
-            val = self.default_date if self.default_to_today else UNDEFINED_QDATETIME
-        editor.setDateTime(val)
-
-    def setModelData(self, editor, model, index):
-        val = editor.dateTime()
-        if val <= UNDEFINED_QDATETIME:
-            model.setData(index, UNDEFINED_QDATETIME, Qt.EditRole)
-        else:
-            model.setData(index, QDateTime(val), Qt.EditRole)
-
-
-class NoWheelComboBox(QComboBox):
-    def wheelEvent(self, event):
-        # Disable the mouse wheel on top of the combo box changing selection as plays havoc in a grid
-        event.ignore()
 
 
 class CheckableTableWidgetItem(QTableWidgetItem):
@@ -860,20 +730,6 @@ class TextWithLengthDelegate(TextDelegate):
         return editor
 
 
-def get_title_authors_text(db, book_id):
-    def authors_to_list(db, book_id):
-        authors = db.authors(book_id, index_is_id=True)
-        if authors:
-            return [a.strip().replace("|", ",") for a in authors.split(",")]
-        return []
-
-    title = db.title(book_id, index_is_id=True)
-    authors = authors_to_list(db, book_id)
-    from calibre.ebooks.metadata import authors_to_string
-
-    return "%s / %s" % (title, authors_to_string(authors))
-
-
 class ProgressBar(QDialog):
     def __init__(
         self,
@@ -928,9 +784,6 @@ class ProgressBar(QDialog):
     def set_value(self, value):
         self.progressBar.setValue(value)
         self.refresh()
-
-    def set_progress_format(self, progress_format=None):
-        pass
 
 
 def prompt_for_restart(parent, title, message):

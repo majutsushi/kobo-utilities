@@ -25,6 +25,7 @@ from calibre.gui2 import (
 from calibre.gui2.complete2 import EditWithComplete
 from calibre.gui2.dialogs.confirm_delete import confirm
 from calibre.gui2.dialogs.template_dialog import TemplateDialog
+from calibre.gui2.library.delegates import DateDelegate
 from calibre.gui2.widgets2 import ColorButton
 from calibre.utils.config import tweaks
 from calibre.utils.date import qt_to_dt, utc_tz
@@ -66,7 +67,6 @@ from .book import SeriesBook
 from .common_utils import (
     CheckableTableWidgetItem,
     CustomColumnComboBox,
-    DateDelegate,
     DateTableWidgetItem,
     ImageTitleLayout,
     ProfileComboBox,
@@ -117,32 +117,6 @@ LINE_SPACINGS_030200 = [
     2.6,
     2.8,
     3,
-]
-FONT_SIZES = [
-    12,
-    14,
-    16,
-    17,
-    18,
-    19,
-    20,
-    21,
-    22,
-    24,
-    25,
-    26,
-    28,
-    32,
-    36,
-    40,
-    44,
-    46,
-    48,
-    50,
-    52,
-    54,
-    56,
-    58,
 ]
 KOBO_FONTS = {
     (0, 0, 0): {  # Format is: Display name, setting name
@@ -207,15 +181,6 @@ KOBO_FONTS = {
 }
 
 DIALOG_NAME = "Kobo Utilities"
-
-ORDER_SHELVES_TYPE = [
-    cfg.KEY_ORDER_SHELVES_SERIES,
-    cfg.KEY_ORDER_SHELVES_AUTHORS,
-    cfg.KEY_ORDER_SHELVES_OTHER,
-    cfg.KEY_ORDER_SHELVES_ALL,
-]
-
-ORDER_SHELVES_BY = [cfg.KEY_ORDER_SHELVES_BY_SERIES, cfg.KEY_ORDER_SHELVES_PUBLISHED]
 
 READING_DIRECTIONS = {
     _("Default"): "default",
@@ -481,12 +446,6 @@ class QueueProgressDialog(QProgressDialog):
 
         # Queue a job to process these ePub books
         self.do_queue()
-
-    def _authors_to_list(self, db, book_id):
-        authors = db.authors(book_id, index_is_id=True)
-        if authors:
-            return [a.strip().replace("|", ",") for a in authors.split(",")]
-        return []
 
 
 class ReaderOptionsDialog(SizePersistedDialog):
@@ -1317,10 +1276,6 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         column_types = ["datetime"]
         return self.get_custom_columns(column_types)
 
-    def get_text_type_custom_columns(self):
-        column_types = ["text", "comments"]
-        return self.get_custom_columns(column_types)
-
     def get_custom_columns(self, column_types):
         custom_columns = self.plugin_action.gui.library_view.model().custom_columns
         available_columns = {}
@@ -1865,7 +1820,6 @@ class RemoveAnnotationsOptionsDialog(SizePersistedDialog):
 
         self.options = gprefs.get(self.unique_pref_name + ":settings", {})
 
-        self.is_device_view = self.plugin_action.isDeviceView()
         self.initialize_controls()
         self.annotation_clean_option = self.options.get(cfg.KEY_REMOVE_ANNOT_ACTION, 0)
         self.annotation_clean_option_button_group.button(
@@ -2538,7 +2492,7 @@ class SeriesTableWidget(QTableWidget):
         self.setSortingEnabled(False)
         self.setMinimumSize(550, 0)
         self.selectRow(0)
-        delegate = DateDelegate(self, self.fmt, default_to_today=False)
+        delegate = DateDelegate(self, tweak_name="gui_pubdate_display_format")
         self.setItemDelegateForColumn(2, delegate)
 
     def setMinimumColumnWidth(self, col, minimum):
@@ -3207,7 +3161,7 @@ class BooksNotInDeviceDatabaseTableWidget(QTableWidget):
         self.setSortingEnabled(True)
         self.setMinimumSize(550, 0)
         self.selectRow(0)
-        delegate = DateDelegate(self, self.fmt, default_to_today=False)
+        delegate = DateDelegate(self, tweak_name="gui_pubdate_display_format")
         self.setItemDelegateForColumn(3, delegate)
 
     def setMinimumColumnWidth(self, col, minimum):
@@ -3493,7 +3447,7 @@ class ShowReadingPositionChangesTableWidget(QTableWidget):
         self.hideColumn(7)
         self.setSortingEnabled(True)
         self.selectRow(0)
-        delegate = DateDelegate(self, default_to_today=False)
+        delegate = DateDelegate(self)
         self.setItemDelegateForColumn(5, delegate)
         self.setItemDelegateForColumn(6, delegate)
 
@@ -3559,9 +3513,6 @@ class ShowReadingPositionChangesTableWidget(QTableWidget):
         book_idColumn = RatingTableWidgetItem(book_id)
         self.setItem(row, 7, book_idColumn)
         self.blockSignals(False)
-
-    def select_all(self):
-        self.selectAll()
 
     def toggle_checkmarks(self, select):
         for i in range(self.rowCount()):
@@ -3702,7 +3653,7 @@ class DuplicateShelvesInDeviceDatabaseTableWidget(QTableWidget):
         self.setMinimumColumnWidth(2, 150)
         self.setSortingEnabled(True)
         self.selectRow(0)
-        delegate = DateDelegate(self, default_to_today=False)
+        delegate = DateDelegate(self)
         self.setItemDelegateForColumn(1, delegate)
         self.setItemDelegateForColumn(2, delegate)
 

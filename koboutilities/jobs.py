@@ -226,8 +226,8 @@ def do_store_locations(books_to_scan, options, cpus, notification=lambda x, _y: 
     # Queue all the jobs
 
     args = [
-        "calibre_plugins.koboutilities.jobs",
-        "do_store_locations_all",
+        do_store_locations_all.__module__,
+        do_store_locations_all.__name__,
         (books_to_scan, options),
     ]
     debug("len(books_to_scan)=%d" % (len(books_to_scan)))

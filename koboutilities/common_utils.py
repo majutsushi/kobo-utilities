@@ -77,8 +77,10 @@ def debug(*args):
         assert frame is not None
         code = frame.f_code
         filename = code.co_filename.replace("calibre_plugins.", "")
+        # co_qualname was added in Python 3.11
+        funcname = getattr(code, "co_qualname", code.co_name)
         timed_print(
-            f"[DEBUG] [{filename}:{code.co_name}:{frame.f_lineno}]",
+            f"[DEBUG] [{filename}:{funcname}:{frame.f_lineno}]",
             *args,
         )
 

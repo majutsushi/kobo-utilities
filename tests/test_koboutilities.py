@@ -202,6 +202,7 @@ class TestKoboUtilities(unittest.TestCase):
             name="test-device",
             path="/",
             db_path="/kobo.sqlite",
+            device_db_path="/kobo.sqlite",
             is_db_copied=False,
         )
         self.plugin.log = default_log
@@ -307,7 +308,9 @@ class TestKoboUtilities(unittest.TestCase):
                 "kepub": action.KEPUB_FETCH_QUERY,
                 "epub": action.EPUB_FETCH_QUERY,
             },
+            "database_path": "unused",
             "device_database_path": "unused",
+            "is_db_copied": False,
         }
 
         # Run tested function

@@ -289,7 +289,10 @@ def _store_bookmarks(books, options):
     last_read_column_name = options[cfg.KEY_LAST_READ_CUSTOM_COLUMN]
 
     connection = DeviceDatabaseConnection(
-        options["device_database_path"], use_row_factory=True
+        options["database_path"],
+        options["device_database_path"],
+        options["is_db_copied"],
+        use_row_factory=True,
     )
     cursor = connection.cursor()
     count_books += 1
@@ -586,7 +589,9 @@ def do_clean_images_dir(options, cpus, notification=lambda x, _y: x):
     del cpus
     main_image_path = options["main_image_path"]
     sd_image_path = options["sd_image_path"]
+    database_path = options["database_path"]
     device_database_path = options["device_database_path"]
+    is_db_copied = options["is_db_copied"]
 
     notification(1 / 7, "Getting ImageIDs from main images directory")
     debug(
@@ -601,7 +606,7 @@ def do_clean_images_dir(options, cpus, notification=lambda x, _y: x):
 
     notification(3 / 7, "Getting ImageIDs from device database.")
     debug("Getting ImageIDs from device database.")
-    imageids_db = _get_imageId_set(device_database_path)
+    imageids_db = _get_imageId_set(database_path, device_database_path, is_db_copied)
 
     notification(4 / 7, "Checking/removing images from main images directory")
     extra_imageids_files_main = set(imageids_files_main.keys()) - imageids_db
@@ -693,8 +698,10 @@ def _remove_extra_files(
     return extra_image_files
 
 
-def _get_imageId_set(device_database_path):
-    connection = DeviceDatabaseConnection(device_database_path, use_row_factory=True)
+def _get_imageId_set(database_path: str, device_database_path: str, is_db_copied: bool):
+    connection = DeviceDatabaseConnection(
+        database_path, device_database_path, is_db_copied, use_row_factory=True
+    )
     imageId_query = (
         "SELECT DISTINCT ImageId "
         "FROM content "

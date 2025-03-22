@@ -1274,7 +1274,9 @@ class KoboUtilitiesAction(InterfaceAction):
             rest_of_book_estimate_column
         )
 
-        self.options["device_database_path"] = self.device.db_path
+        self.options["database_path"] = self.device.db_path
+        self.options["device_database_path"] = self.device.device_db_path
+        self.options["is_db_copied"] = self.device.is_db_copied
         self.options["job_function"] = "store_current_bookmark"
         self.options["supports_ratings"] = self.device.supports_ratings
         self.options["epub_location_like_kepub"] = self.device.epub_location_like_kepub
@@ -1469,7 +1471,9 @@ class KoboUtilitiesAction(InterfaceAction):
             )
             return
 
-        self.options["device_database_path"] = self.device.db_path
+        self.options["database_path"] = self.device.db_path
+        self.options["device_database_path"] = self.device.device_db_path
+        self.options["is_db_copied"] = self.device.is_db_copied
         self.options["job_function"] = "store_current_bookmark"
         self.options["supports_ratings"] = self.device.supports_ratings
         self.options["epub_location_like_kepub"] = self.device.epub_location_like_kepub
@@ -1700,7 +1704,7 @@ class KoboUtilitiesAction(InterfaceAction):
         )
         self.options["annotations_ext"] = ".annot"
         self.options["device_path"] = self.device.path
-        self.options["device_database_path"] = self.device.db_path
+        # self.options["device_database_path"] = self.device.db_path
         self.options["job_function"] = "remove_annotations"
         debug("self.options=", self.options)
         QueueProgressDialog(
@@ -2436,7 +2440,9 @@ class KoboUtilitiesAction(InterfaceAction):
             main_image_path
         )
         self.options["sd_image_path"] = self.device.device.normalize_path(sd_image_path)
-        self.options["device_database_path"] = self.device.db_path
+        self.options["database_path"] = self.device.db_path
+        self.options["device_database_path"] = self.device.device_db_path
+        self.options["is_db_copied"] = self.device.is_db_copied
         self.options["job_function"] = "clean_images_dir"
         debug("self.options=", self.options)
         QueueProgressDialog(
@@ -2635,13 +2641,14 @@ class KoboUtilitiesAction(InterfaceAction):
                 device, KOBOTOUCH
             ) and device.fwversion >= (4, 17, 13651)  # type: ignore[reportOperatorIssue]
 
+        device_db_path = cast(
+            "str", device.normalize_path(device_path + ".kobo/KoboReader.sqlite")
+        )
         if isinstance(device, KOBOTOUCH) and hasattr(device, "db_manager"):
             db_path = device.db_manager.dbpath
             is_db_copied = device.db_manager.needs_copy
         else:
-            db_path = cast(
-                "str", device.normalize_path(device_path + ".kobo/KoboReader.sqlite")
-            )
+            db_path = device_db_path
             is_db_copied = False
         debug("db_path:", db_path)
 
@@ -2661,6 +2668,7 @@ class KoboUtilitiesAction(InterfaceAction):
             device_name,
             device_path,
             db_path,
+            device_db_path,
             is_db_copied,
         )
 
@@ -2712,7 +2720,12 @@ class KoboUtilitiesAction(InterfaceAction):
         self, use_row_factory=False
     ) -> DeviceDatabaseConnection:
         assert self.device is not None
-        return DeviceDatabaseConnection(self.device.db_path, use_row_factory)
+        return DeviceDatabaseConnection(
+            self.device.db_path,
+            self.device.device_db_path,
+            self.device.is_db_copied,
+            use_row_factory,
+        )
 
     def _store_queue_job(self, options: Dict[str, Any], books_to_modify: List[Tuple]):
         debug("Start")
@@ -7201,4 +7214,5 @@ class KoboDevice:
     name: str
     path: str
     db_path: str
+    device_db_path: str
     is_db_copied: bool

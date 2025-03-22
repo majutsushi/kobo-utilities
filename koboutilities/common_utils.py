@@ -54,6 +54,8 @@ except ImportError:
     timed_print = print
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from .action import KoboUtilitiesAction
 
 MIMETYPE_KOBO = "application/x-kobo-epub+zip"
@@ -305,17 +307,27 @@ def row_factory(cursor, row):
 # Without a lock the copying can lead to data loss.
 # In addition, transactions are generally useful when changing the device DB.
 class DeviceDatabaseConnection(apsw.Connection):
-    def __init__(self, database_path: str, use_row_factory: bool = False) -> None:
+    def __init__(
+        self,
+        database_path: str,
+        device_db_path: str,
+        is_db_copied: bool,
+        use_row_factory: bool = False,
+    ) -> None:
         self.__lock = None
+        self.__copy_db: Callable[[apsw.Connection, str], None] = lambda *_args: None
         try:
-            from calibre.devices.kobo.db import kobo_db_lock
+            from calibre.devices.kobo.db import copy_db, kobo_db_lock
 
             self.__lock = kobo_db_lock
+            self.__copy_db = copy_db
         except ImportError:
             pass
         super().__init__(database_path)
         if use_row_factory:
             self.setrowtrace(row_factory)
+        self.__device_db_path = device_db_path
+        self.__is_db_copied = is_db_copied
 
     def __enter__(self) -> apsw.Connection:
         if self.__lock is not None:
@@ -325,6 +337,11 @@ class DeviceDatabaseConnection(apsw.Connection):
     def __exit__(self, exc_type, exc_value, tb) -> bool | None:
         try:
             suppress_exception = super().__exit__(exc_type, exc_value, tb)
+            if self.__is_db_copied and (
+                suppress_exception
+                or (exc_type is None and exc_value is None and tb is None)
+            ):
+                self.__copy_db(self, self.__device_db_path)
         finally:
             if self.__lock is not None:
                 self.__lock.release()
@@ -332,7 +349,9 @@ class DeviceDatabaseConnection(apsw.Connection):
 
 
 def check_device_database(database_path: str):
-    connection = DeviceDatabaseConnection(database_path)
+    connection = DeviceDatabaseConnection(
+        database_path, database_path, is_db_copied=False
+    )
     check_query = "PRAGMA integrity_check"
     cursor = connection.cursor()
 

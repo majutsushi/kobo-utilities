@@ -1,5 +1,10 @@
 # Changelog
 
+## unreleased
+
+- Correctly update the "Device" tab in the options when connecting a device
+  while the dialog is open
+
 ## Version 2.20.0 - 2025-03-22
 
 - Use Calibre 8's database handling if available

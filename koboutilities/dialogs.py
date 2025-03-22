@@ -1921,7 +1921,7 @@ class RemoveAnnotationsOptionsDialog(SizePersistedDialog):
             annotation_clean_option_group_box_layout
         )
         self.annotation_clean_option_button_group = QButtonGroup(self)
-        self.annotation_clean_option_button_group.buttonClicked[int].connect(
+        self.annotation_clean_option_button_group.buttonClicked.connect(
             self._annotation_clean_option_radio_clicked
         )
         for clean_option in annotation_clean_options:

@@ -24,7 +24,7 @@ class ActionKoboUtilities(InterfaceActionBase):
     description = "Utilities to use with Kobo ereaders"
     supported_platforms = ["windows", "osx", "linux"]  # noqa: RUF012
     author = "David Forrester and others"
-    version = (2, 19, 1)
+    version = (2, 20, 0)
     # Calibre versions from https://github.com/kovidgoyal/calibre/blob/master/bypy/sources.json:
     # Calibre 5.13.0 (2021-03-10): Python 3.8.5
     # Calibre 6.0.0 (2022-07-11): Python 3.10.1

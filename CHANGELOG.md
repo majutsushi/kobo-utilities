@@ -1,5 +1,15 @@
 # Changelog
 
+## Version 2.20.0 - 2025-03-22
+
+- Use Calibre 8's database handling if available
+  to prevent potential data loss on some filesystems
+- Don't show driver switching options in Calibre 8 since it is no longer necessary
+- Fixed bug that prevented some options from showing up in the Upload Covers dialog
+- Fixed long-standing bug that prevented the "Remove Annotation Files"
+  feature from working
+- Made debug logging more consistent
+
 ## Version 2.19.1 - 2025-03-17
 
 - Fixed error when using epub files instead of kepub

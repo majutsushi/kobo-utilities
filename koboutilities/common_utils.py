@@ -19,7 +19,6 @@ from calibre.gui2 import (
     error_dialog,
     gprefs,
     info_dialog,
-    timed_print,
 )
 from calibre.gui2.actions import menu_action_unique_name
 from calibre.gui2.keyboard import ShortcutConfig
@@ -47,6 +46,12 @@ from qt.core import (
     QTextEdit,
     QVBoxLayout,
 )
+
+try:
+    # timed_print got added in Calibre 7.2.0
+    from calibre.gui2 import timed_print
+except ImportError:
+    timed_print = print
 
 if TYPE_CHECKING:
     from .action import KoboUtilitiesAction

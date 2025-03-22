@@ -408,15 +408,6 @@ def convert_kobo_date(kobo_date: Optional[str]) -> Optional[datetime]:
     return converted_date
 
 
-class ImageLabel(QLabel):
-    def __init__(self, parent, icon_name, size=16):
-        super(ImageLabel, self).__init__(parent)
-        pixmap = get_pixmap(icon_name)
-        self.setPixmap(pixmap)
-        self.setMaximumSize(size, size)
-        self.setScaledContents(True)
-
-
 class ImageTitleLayout(QHBoxLayout):
     """
     A reusable layout widget displaying an image followed by a title

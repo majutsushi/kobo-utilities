@@ -320,8 +320,8 @@ class KoboUtilitiesAction(InterfaceAction):
 
     def _on_device_metadata_available(self):
         debug("Start")
-        self.plugin_device_metadata_available.emit()
         self.device = self.get_device()
+        self.plugin_device_metadata_available.emit()
         self.set_toolbar_button_tooltip()
 
         if self.device is not None:

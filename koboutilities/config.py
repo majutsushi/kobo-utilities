@@ -1856,6 +1856,8 @@ class ConfigWidget(QWidget):
         self.devices_tab.update_from_connection_status(first_time=True)
         self.profiles_tab.refresh_current_profile_info()
 
+        self.connect_signals()
+
     def connect_signals(self):
         self.plugin_action.plugin_device_connection_changed.connect(
             self.devices_tab.on_device_connection_changed

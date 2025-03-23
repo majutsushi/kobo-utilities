@@ -1924,13 +1924,15 @@ class RemoveAnnotationsOptionsDialog(SizePersistedDialog):
         self.annotation_clean_option_button_group.buttonClicked.connect(
             self._annotation_clean_option_radio_clicked
         )
-        for clean_option in annotation_clean_options:
+        self.annotation_clean_option_buttons = {}
+        for row, clean_option in enumerate(annotation_clean_options):
             clean_options = annotation_clean_options[clean_option]
             rdo = QRadioButton(clean_options[0], self)
             rdo.setToolTip(clean_options[1])
             self.annotation_clean_option_button_group.addButton(rdo)
             self.annotation_clean_option_button_group.setId(rdo, clean_option)
             annotation_clean_option_group_box_layout.addWidget(rdo)
+            self.annotation_clean_option_buttons[rdo] = row
 
         layout.addStretch(1)
 
@@ -1945,8 +1947,8 @@ class RemoveAnnotationsOptionsDialog(SizePersistedDialog):
         gprefs.set(self.unique_pref_name + ":settings", self.options)
         self.accept()
 
-    def _annotation_clean_option_radio_clicked(self, idx):
-        self.annotation_clean_option = idx
+    def _annotation_clean_option_radio_clicked(self, radioButton):
+        self.annotation_clean_option = self.annotation_clean_option_buttons[radioButton]
 
 
 class CoverUploadOptionsDialog(SizePersistedDialog):

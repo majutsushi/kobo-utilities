@@ -2702,19 +2702,19 @@ class KoboUtilitiesAction(InterfaceAction):
     def _store_queue_job(self, options: Dict[str, Any], books_to_modify: List[Tuple]):
         debug("Start")
         cpus = 1  # self.gui.device_manager.server.pool_size
-        from .jobs import do_store_locations
+        from .jobs import do_read_locations
 
         args = [books_to_modify, options, cpus]
         desc = _("Storing reading positions for {0} books").format(len(books_to_modify))
         self.gui.device_manager.create_job(
-            do_store_locations,
-            self.Dispatcher(self._store_completed),
+            do_read_locations,
+            self.Dispatcher(self._read_completed),
             description=desc,
             args=args,
         )
         self.gui.status_bar.show_message(self.giu_name + " - " + desc, 3000)
 
-    def _store_completed(self, job):
+    def _read_completed(self, job):
         if job.failed:
             self.gui.job_exception(
                 job, dialog_title=_("Failed to get reading positions")

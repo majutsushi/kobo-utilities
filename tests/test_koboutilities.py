@@ -319,7 +319,7 @@ class TestKoboUtilities(unittest.TestCase):
             "DeviceDatabaseConnection",
             return_value=device_db.db_conn,
         ):
-            stored_locations = jobs._store_bookmarks(books_in_calibre, cfg)
+            stored_locations = jobs._read_locations(books_in_calibre, cfg)
 
         pprint(stored_locations)
         self.assertNotIn(book1.calibre_id, stored_locations)

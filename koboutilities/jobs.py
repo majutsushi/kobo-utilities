@@ -215,9 +215,9 @@ def do_device_database_backup(backup_options):
     return
 
 
-def do_store_locations(books_to_scan, options, cpus, notification=lambda x, _y: x):
+def do_read_locations(books_to_scan, options, cpus, notification=lambda x, _y: x):
     """
-    Master job to do store the current reading positions
+    Master job to do read the current reading locations from the device DB
     """
     debug("start")
     server = Server(pool_size=cpus)
@@ -226,12 +226,12 @@ def do_store_locations(books_to_scan, options, cpus, notification=lambda x, _y: 
     # Queue all the jobs
 
     args = [
-        do_store_locations_all.__module__,
-        do_store_locations_all.__name__,
+        do_read_locations_all.__module__,
+        do_read_locations_all.__name__,
         (books_to_scan, options),
     ]
     debug("len(books_to_scan)=%d" % (len(books_to_scan)))
-    job: ParallelJob = ParallelJob("arbitrary", "Store locations", done=None, args=args)
+    job: ParallelJob = ParallelJob("arbitrary", "Read locations", done=None, args=args)
     server.add_job(job)
 
     # This server is an arbitrary_n job, so there is a notifier available.
@@ -241,7 +241,7 @@ def do_store_locations(books_to_scan, options, cpus, notification=lambda x, _y: 
     # dequeue the job results as they arrive, saving the results
     total = 1
     count = 0
-    stored_locations = {}
+    new_locations = {}
     while True:
         job = server.changed_jobs_queue.get()
         # A job can 'change' when it is not finished, for example if it
@@ -251,11 +251,11 @@ def do_store_locations(books_to_scan, options, cpus, notification=lambda x, _y: 
             debug("Job not finished")
             continue
         # A job really finished. Get the information.
-        stored_locations = job.result
+        new_locations = job.result
         count += 1
         notification(float(count) / total, "Storing locations")
-        number_bookmarks = len(stored_locations) if stored_locations else 0
-        debug("count=%d" % number_bookmarks)
+        number_locations = len(new_locations) if new_locations else 0
+        debug("count=%d" % number_locations)
         debug(job.details)
         if count >= total:
             # All done!
@@ -264,20 +264,20 @@ def do_store_locations(books_to_scan, options, cpus, notification=lambda x, _y: 
     server.close()
     debug("finished")
     # return the map as the job result
-    return stored_locations, options
+    return new_locations, options
 
 
-def do_store_locations_all(books, options):
+def do_read_locations_all(books, options):
     """
-    Child job, to store location for all the books
+    Child job, to read location for all the books
     """
-    return _store_bookmarks(books, options)
+    return _read_locations(books, options)
 
 
-def _store_bookmarks(books, options):
+def _read_locations(books, options):
     debug("start")
     count_books = 0
-    stored_locations = {}
+    new_locations = {}
     clear_if_unread = options[cfg.KEY_CLEAR_IF_UNREAD]
     store_if_more_recent = options[cfg.KEY_STORE_IF_MORE_RECENT]
     do_not_store_if_reopened = options[cfg.KEY_DO_NOT_STORE_IF_REOPENED]
@@ -569,12 +569,12 @@ def _store_bookmarks(books, options):
 
         if reading_position_changed:
             debug("position changed for: %s - %s" % (title, authors))
-            stored_locations[book_id] = device_status
+            new_locations[book_id] = device_status
 
     debug("finished book loop")
 
     debug("finished")
-    return stored_locations
+    return new_locations
 
 
 def value_changed(old_value, new_value):

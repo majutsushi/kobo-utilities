@@ -354,6 +354,7 @@ class KoboUtilitiesAction(InterfaceAction):
             self.no_device_actions_map = []
 
             device = self.device
+            self.menu.setToolTipsVisible(True)
             self.set_toolbar_button_tooltip()
 
             self.create_menu_item_ex(
@@ -362,14 +363,9 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="Set Reader Font for Selected Books",
                 shortcut_name=_("Set Reader Font for Selected Books"),
                 triggered=self.set_reader_fonts,
-                enabled=device is not None and device.is_kobotouch,
                 is_library_action=True,
                 is_device_action=True,
-                tooltip=(
-                    None
-                    if (device is None or device.is_kobotouch)
-                    else "Not supported for this device"
-                ),
+                is_supported=device is not None and device.is_kobotouch,
             )
 
             self.create_menu_item_ex(
@@ -378,14 +374,9 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="Remove Reader Font for Selected Books",
                 shortcut_name=_("Remove Reader Font for Selected Books"),
                 triggered=self.remove_reader_fonts,
-                enabled=device is not None and device.is_kobotouch,
                 is_library_action=True,
                 is_device_action=True,
-                tooltip=(
-                    None
-                    if (device is None or device.is_kobotouch)
-                    else "Not supported for this device"
-                ),
+                is_supported=device is not None and device.is_kobotouch,
             )
 
             self.menu.addSeparator()
@@ -396,7 +387,6 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="Update metadata in device library",
                 shortcut_name=_("Update metadata in device library"),
                 triggered=self.update_metadata,
-                enabled=not self.isDeviceView() and device is not None,
                 is_library_action=True,
             )
 
@@ -406,7 +396,6 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="Change Reading Status in device library",
                 shortcut_name=_("Change Reading Status in device library"),
                 triggered=self.change_reading_status,
-                enabled=self.isDeviceView() and device is not None,
                 is_device_action=True,
             )
 
@@ -416,15 +405,8 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="Manage Series Information in device library",
                 shortcut_name=_("Manage Series Information in device library"),
                 triggered=self.manage_series_on_device,
-                enabled=self.isDeviceView()
-                and device is not None
-                and device.supports_series,
                 is_device_action=True,
-                tooltip=(
-                    None
-                    if (device is None or device.supports_series)
-                    else "Not supported for this device"
-                ),
+                is_supported=device is not None and device.supports_series,
             )
 
             self.create_menu_item_ex(
@@ -433,7 +415,6 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="Store/Restore current bookmark",
                 shortcut_name=_("Store/Restore current bookmark"),
                 triggered=self.handle_bookmarks,
-                enabled=not self.isDeviceView() and device is not None,
                 is_library_action=True,
             )
 
@@ -445,7 +426,6 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="Update ToC for Selected Books",
                 shortcut_name=_("Update ToC for Selected Books"),
                 triggered=self.update_book_toc_on_device,
-                enabled=not self.isDeviceView() and device is not None,
                 is_library_action=True,
             )
 
@@ -456,7 +436,6 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="Upload/covers for Selected Books",
                 shortcut_name=_("Upload covers for Selected Books"),
                 triggered=self.upload_covers,
-                enabled=not self.isDeviceView() and device is not None,
                 is_library_action=True,
             )
             self.create_menu_item_ex(
@@ -465,14 +444,9 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="Remove covers for Selected Books",
                 shortcut_name=_("Remove covers for Selected Books"),
                 triggered=self.remove_covers,
-                enabled=device is not None and device.is_kobotouch,
                 is_library_action=True,
                 is_device_action=True,
-                tooltip=(
-                    None
-                    if (device is None or device.is_kobotouch)
-                    else "Not supported for this device"
-                ),
+                is_supported=device is not None and device.is_kobotouch,
             )
 
             self.create_menu_item_ex(
@@ -481,7 +455,6 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="Clean images directory of extra cover images",
                 shortcut_name=_("Clean images directory of extra cover images"),
                 triggered=self.clean_images_dir,
-                enabled=device is not None,
                 is_library_action=True,
                 is_device_action=True,
             )
@@ -491,14 +464,9 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="Open cover image directory",
                 shortcut_name=_("Open cover image directory"),
                 triggered=self.open_cover_image_directory,
-                enabled=device is not None and device.is_kobotouch,
                 is_library_action=True,
                 is_device_action=True,
-                tooltip=(
-                    None
-                    if (device is None or device.is_kobotouch)
-                    else "Not supported for this device"
-                ),
+                is_supported=device is not None and device.is_kobotouch,
             )
             self.menu.addSeparator()
 
@@ -508,14 +476,9 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="Order Series Shelves",
                 shortcut_name=_("Order Series Shelves"),
                 triggered=self.order_series_shelves,
-                enabled=(device is not None and device.supports_series),
                 is_library_action=True,
                 is_device_action=True,
-                tooltip=(
-                    None
-                    if (device is None or device.supports_series)
-                    else "Not supported for this device"
-                ),
+                is_supported=(device is not None and device.supports_series),
             )
             self.create_menu_item_ex(
                 self.menu,
@@ -523,18 +486,8 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="Get Shelves From Device",
                 shortcut_name=_("Get Shelves From Device"),
                 triggered=self.get_shelves_from_device,
-                enabled=(
-                    not self.isDeviceView()
-                    and device is not None
-                    and device.is_kobotouch
-                ),
                 is_library_action=True,
-                is_device_action=False,
-                tooltip=(
-                    None
-                    if (device is None or device.is_kobotouch)
-                    else "Not supported for this device"
-                ),
+                is_supported=device is not None and device.is_kobotouch,
             )
             if device is not None and device.device.fwversion < (4, 4, 0):
                 self.create_menu_item_ex(
@@ -543,14 +496,9 @@ class KoboUtilitiesAction(InterfaceAction):
                     unique_name="Set Related Books",
                     shortcut_name=_("Set Related Books"),
                     triggered=self.set_related_books,
-                    enabled=device.supports_series,
                     is_library_action=True,
                     is_device_action=True,
-                    tooltip=(
-                        None
-                        if device.supports_series
-                        else "Not supported for this device"
-                    ),
+                    is_supported=device.supports_series,
                 )
             self.menu.addSeparator()
             self.create_menu_item_ex(
@@ -560,7 +508,6 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="Copy annotation for Selected Book",
                 shortcut_name=_("Copy annotation for Selected Book"),
                 triggered=self.getAnnotationForSelected,
-                enabled=not self.isDeviceView() and device is not None,
                 is_library_action=True,
             )
             self.create_menu_item_ex(
@@ -569,7 +516,6 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="Backup Annotation File",
                 shortcut_name=_("Backup Annotation File"),
                 triggered=self.backup_annotation_files,
-                enabled=not self.isDeviceView() and device is not None,
                 is_library_action=True,
             )
             self.create_menu_item_ex(
@@ -578,7 +524,6 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="Remove Annotation Files",
                 shortcut_name=_("Remove Annotation Files"),
                 triggered=self.remove_annotations_files,
-                enabled=device is not None,
                 is_library_action=True,
                 is_device_action=True,
             )
@@ -591,7 +536,6 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="Show books not in the device database",
                 shortcut_name=_("Show books not in the device database"),
                 triggered=self.show_books_not_in_database,
-                enabled=self.isDeviceView() and device is not None,
                 is_device_action=True,
             )
 
@@ -601,7 +545,6 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="Refresh the list of books on the device",
                 shortcut_name=_("Refresh the list of books on the device"),
                 triggered=self.refresh_device_books,
-                enabled=device is not None,
                 is_library_action=True,
                 is_device_action=True,
             )
@@ -612,14 +555,9 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="Block Analytics Events",
                 shortcut_name=_("Block Analytics Events"),
                 triggered=self.block_analytics,
-                enabled=device is not None and device.is_kobotouch,
                 is_library_action=True,
                 is_device_action=True,
-                tooltip=(
-                    None
-                    if (device is None or device.is_kobotouch)
-                    else "Not supported for this device"
-                ),
+                is_supported=device is not None and device.is_kobotouch,
             )
             databaseMenu.addSeparator()
             self.create_menu_item_ex(
@@ -628,14 +566,9 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="Fix Duplicate Shelves",
                 shortcut_name=_("Fix Duplicate Shelves"),
                 triggered=self.fix_duplicate_shelves,
-                enabled=device is not None and device.is_kobotouch,
                 is_library_action=True,
                 is_device_action=True,
-                tooltip=(
-                    None
-                    if (device is None or device.is_kobotouch)
-                    else "Not supported for this device"
-                ),
+                is_supported=device is not None and device.is_kobotouch,
             )
             self.create_menu_item_ex(
                 databaseMenu,
@@ -643,14 +576,10 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="Check the device database",
                 shortcut_name=_("Check the device database"),
                 triggered=self.check_device_database,
-                enabled=device is not None and not device.is_db_copied,
                 is_library_action=True,
                 is_device_action=True,
-                tooltip=(
-                    "Not supported for databases on this filesystem"
-                    if device and device.is_db_copied
-                    else None
-                ),
+                is_supported=device is not None and not device.is_db_copied,
+                not_supported_reason=_("Not supported for this connection mode"),
             )
             self.create_menu_item_ex(
                 databaseMenu,
@@ -658,14 +587,10 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="Compress the device database",
                 shortcut_name=_("Compress the device database"),
                 triggered=self.vacuum_device_database,
-                enabled=device is not None and not device.is_db_copied,
                 is_library_action=True,
                 is_device_action=True,
-                tooltip=(
-                    "Not supported for databases on this filesystem"
-                    if device and device.is_db_copied
-                    else None
-                ),
+                is_supported=device is not None and not device.is_db_copied,
+                not_supported_reason=_("Not supported for this connection mode"),
             )
             self.create_menu_item_ex(
                 databaseMenu,
@@ -673,7 +598,6 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="Backup device database",
                 shortcut_name=_("Backup device database"),
                 triggered=self.backup_device_database,
-                enabled=device is not None,
                 is_library_action=True,
                 is_device_action=True,
             )
@@ -688,7 +612,6 @@ class KoboUtilitiesAction(InterfaceAction):
                     "Creates a file on the device which will be used to set the time when the device is disconnected."
                 ),
                 triggered=self.set_time_on_device,
-                enabled=device is not None,
                 is_library_action=True,
                 is_device_action=True,
             )
@@ -703,7 +626,6 @@ class KoboUtilitiesAction(InterfaceAction):
                     shortcut_name=_("Configure Driver"),
                     image="config.png",
                     triggered=self.configure_device,
-                    enabled=True,
                     is_library_action=True,
                     is_device_action=True,
                     is_no_device_action=True,
@@ -726,7 +648,6 @@ class KoboUtilitiesAction(InterfaceAction):
                     shortcut_name=_("Switch between main and extended driver"),
                     image="config.png",
                     triggered=self.switch_device_driver,
-                    enabled=True,
                     is_library_action=True,
                     is_device_action=True,
                     is_no_device_action=True,
@@ -740,7 +661,6 @@ class KoboUtilitiesAction(InterfaceAction):
                 shortcut_name=_("Customize plugin"),
                 image="config.png",
                 triggered=self.show_configuration,
-                enabled=True,
                 is_library_action=True,
                 is_device_action=True,
                 is_no_device_action=True,
@@ -753,7 +673,6 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="About KoboUtilities",
                 shortcut_name=_("About KoboUtilities"),
                 triggered=self.about,
-                enabled=True,
                 is_library_action=True,
                 is_device_action=True,
                 is_no_device_action=True,
@@ -784,37 +703,48 @@ class KoboUtilitiesAction(InterfaceAction):
         parent_menu,
         menu_text,
         image=None,
-        tooltip=None,
         shortcut=None,
         triggered=None,
         is_checked=None,
         shortcut_name=None,
         unique_name=None,
-        enabled=False,
+        tooltip: Optional[str] = None,
         is_library_action=False,
         is_device_action=False,
         is_no_device_action=False,
+        is_supported=True,
+        not_supported_reason: str = _("Not supported for this device"),
     ):
-        if (self.isDeviceView() and is_device_action) or (
-            not self.isDeviceView() and is_library_action
-        ):
-            ac = create_menu_action_unique(
-                self,
-                parent_menu,
-                menu_text,
-                image,
-                tooltip,
-                shortcut,
-                triggered,
-                is_checked,
-                shortcut_name,
-                unique_name,
-            )
-
-            ac.setEnabled(enabled)
-            self.menu_actions[shortcut_name] = ac
+        if self.device is None and not is_no_device_action:
+            tooltip = _("No device connected")
+            enabled = False
+        elif self.device is not None and not is_supported:
+            tooltip = not_supported_reason
+            enabled = False
+        elif self.isDeviceView() and not is_device_action:
+            tooltip = _("Only supported in Library View")
+            enabled = False
+        elif not self.isDeviceView() and not is_library_action:
+            tooltip = _("Only supported in Device View")
+            enabled = False
         else:
-            ac = None
+            tooltip = tooltip
+            enabled = True
+
+        ac = create_menu_action_unique(
+            self,
+            parent_menu,
+            menu_text,
+            image,
+            tooltip,
+            shortcut,
+            triggered,
+            is_checked,
+            shortcut_name,
+            unique_name,
+        )
+        ac.setEnabled(enabled)
+        self.menu_actions[shortcut_name] = ac
 
         if is_library_action:
             self.library_actions_map.append(shortcut_name)

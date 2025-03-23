@@ -365,10 +365,6 @@ class KoboUtilitiesAction(InterfaceAction):
             self.no_device_actions_map = []
 
             device = self.device
-            debug(
-                "device.supports_ratings=%s"
-                % (device is not None and device.supports_ratings)
-            )
             self.set_toolbar_button_tooltip()
 
             debug("have device.")

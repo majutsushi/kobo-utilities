@@ -1,7 +1,11 @@
 # Changelog
 
-## unreleased
+## Version 2.21.0 - 2025-03-24
 
+- Always show all menu items to improve discoverability and reduce confusion.
+  If a feature is not currently available the menu item will be disabled
+  and a tooltip will be shown explaining why.
+- Fixed another bug in the "Remove Annotation Files" feature
 - Correctly update the "Device" tab in the options when connecting a device
   while the dialog is open
 

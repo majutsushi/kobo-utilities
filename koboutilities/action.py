@@ -2006,6 +2006,8 @@ class KoboUtilitiesAction(InterfaceAction):
         d.exec_()
 
     def block_analytics(self) -> None:
+        # Some background info:
+        # https://www.mobileread.com/forums/showpost.php?p=3934039&postcount=44
         debug("start")
         self.device = self.get_device()
         if self.device is None:

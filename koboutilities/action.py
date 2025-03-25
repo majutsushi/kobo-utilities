@@ -1,6 +1,8 @@
 # vim:fileencoding=UTF-8:ts=4:sw=4:sta:et:sts=4:ai
 from __future__ import annotations
 
+from pathlib import Path
+
 __license__ = "GPL v3"
 __copyright__ = "2012-2017, David Forrester <davidfor@internode.on.net>"
 __docformat__ = "restructuredtext en"
@@ -2485,7 +2487,17 @@ class KoboUtilitiesAction(InterfaceAction):
             return None
 
         version_info = None
-        device_version_info = device.device_version_info()
+        try:
+            # This method got added in Calibre 5.41
+            device_version_info = device.device_version_info()
+        except AttributeError:
+            debug(
+                "no KOBO.device_version_info() method found; assuming old Calibre version"
+            )
+            version_file = Path(str(device._main_prefix), ".kobo/version")
+            device_version_info = version_file.read_text().strip().split(",")
+            debug("manually read version:", device_version_info)
+
         if device_version_info:
             serial_no, _, fw_version, _, _, model_id = device_version_info
             version_info = KoboVersionInfo(serial_no, fw_version, model_id)

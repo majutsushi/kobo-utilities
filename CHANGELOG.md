@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 2.21.1 - 2025-03-26
+
+- Fixed a bug that prevented the plugin from working
+  in supported Calibre versions before 5.41
+
 ## Version 2.21.0 - 2025-03-24
 
 - Always show all menu items to improve discoverability and reduce confusion.

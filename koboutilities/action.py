@@ -474,9 +474,9 @@ class KoboUtilitiesAction(InterfaceAction):
 
             self.create_menu_item_ex(
                 self.menu,
-                _("Order Series Shelves"),
-                unique_name="Order Series Shelves",
-                shortcut_name=_("Order Series Shelves"),
+                _("Order Series Collections"),
+                unique_name="Order Series Collections",
+                shortcut_name=_("Order Series Collections"),
                 triggered=self.order_series_shelves,
                 is_library_action=True,
                 is_device_action=True,
@@ -484,9 +484,9 @@ class KoboUtilitiesAction(InterfaceAction):
             )
             self.create_menu_item_ex(
                 self.menu,
-                _("Get Shelves From Device"),
-                unique_name="Get Shelves From Device",
-                shortcut_name=_("Get Shelves From Device"),
+                _("Get Collections From Device"),
+                unique_name="Get Collections From Device",
+                shortcut_name=_("Get Collections From Device"),
                 triggered=self.get_shelves_from_device,
                 is_library_action=True,
                 is_supported=device is not None and device.is_kobotouch,
@@ -564,9 +564,9 @@ class KoboUtilitiesAction(InterfaceAction):
             databaseMenu.addSeparator()
             self.create_menu_item_ex(
                 databaseMenu,
-                _("Fix Duplicate Shelves"),
-                unique_name="Fix Duplicate Shelves",
-                shortcut_name=_("Fix Duplicate Shelves"),
+                _("Fix Duplicate Collections"),
+                unique_name="Fix Duplicate Collections",
+                shortcut_name=_("Fix Duplicate Collections"),
                 triggered=self.fix_duplicate_shelves,
                 is_library_action=True,
                 is_device_action=True,
@@ -1726,7 +1726,7 @@ class KoboUtilitiesAction(InterfaceAction):
         if self.device is None:
             error_dialog(
                 self.gui,
-                _("Cannot fix the duplicate shelves in the device library."),
+                _("Cannot fix the duplicate Collections in the device library."),
                 _("No device connected."),
                 show=True,
             )
@@ -1748,12 +1748,12 @@ class KoboUtilitiesAction(InterfaceAction):
             _("Update summary:")
             + "\n\t"
             + _(
-                "Starting number of shelves={0}\n\tShelves removed={1}\n\tTotal shelves={2}"
+                "Starting number of Collections={0}\n\tCollections removed={1}\n\tTotal collections={2}"
             ).format(starting_shelves, shelves_removed, finished_shelves)
         )
         info_dialog(
             self.gui,
-            _("Kobo Utilities") + " - " + _("Duplicate Shelves Fixed"),
+            _("Kobo Utilities") + " - " + _("Duplicate Collections Fixed"),
             result_message,
             show=True,
         )
@@ -1763,7 +1763,7 @@ class KoboUtilitiesAction(InterfaceAction):
         if self.device is None:
             error_dialog(
                 self.gui,
-                _("Cannot order the series shelves in the device library."),
+                _("Cannot order the series Collections in the device library."),
                 _("No device connected."),
                 show=True,
             )
@@ -1786,13 +1786,13 @@ class KoboUtilitiesAction(InterfaceAction):
         result_message = (
             _("Update summary:")
             + "\n\t"
-            + _("Starting number of shelves={0}\n\tShelves reordered={1}").format(
+            + _("Starting number of collections={0}\n\tCollections reordered={1}").format(
                 starting_shelves, shelves_ordered
             )
         )
         info_dialog(
             self.gui,
-            _("Kobo Utilities") + " - " + _("Order Series Shelves"),
+            _("Kobo Utilities") + " - " + _("Order Series Collections"),
             result_message,
             show=True,
         )
@@ -1852,7 +1852,7 @@ class KoboUtilitiesAction(InterfaceAction):
         if self.device is None:
             error_dialog(
                 self.gui,
-                _("Cannot get the shelves from device."),
+                _("Cannot get the collections from device."),
                 _("No device connected."),
                 show=True,
             )
@@ -1898,10 +1898,10 @@ class KoboUtilitiesAction(InterfaceAction):
                 return
 
         progressbar = ProgressBar(
-            parent=self.gui, window_title=_("Getting shelves from device")
+            parent=self.gui, window_title=_("Getting collections from device")
         )
         progressbar.show()
-        progressbar.set_label(_("Getting list of shelves"))
+        progressbar.set_label(_("Getting list of collections"))
 
         library_db = current_view.model().db
         if self.options[cfg.KEY_ALL_BOOKS]:
@@ -1918,7 +1918,7 @@ class KoboUtilitiesAction(InterfaceAction):
         debug("selectedIDs:", selectedIDs)
         books = self._convert_calibre_ids_to_books(library_db, selectedIDs)
         progressbar.set_label(
-            _("Number of books to get shelves for {0}").format(len(books))
+            _("Number of books to get collections for {0}").format(len(books))
         )
         for book in books:
             device_book_paths = self.get_device_paths_from_id(book.calibre_id)
@@ -1938,12 +1938,12 @@ class KoboUtilitiesAction(InterfaceAction):
             _("Update summary:")
             + "\n\t"
             + _(
-                "Books processed={0}\n\tBooks with Shelves={1}\n\tBooks without Shelves={2}"
+                "Books processed={0}\n\tBooks with Collections={1}\n\tBooks without Collections={2}"
             ).format(count_books, books_with_shelves, books_without_shelves)
         )
         info_dialog(
             self.gui,
-            _("Kobo Utilities") + " - " + _("Get Shelves from Device"),
+            _("Kobo Utilities") + " - " + _("Get Collections from Device"),
             result_message,
             show=True,
         )
@@ -3820,7 +3820,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
         debug("shelves:", shelves, " options:", options)
         progressbar = ProgressBar(
-            parent=self.gui, window_title=_("Order Series Shelves")
+            parent=self.gui, window_title=_("Order Series Collections")
         )
         progressbar.show_with_maximum(len(shelves))
         progressbar.left_align_label()

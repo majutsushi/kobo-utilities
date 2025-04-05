@@ -1349,17 +1349,17 @@ class GetShelvesFromDeviceDialog(SizePersistedDialog):
         self.all_books_checkbox = QCheckBox(_("All books on device"), self)
         self.all_books_checkbox.setToolTip(
             _(
-                "Get the shelves for all the books on the device that are in the library. If not checked, will only get them for the selected books."
+                "Get the collections for all the books on the device that are in the library. If not checked, will only get them for the selected books."
             )
         )
         options_layout.addWidget(self.all_books_checkbox, 1, 0, 1, 2)
 
         self.replace_shelves_checkbox = QCheckBox(
-            _("Replace column with shelves"), self
+            _("Replace column with collections"), self
         )
         self.replace_shelves_checkbox.setToolTip(
             _(
-                "If this is selected, the current value in the library, will be replaced by\nthe retrieved shelves. Otherwise, the retrieved shelves will be added to the value"
+                "If this is selected, the current value in the library, will be replaced by\nthe retrieved collections. Otherwise, the retrieved collections will be added to the value"
             )
         )
         options_layout.addWidget(self.replace_shelves_checkbox, 2, 0, 1, 2)
@@ -3542,11 +3542,11 @@ class FixDuplicateShelvesDialog(SizePersistedDialog):
         self.resize_dialog()
 
     def initialize_controls(self):
-        self.setWindowTitle(_("Duplicate Shelves in Device Database"))
+        self.setWindowTitle(_("Duplicate Collections in Device Database"))
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/manage_series.png", _("Duplicate Shelves in Device Database")
+            self, "images/manage_series.png", _("Duplicate Collections in Device Database")
         )
         layout.addLayout(title_layout)
 
@@ -3740,10 +3740,10 @@ class OrderSeriesShelvesDialog(SizePersistedDialog):
         layout.addLayout(title_layout)
 
         order_shelves_type_toolTip = [
-            _("Order the shelves with series names."),
-            _("Order the shelves with author names."),
-            _("Order the shelves that do not have series or author names."),
-            _("Order all shelves."),
+            _("Order the collections with series names."),
+            _("Order the collections with author names."),
+            _("Order the collections that do not have series or author names."),
+            _("Order all collections."),
         ]
 
         order_shelves_type_group_box = QGroupBox(_("Shelves to order"), self)

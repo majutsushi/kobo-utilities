@@ -108,6 +108,7 @@ def do_device_database_backup(backup_options):
         shutil.copyfile(bookreader_database_file, bookreader_backup_file_path)
     except Exception as e:
         debug("backup of database BookReader.sqlite failed. Exception: {0}".format(e))
+        bookreader_backup_file_path = None
 
     try:
         check_result = check_device_database(backup_file_path)

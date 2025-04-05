@@ -11,7 +11,7 @@ from configparser import ConfigParser
 from datetime import datetime
 from functools import partial
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional, cast
 from urllib.parse import quote_plus
 
 from calibre.ebooks.metadata import authors_to_string
@@ -1670,7 +1670,9 @@ class ChangeReadingStatusOptionsDialog(SizePersistedDialog):
         self.plugin_action = plugin_action
         self.help_anchor = "ChangeReadingStatus"
 
-        self.options = gprefs.get(self.unique_pref_name + ":settings", {})
+        self.options = cast(
+            "Dict[str, Any]", gprefs.get(self.unique_pref_name + ":settings", {})
+        )
 
         self.initialize_controls()
 
@@ -1741,7 +1743,9 @@ class BackupAnnotationsOptionsDialog(SizePersistedDialog):
         self.plugin_action = plugin_action
         self.help_anchor = "BackupAnnotations"
 
-        self.options = gprefs.get(self.unique_pref_name + ":settings", {})
+        self.options = cast(
+            "Dict[str, Any]", gprefs.get(self.unique_pref_name + ":settings", {})
+        )
 
         self.initialize_controls()
 
@@ -1818,7 +1822,9 @@ class RemoveAnnotationsOptionsDialog(SizePersistedDialog):
         self.plugin_action = plugin_action
         self.help_anchor = "RemoveAnnotations"
 
-        self.options = gprefs.get(self.unique_pref_name + ":settings", {})
+        self.options = cast(
+            "Dict[str, Any]", gprefs.get(self.unique_pref_name + ":settings", {})
+        )
 
         self.initialize_controls()
         self.annotation_clean_option = self.options.get(cfg.KEY_REMOVE_ANNOT_ACTION, 0)
@@ -1915,7 +1921,9 @@ class CoverUploadOptionsDialog(SizePersistedDialog):
 
         self.initialize_controls()
 
-        self.options = gprefs.get(self.unique_pref_name + ":settings", {})
+        self.options = cast(
+            "Dict[str, Any]", gprefs.get(self.unique_pref_name + ":settings", {})
+        )
 
         # Set some default values from last time dialog was used.
         blackandwhite = self.options.get(cfg.KEY_COVERS_BLACKANDWHITE, False)
@@ -2076,7 +2084,9 @@ class RemoveCoverOptionsDialog(SizePersistedDialog):
 
         self.initialize_controls()
 
-        self.options = gprefs.get(self.unique_pref_name + ":settings", {})
+        self.options = cast(
+            "Dict[str, Any]", gprefs.get(self.unique_pref_name + ":settings", {})
+        )
 
         remove_fullsize_covers = self.options.get(cfg.KEY_REMOVE_FULLSIZE_COVERS, False)
         self.remove_fullsize_covers_checkbox.setCheckState(
@@ -2225,7 +2235,9 @@ class CleanImagesDirOptionsDialog(SizePersistedDialog):
 
         self.initialize_controls()
 
-        self.options = gprefs.get(self.unique_pref_name + ":settings", {})
+        self.options = cast(
+            "Dict[str, Any]", gprefs.get(self.unique_pref_name + ":settings", {})
+        )
 
         delete_extra_covers = self.options.get("delete_extra_covers", False)
         self.delete_extra_covers_checkbox.setCheckState(

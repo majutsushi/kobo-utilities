@@ -137,9 +137,23 @@ EPUB_FETCH_QUERY_NORATING = (
     "c1.MimeType, "
     "NULL as rating, "
     "c1.contentId, "
-    "c1.TimeSpentReading, "
-    "c1.RestOfBookEstimate "
     "FROM content c1 LEFT OUTER JOIN content c2 ON c1.ChapterIDBookmarked = c2.ContentID "
+    "WHERE c1.ContentID = ?"
+)
+
+EPUB_FETCH_QUERY_NOTIMESPENT = (
+    "SELECT c1.ChapterIDBookmarked, "
+    "c2.adobe_location, "
+    "c1.ReadStatus, "
+    "c1.___PercentRead, "
+    "c1.Attribution, "
+    "c1.DateLastRead, "
+    "c1.Title, "
+    "c1.MimeType, "
+    "r.rating, "
+    "c1.contentId "
+    "FROM content c1 LEFT OUTER JOIN content c2 ON c1.ChapterIDBookmarked = c2.ContentID "
+    "LEFT OUTER JOIN ratings r ON c1.ContentID = r.ContentID "
     "WHERE c1.ContentID = ?"
 )
 
@@ -171,9 +185,22 @@ KEPUB_FETCH_QUERY_NORATING = (
     "c1.MimeType, "
     "NULL as rating, "
     "c1.contentId, "
-    "c1.TimeSpentReading, "
-    "c1.RestOfBookEstimate "
     "FROM content c1 "
+    "WHERE c1.ContentID = ?"
+)
+
+KEPUB_FETCH_QUERY_NOTIMESPENT = (
+    "SELECT c1.ChapterIDBookmarked, "
+    "c1.adobe_location, "
+    "c1.ReadStatus, "
+    "c1.___PercentRead, "
+    "c1.Attribution, "
+    "c1.DateLastRead, "
+    "c1.Title, "
+    "c1.MimeType, "
+    "r.rating, "
+    "c1.contentId "
+    "FROM content c1 LEFT OUTER JOIN ratings r ON c1.ContentID = r.ContentID "
     "WHERE c1.ContentID = ?"
 )
 
@@ -185,7 +212,11 @@ FETCH_QUERIES[(0, 0, 0)] = {
     "epub": EPUB_FETCH_QUERY_NORATING,
     "kepub": KEPUB_FETCH_QUERY_NORATING,
 }
-FETCH_QUERIES[(1, 9, 17)] = {"epub": EPUB_FETCH_QUERY, "kepub": KEPUB_FETCH_QUERY}
+FETCH_QUERIES[(1, 9, 17)] = {
+    "epub": EPUB_FETCH_QUERY_NOTIMESPENT,
+    "kepub": KEPUB_FETCH_QUERY_NOTIMESPENT,
+}
+FETCH_QUERIES[(4, 0, 7523)] = {"epub": EPUB_FETCH_QUERY, "kepub": KEPUB_FETCH_QUERY}
 # With 4.17.13651, epub location is stored in the same way a for kepubs.
 FETCH_QUERIES[(4, 17, 13651)] = {"epub": KEPUB_FETCH_QUERY, "kepub": KEPUB_FETCH_QUERY}
 

@@ -3558,7 +3558,9 @@ class FixDuplicateShelvesDialog(SizePersistedDialog):
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/manage_series.png", _("Duplicate Collections in Device Database")
+            self,
+            "images/manage_series.png",
+            _("Duplicate Collections in Device Database"),
         )
         layout.addLayout(title_layout)
 

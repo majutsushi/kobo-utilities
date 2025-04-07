@@ -1817,9 +1817,9 @@ class KoboUtilitiesAction(InterfaceAction):
         result_message = (
             _("Update summary:")
             + "\n\t"
-            + _("Starting number of collections={0}\n\tCollections reordered={1}").format(
-                starting_shelves, shelves_ordered
-            )
+            + _(
+                "Starting number of collections={0}\n\tCollections reordered={1}"
+            ).format(starting_shelves, shelves_ordered)
         )
         info_dialog(
             self.gui,

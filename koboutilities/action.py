@@ -5218,10 +5218,8 @@ class KoboUtilitiesAction(InterfaceAction):
 
                         kobo_rating = result["Rating"] * 2 if result["Rating"] else 0
 
-                        if result["TimeSpentReading"]:
-                            time_spent_reading = result["TimeSpentReading"]
-                        if result["RestOfBookEstimate"]:
-                            rest_of_book_estimate = result["RestOfBookEstimate"]
+                        time_spent_reading = result.get("TimeSpentReading")
+                        rest_of_book_estimate = result.get("RestOfBookEstimate")
 
                 else:
                     books_without_reading_locations += 1

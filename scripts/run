@@ -5,11 +5,13 @@
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
-#   "requests"
+#   "babel",
+#   "requests",
 # ]
 # ///
 #
 # ruff: noqa: S603, S607
+
 from __future__ import annotations
 
 import argparse
@@ -24,6 +26,8 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 # Ignore until https://github.com/microsoft/pylance-release/discussions/6522 is fixed
 import requests  # type: ignore[reportMissingModuleSource]
+from babel.messages.mofile import write_mo  # type: ignore[reportMissingModuleSource]
+from babel.messages.pofile import read_po  # type: ignore[reportMissingModuleSource]
 
 PLUGIN_NAME = "KoboUtilities"
 CALIBRE_MINIMUM_URL = (
@@ -75,6 +79,8 @@ def build() -> Path:
         version = "unknown"
     zip_name = f"{PLUGIN_NAME}-{version}.zip"
 
+    msgfmt()
+
     # Delete old zip files so they don't get updated accidentally
     for path in Path.cwd().glob(f"{PLUGIN_NAME}-*.zip"):
         path.unlink()
@@ -89,10 +95,19 @@ def build() -> Path:
             zip_file.write(f)
         for f in Path("help").iterdir():
             zip_file.write(f)
-        for f in Path("translations").iterdir():
+        for f in Path("translations").glob("*.mo"):
             zip_file.write(f)
 
     return Path.cwd() / zip_name
+
+
+def msgfmt() -> None:
+    for po in Path("translations").glob("*.po"):
+        with po.open() as f:
+            catalog = read_po(f)
+        mo = po.parent / f"{po.stem}.mo"
+        with mo.open("wb") as f:
+            write_mo(f, catalog)
 
 
 def run_tests(plugin_zip: Path) -> bool:

@@ -2,3 +2,4 @@ calibre-latest
 calibre-v*
 *.zip
 .env
+translations/*.mo

@@ -492,7 +492,7 @@ class ReaderOptionsDialog(SizePersistedDialog):
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/icon.png", "Kobo eReader Font Settings"
+            self, "images/icon.png", _("Kobo eReader Font Settings")
         )
         layout.addLayout(title_layout)
 
@@ -983,7 +983,7 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/icon.png", "Update metadata in Device Library"
+            self, "images/icon.png", _("Update metadata in device library")
         )
         layout.addLayout(title_layout)
 
@@ -1503,7 +1503,7 @@ class BookmarkOptionsDialog(SizePersistedDialog):
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/icon.png", "Store or Restore Bookmark"
+            self, "images/icon.png", _("Store or Restore Bookmark")
         )
         layout.addLayout(title_layout)
 
@@ -1686,7 +1686,7 @@ class ChangeReadingStatusOptionsDialog(SizePersistedDialog):
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/icon.png", "Change Reading Status in Device Library"
+            self, "images/icon.png", _("Change Reading Status in device library")
         )
         layout.addLayout(title_layout)
 
@@ -1760,7 +1760,7 @@ class BackupAnnotationsOptionsDialog(SizePersistedDialog):
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/icon.png", "Backup Annotations Files"
+            self, "images/icon.png", _("Backup Annotations Files")
         )
         layout.addLayout(title_layout)
         options_layout = QGridLayout()
@@ -1809,7 +1809,7 @@ class BackupAnnotationsOptionsDialog(SizePersistedDialog):
         path = choose_dir(
             self,
             "backup annotations destination dialog",
-            "Choose destination directory",
+            _("Choose destination directory"),
         )
         self.dest_directory_edit.setText(path)
 
@@ -1979,7 +1979,7 @@ class CoverUploadOptionsDialog(SizePersistedDialog):
         self.setWindowTitle(DIALOG_NAME)
         layout = QVBoxLayout(self)
         self.setLayout(layout)
-        title_layout = ImageTitleLayout(self, "default_cover.png", "Upload Covers")
+        title_layout = ImageTitleLayout(self, "default_cover.png", _("Upload Covers"))
         layout.addLayout(title_layout, stretch=0)
 
         options_group = QGroupBox(_("Upload Covers"), self)
@@ -2170,7 +2170,7 @@ class BlockAnalyticsOptionsDialog(SizePersistedDialog):
         self.setWindowTitle(DIALOG_NAME)
         layout = QVBoxLayout(self)
         self.setLayout(layout)
-        title_layout = ImageTitleLayout(self, "images/icon.png", "Block Analytics")
+        title_layout = ImageTitleLayout(self, "images/icon.png", _("Block Analytics"))
         layout.addLayout(title_layout)
 
         options_group = QGroupBox(_("AnalyticsEvents Database Trigger"), self)
@@ -2254,7 +2254,7 @@ class CleanImagesDirOptionsDialog(SizePersistedDialog):
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/icon.png", "Clean Images Directory"
+            self, "images/icon.png", _("Clean Images Directory")
         )
         layout.addLayout(title_layout)
 
@@ -2303,7 +2303,9 @@ class LockSeriesDialog(SizePersistedDialog):
         self.setWindowTitle(_("Lock Series Index"))
         layout = QVBoxLayout(self)
         self.setLayout(layout)
-        title_layout = ImageTitleLayout(self, "images/lock32.png", "Lock Series Index")
+        title_layout = ImageTitleLayout(
+            self, "images/lock32.png", _("Lock Series Index")
+        )
         layout.addLayout(title_layout)
 
         layout.addSpacing(10)
@@ -2659,7 +2661,7 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/manage_series.png", "Manage Series on Device"
+            self, "images/manage_series.png", _("Manage Series On Device")
         )
         layout.addLayout(title_layout)
 
@@ -3243,7 +3245,7 @@ class ShowBooksNotInDeviceDatabaseDialog(SizePersistedDialog):
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/manage_series.png", "Books not in Device Database"
+            self, "images/manage_series.png", _("Books not in Device Database")
         )
         layout.addLayout(title_layout)
 
@@ -3331,7 +3333,7 @@ class ShowReadingPositionChangesDialog(SizePersistedDialog):
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/manage_series.png", "Show Reading Position Changes"
+            self, "images/manage_series.png", _("Show Reading Position Changes")
         )
         layout.addLayout(title_layout)
 

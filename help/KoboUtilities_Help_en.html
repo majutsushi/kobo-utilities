@@ -1234,26 +1234,26 @@ format(hours, 'hr') & format(minutes, 'min')</pre
             button will list the extra cover image files that were found.
         </p>
 
-        <h3 id="OrderSeriesShelves">Order Series Shelves</h3>
+        <h3 id="OrderSeriesShelves">Order Series Collections</h3>
 
         <p>
-            Using the KoboTouch driver, shelves can be created for each book
-            series on the device. The books are then added to the shelf. But,
-            there is no way to sort these shelves into the series order. This
-            option allows uses the "Date Added" sort to show the books in the
-            series order.
+            Using the KoboTouch driver, collections can be created for each book
+            series on the device. The books are then added to the collection.
+            But, there is no way to sort these collections into the series
+            order. This option allows uses the "Date Added" sort to show the
+            books in the series order.
         </p>
 
         <p>
             To use it, select the menu option. A dialog with the list of series
-            shelves will be displayed. The shelves listed are those that have
-            the same name as for series that are on the device. The number of
-            books on each shelf will be displayed.
+            collections will be displayed. The collections listed are those that
+            have the same name as for series that are on the device. The number
+            of books in each collection will be displayed.
         </p>
 
         <p>
-            Select the options and press the OK button to order the shelves. The
-            options on the dialog are:
+            Select the options and press the OK button to order the collections.
+            The options on the dialog are:
         </p>
 
         <ul>
@@ -1265,34 +1265,35 @@ format(hours, 'hr') & format(minutes, 'min')</pre
 
             <li>
                 If "Update config file" is selected, the selected sort order for
-                the series shelves will be set to "Date Added" in the "Kobo
+                the series collections will be set to "Date Added" in the "Kobo
                 eReader.conf" file. The is the sort order needed to display the
                 books in the series order. If this option is not selected, the
-                sort order will need to be changed when viewing the shelves.
+                sort order will need to be changed when viewing the collections.
             </li>
 
             <li>
-                To skip ordering a shelf, select it in the list and press the
-                "Remove" button.
+                To skip ordering a collection, select it in the list and press
+                the "Remove" button.
             </li>
         </ul>
 
         <p>
-            When the shelves are ordered, a message box will be displayed with
-            the number of shelves whose order was set. If the shelf only had one
-            book on it, the shelf order will not be changed.
+            When the collections are ordered, a message box will be displayed
+            with the number of collections whose order was set. If the
+            collection only had one book on it, the collection order will not be
+            changed.
         </p>
 
         <p>
             To see the books in the series order, select "Date Added" when
-            viewing the shelf on the device.
+            viewing the collection on the device.
         </p>
 
         <p>A few notes about the ordering:</p>
 
         <ul>
             <li>
-                Only books that have a series name that match the shelf are
+                Only books that have a series name that match the collection are
                 ordered.
             </li>
 
@@ -1337,7 +1338,7 @@ format(hours, 'hr') & format(minutes, 'min')</pre
             populate this for sideloaded books. This function can. It allows you
             to set the related books as either all the books in the same series,
             or all the books by the same author. This is an alternative to using
-            a series or author shelf as a way of grouping books.
+            a series or author collection as a way of grouping books.
         </p>
 
         <p>To set the related books for sideloaded books:</p>
@@ -1536,32 +1537,36 @@ format(hours, 'hr') & format(minutes, 'min')</pre
         <p>
             When this is used, the books on the device will be reread. This is
             done in the same way as when the device is first connected. The main
-            use for this is it will cause any changes for shelves an series
+            use for this is it will cause any changes for collections and series
             information to be sent to the device.
         </p>
 
-        <h3 id="FixDuplicateShelves">Fix Duplicate Shelves</h3>
+        <h3 id="FixDuplicateShelves">Fix Duplicate Collections</h3>
 
         <p>
-            Due to some errors with syncing to the Kobo server, the shelves
+            Due to some errors with syncing to the Kobo server, the collections
             occasionally appear to be duplicated. There are several things that
-            can happen, but in one case old shelves that have been deleted are
-            recreated.
+            can happen, but in one case old collections that have been deleted
+            are recreated.
         </p>
 
         <p>
-            To use it, select the menu option. A list of all shelves with the
-            following information is displayed:
+            To use it, select the menu option. A list of all collections with
+            the following information is displayed:
         </p>
 
         <ul>
-            <li>Shelf Name</li>
+            <li>Collection Name</li>
 
-            <li>Oldest - Date when oldest version of the shelf was created</li>
+            <li>
+                Oldest - Date when oldest version of the collection was created
+            </li>
 
-            <li>Newest - Date when newest version of the shelf was created</li>
+            <li>
+                Newest - Date when newest version of the collection was created
+            </li>
 
-            <li>Number - Number of versions of the shelf</li>
+            <li>Number - Number of versions of the collection</li>
         </ul>
 
         <p>
@@ -1571,32 +1576,33 @@ format(hours, 'hr') & format(minutes, 'min')</pre
 
         <ul>
             <li>
-                Shelf to Keep: This can be either "Newest" or "Oldest". This
-                determines which of the duplicate copies of the shelves should
-                be kept.
+                Collection to Keep: This can be either "Newest" or "Oldest".
+                This determines which of the duplicate copies of the collections
+                should be kept.
             </li>
 
             <li>
-                Purge duplicate shelves: Selecting this will delete the rows for
-                the duplicate shelves from the database.
+                Purge duplicate collections: Selecting this will delete the rows
+                for the duplicate collections from the database.
             </li>
         </ul>
 
         <p>
-            When the OK button is pressed, the duplicate shelves will be marked
-            for deletion. The version of each shelve that is kept will be the
-            one with either the newest or oldest date, depending on the options.
-            After this is done, you should disconnect the device and sync to the
-            Kobo server. This should remove all the duplicates from the server
-            and should solve the problem.
+            When the OK button is pressed, the duplicate collections will be
+            marked for deletion. The version of each collection that is kept
+            will be the one with either the newest or oldest date, depending on
+            the options. After this is done, you should disconnect the device
+            and sync to the Kobo server. This should remove all the duplicates
+            from the server and should solve the problem.
         </p>
 
         <p>
-            If the <b>Purge duplicate shelves</b> option is selected, the
+            If the <b>Purge duplicate collections</b> option is selected, the
             duplicates will be deleted from the device database. If this is done
             and a sync to the Kobo server is then done, it is possible that the
-            server will send all the shelves to the device again. But, if you
-            don't sync the shelves in the future, this probably isn't important.
+            server will send all the collections to the device again. But, if
+            you don't sync the collections in the future, this probably isn't
+            important.
         </p>
 
         <p>This function is available for both the library and device lists.</p>

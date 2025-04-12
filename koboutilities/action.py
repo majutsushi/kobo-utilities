@@ -1757,7 +1757,7 @@ class KoboUtilitiesAction(InterfaceAction):
         if self.device is None:
             error_dialog(
                 self.gui,
-                _("Cannot fix the duplicate Collections in the device library."),
+                _("Cannot fix the duplicate collections in the device library."),
                 _("No device connected."),
                 show=True,
             )
@@ -1779,7 +1779,7 @@ class KoboUtilitiesAction(InterfaceAction):
             _("Update summary:")
             + "\n\t"
             + _(
-                "Starting number of Collections={0}\n\tCollections removed={1}\n\tTotal collections={2}"
+                "Starting number of collections={0}\n\tCollections removed={1}\n\tTotal collections={2}"
             ).format(starting_shelves, shelves_removed, finished_shelves)
         )
         info_dialog(
@@ -1794,7 +1794,7 @@ class KoboUtilitiesAction(InterfaceAction):
         if self.device is None:
             error_dialog(
                 self.gui,
-                _("Cannot order the series Collections in the device library."),
+                _("Cannot order the series collections in the device library."),
                 _("No device connected."),
                 show=True,
             )
@@ -1908,16 +1908,16 @@ class KoboUtilitiesAction(InterfaceAction):
             details_msg = _(
                 "The selected column is {0}."
                 "\n"
-                "The driver shelf management columns are: {1}"
+                "The driver collection management columns are: {1}"
             ).format(
                 self.options[cfg.KEY_SHELVES_CUSTOM_COLUMN], ", ".join(driver_shelves)
             )
             mb = question_dialog(
                 self.gui,
-                _("Getting shelves from device"),
+                _("Getting collections from device"),
                 _(
-                    "The column selected is one of the columns used in the driver configuration for shelf management. "
-                    "Updating this column might affect the shelf management the next time you connect the device. "
+                    "The column selected is one of the columns used in the driver configuration for collection management. "
+                    "Updating this column might affect the collection management the next time you connect the device. "
                     "\n\nAre you sure you want to do this?"
                 ),
                 override_icon=QIcon(I("dialog_warning.png")),
@@ -3893,7 +3893,7 @@ class KoboUtilitiesAction(InterfaceAction):
         for shelf in shelves:
             starting_shelves += 1
             debug("shelf=%s, count=%d" % (shelf["name"], shelf["count"]))
-            progressbar.set_label(_("Updating shelf: {0}").format(shelf["name"]))
+            progressbar.set_label(_("Updating collection: {0}").format(shelf["name"]))
             progressbar.increment()
             if shelf["count"] <= 1:
                 continue
@@ -4175,7 +4175,7 @@ class KoboUtilitiesAction(InterfaceAction):
         shelves_removed = 0
         finished_shelves = 0
         progressbar = ProgressBar(
-            parent=self.gui, window_title=_("Duplicate Shelves in Device Database")
+            parent=self.gui, window_title=_("Duplicate Collections in Device Database")
         )
         total_shelves = len(shelves)
         progressbar.show_with_maximum(total_shelves)
@@ -4223,7 +4223,9 @@ class KoboUtilitiesAction(InterfaceAction):
             for shelf in shelves:
                 starting_shelves += shelf[3]
                 finished_shelves += 1
-                progressbar.set_label(_("Removing duplicates of shelf ") + shelf[0])
+                progressbar.set_label(
+                    _("Removing duplicates of collection ") + shelf[0]
+                )
                 progressbar.increment()
 
                 if shelf[3] > 1:
@@ -5831,7 +5833,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
         cursor = connection.cursor()
         for book in books:
-            progressbar.set_label(_("Getting shelves for ") + book.title)
+            progressbar.set_label(_("Getting collections for ") + book.title)
             progressbar.increment()
             count_books += 1
             shelf_names = []

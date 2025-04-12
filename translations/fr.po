@@ -121,16 +121,12 @@ msgstr "Nettoyer le dossier d'images de couvertures supplémentaires"
 #: action.py:1443 dialogs.py:3045 action.py:463 action.py:465 action.py:1502
 #: action.py:3110 dialogs.py:3092 action.py:480 action.py:482 action.py:1623
 #: action.py:3363 dialogs.py:3149 dialogs.py:3152
-msgid "Order Series Shelves"
+msgid "Order Series Collections"
 msgstr "Trier les étagères de séries"
-
-#: action.py:436
-msgid "Order Series  Shelves"
-msgstr "Trier les  étagères de séries"
 
 #: action.py:442 action.py:444 action.py:439 action.py:441 action.py:471
 #: action.py:473 action.py:488 action.py:490
-msgid "Get Shelves From Device"
+msgid "Get Collections From Device"
 msgstr "Récupérer les étagères depuis le dispositif"
 
 #: action.py:450 action.py:452 action.py:1465 action.py:3060 dialogs.py:3193
@@ -178,7 +174,7 @@ msgstr "Bloquer les événements d'analyse."
 
 #: action.py:504 action.py:506 action.py:501 action.py:503 action.py:533
 #: action.py:535 action.py:550 action.py:552
-msgid "Fix Duplicate Shelves"
+msgid "Fix Duplicate Collections"
 msgstr "Corriger les étagères en double"
 
 #: action.py:511 action.py:513 action.py:508 action.py:510 action.py:540
@@ -600,7 +596,7 @@ msgstr ""
 "dispositif."
 
 #: action.py:1389 action.py:1399 action.py:1458 action.py:1579
-msgid "Cannot fix the duplicate shelves in the device library."
+msgid "Cannot fix the duplicate collections in the device library."
 msgstr ""
 "Impossible de corriger les étagères en double dans la bibliothèque du "
 "dispositif."
@@ -608,28 +604,28 @@ msgstr ""
 #: action.py:1404 action.py:1414 action.py:1473 action.py:1594
 #, python-brace-format
 msgid ""
-"Starting number of shelves={0}\n"
-"\tShelves removed={1}\n"
-"\tTotal shelves={2}"
+"Starting number of collections={0}\n"
+"\tCollections removed={1}\n"
+"\tTotal collections={2}"
 msgstr ""
 "Nombre d'étagère de départ={0}\n"
 "\tEtagères retirées={1}\n"
 "\tTotal d'étagères={2}"
 
 #: action.py:1405 action.py:1415 action.py:1474 action.py:1595
-msgid "Duplicate Shelves Fixed"
+msgid "Duplicate Collections Fixed"
 msgstr "Etagères en double corrigées"
 
 #: action.py:1415 action.py:1425 action.py:1484 action.py:1605
-msgid "Cannot order the series shelves in the device library."
+msgid "Cannot order the series collections in the device library."
 msgstr ""
 "Impossible de trier les étagères de séries dans la bibliothèque du dispositif"
 
 #: action.py:1432 action.py:1442 action.py:1501 action.py:1622
 #, python-brace-format
 msgid ""
-"Starting number of shelves={0}\n"
-"\tShelves reordered={1}"
+"Starting number of collections={0}\n"
+"\tCollections reordered={1}"
 msgstr ""
 "Nombre d'étagères de départ={0}\n"
 "\tEtagères triées={1}"
@@ -653,27 +649,27 @@ msgstr ""
 "\tNombre de livres={1}"
 
 #: action.py:1474 action.py:1484 action.py:1543 action.py:1664
-msgid "Cannot get the shelves from device."
+msgid "Cannot get the collections from device."
 msgstr "Impossible d'obtenir les étagères depuis le dispositif."
 
 #: action.py:1494 action.py:1504 action.py:1563 action.py:1684
 #, python-brace-format
 msgid ""
 "The selected column is {0}.\n"
-"The driver shelf management columns are: {1}"
+"The driver collection management columns are: {1}"
 msgstr ""
 "La colonne sélectionnée est {0}.\n"
 "Les colonnes de gestion des étagères du pilote sont : {1}"
 
 #: action.py:1499 action.py:1509 action.py:1519 action.py:1568 action.py:1578
 #: action.py:1689 action.py:1699
-msgid "Getting shelves from device"
+msgid "Getting collections from device"
 msgstr "Récupération des étagères depuis le dispositif"
 
 #: action.py:1500 action.py:1510 action.py:1569 action.py:1690
 msgid ""
 "The column selected is one of the columns used in the driver configuration "
-"for shelf management. Updating this column might affect the shelf management "
+"for collection management. Updating this column might affect the collection management "
 "the next time you connect the device. \n"
 "\n"
 "Are you sure you want to do this?"
@@ -686,27 +682,27 @@ msgstr ""
 "Etes-vous sure de vouloir faire cela ?"
 
 #: action.py:1510 action.py:1520 action.py:1579 action.py:1700
-msgid "Getting list of shelves"
+msgid "Getting list of collections"
 msgstr "Récupération de la liste des étagères"
 
 #: action.py:1522 action.py:1532 action.py:1591 action.py:1712
 #, python-brace-format
-msgid "Number of books to get shelves for {0}"
+msgid "Number of books to get collections for {0}"
 msgstr "Nombre de livres pour les étagères {0}"
 
 #: action.py:1532 action.py:1542 action.py:1601 action.py:1722
 #, python-brace-format
 msgid ""
 "Books processed={0}\n"
-"\tBooks with Shelves={1}\n"
-"\tBooks without Shelves={2}"
+"\tBooks with Collections={1}\n"
+"\tBooks without Collections={2}"
 msgstr ""
 "Livres traités={0}\n"
 "\tLivres avec étagères={1}\n"
 "\tLivres sans étagères={2}"
 
 #: action.py:1533 action.py:1543 action.py:1602 action.py:1723
-msgid "Get Shelves from Device"
+msgid "Get Collections from Device"
 msgstr "Récupérer les étagères depuis le dispositif"
 
 #: action.py:1542 action.py:1552 action.py:1611 action.py:1732
@@ -996,11 +992,11 @@ msgstr "Suppression des livres connexes"
 #: action.py:3160 dialogs.py:2812 dialogs.py:2815 action.py:3170
 #: dialogs.py:2882 dialogs.py:2885 action.py:3365 dialogs.py:2929
 #: dialogs.py:2932 action.py:3618 dialogs.py:2986 dialogs.py:2989
-msgid "Duplicate Shelves in Device Database"
+msgid "Duplicate Collections in Device Database"
 msgstr "Etagères en double dans la base de données du dispositif"
 
 #: action.py:3210 action.py:3220 action.py:3415 action.py:3668
-msgid "Removing duplicates of shelf "
+msgid "Removing duplicates of collection "
 msgstr "Retrait des étagères en double "
 
 #: action.py:3304 action.py:4687 action.py:3314 action.py:4730 action.py:3509
@@ -1034,7 +1030,7 @@ msgid "Tags"
 msgstr "Etiquettes"
 
 #: action.py:4242 action.py:4279 action.py:4609 action.py:4865
-msgid "Getting shelves for "
+msgid "Getting collections for "
 msgstr "Récupération des étagères pour "
 
 #: dialogs.py:88 dialogs.py:111 dialogs.py:114
@@ -1496,13 +1492,13 @@ msgid "Options"
 msgstr "Options"
 
 #: dialogs.py:874 dialogs.py:944 dialogs.py:943 dialogs.py:950
-msgid "Shelf column:"
+msgid "Collection column:"
 msgstr "Colonne des étagères :"
 
 # \n added
 #: dialogs.py:875 dialogs.py:945 dialogs.py:944 dialogs.py:951
 msgid ""
-"Select a custom column to store the retrieved shelf names. The column type "
+"Select a custom column to store the retrieved collection names. The column type "
 "must\n"
 "be of type 'text'."
 msgstr ""
@@ -1516,21 +1512,21 @@ msgstr "Tous les livres sur le dispositif"
 
 #: dialogs.py:884 dialogs.py:954 dialogs.py:953 dialogs.py:960
 msgid ""
-"Get the shelves for all the books on the device that are in the library. If "
+"Get the collections for all the books on the device that are in the library. If "
 "not checked, will only get them for the selected books."
 msgstr ""
 "Obtenir les étagères pour tous les livres du dispositif et présents dans la "
 "bibliothèque. Si non coché, ne les récupère que pour les livres sélectionnés."
 
 #: dialogs.py:887 dialogs.py:957 dialogs.py:956 dialogs.py:963
-msgid "Replace column with shelves"
+msgid "Replace column with collections"
 msgstr "Remplacer la colonne par des étagères"
 
 # \n in a better place
 #: dialogs.py:888 dialogs.py:958 dialogs.py:957 dialogs.py:964
 msgid ""
 "If this is selected, the current value in the library, will be replaced by\n"
-"the retrieved shelves. Otherwise, the retrieved shelves will be added to the "
+"the retrieved collections. Otherwise, the retrieved collections will be added to the "
 "value"
 msgstr ""
 "Si cette option est sélectionnée, la valeur actuelle de la bibliothèque sera "
@@ -1539,7 +1535,7 @@ msgstr ""
 "à la valeur"
 
 #: dialogs.py:919 dialogs.py:989 dialogs.py:988 dialogs.py:997
-msgid "No shelf column selected"
+msgid "No collection column selected"
 msgstr "Pas de colonne d'étagère sélectionnée"
 
 #: dialogs.py:961 dialogs.py:1031 dialogs.py:1030 dialogs.py:1039
@@ -2134,7 +2130,7 @@ msgid "Book ID"
 msgstr "ID de livre"
 
 #: dialogs.py:2831 dialogs.py:2901 dialogs.py:2948 dialogs.py:3005
-msgid "Shelf to Keep"
+msgid "Collection to Keep"
 msgstr "Etagère à conserver"
 
 #: dialogs.py:2832 dialogs.py:2894 dialogs.py:2902 dialogs.py:2964
@@ -2148,7 +2144,7 @@ msgid "Newest"
 msgstr "Le plus récent"
 
 #: dialogs.py:2843 dialogs.py:2913 dialogs.py:2960 dialogs.py:3017
-msgid "Purge duplicate shelves"
+msgid "Purge duplicate collections"
 msgstr "Purger les étagères en double"
 
 #: dialogs.py:2845 dialogs.py:2915 dialogs.py:2962 dialogs.py:3019
@@ -2162,7 +2158,7 @@ msgstr ""
 "la prochaine synchronisation avec le serveur Kobo."
 
 #: dialogs.py:2894 dialogs.py:2964 dialogs.py:3011 dialogs.py:3068
-msgid "Shelf Name"
+msgid "Collection Name"
 msgstr "Nom de l'étagère"
 
 #: dialogs.py:2894 dialogs.py:2964 dialogs.py:3011 dialogs.py:3068
@@ -2170,31 +2166,31 @@ msgid "Number"
 msgstr "Numéro"
 
 #: dialogs.py:2923 dialogs.py:2993 dialogs.py:3040 dialogs.py:3097
-msgid "(Unnamed shelf)"
+msgid "(Unnamed collection)"
 msgstr "(Étagère Sans nom)"
 
 # modified
 #: dialogs.py:2982 dialogs.py:3052 dialogs.py:3099 dialogs.py:3156
-msgid "Order the shelves with series names."
+msgid "Order the collections with series names."
 msgstr "Trie les étagères avec les noms de série."
 
 # modified
 #: dialogs.py:2983 dialogs.py:3053 dialogs.py:3100 dialogs.py:3157
-msgid "Order the shelves with author names."
+msgid "Order the collections with author names."
 msgstr "Trie les étagères avec les noms d'auteur."
 
 # modified
 #: dialogs.py:2984 dialogs.py:3054 dialogs.py:3101 dialogs.py:3158
-msgid "Order the shelves that do not have series or author names."
+msgid "Order the collections that do not have series or author names."
 msgstr "Trie les étagères sans noms de série ou d'auteur."
 
 # modified
 #: dialogs.py:2985 dialogs.py:3055 dialogs.py:3102 dialogs.py:3159
-msgid "Order all shelves."
+msgid "Order all collections."
 msgstr "Trie toutes les étagères."
 
 #: dialogs.py:2988 dialogs.py:3058 dialogs.py:3105 dialogs.py:3162
-msgid "Shelves to order"
+msgid "Collections to order"
 msgstr "Etagères à trier"
 
 #: dialogs.py:2994 dialogs.py:3220 dialogs.py:3064 dialogs.py:3290
@@ -2209,7 +2205,7 @@ msgstr "Autre"
 
 # from where ?
 #: dialogs.py:3002 dialogs.py:3072 dialogs.py:3119 dialogs.py:3176
-msgid "Get shelves"
+msgid "Get collections"
 msgstr "Obtenir les étagères"
 
 #: dialogs.py:3003 config.py:1335 dialogs.py:3073 config.py:1344
@@ -2237,13 +2233,13 @@ msgid "Published date"
 msgstr "Date de publication"
 
 #: dialogs.py:3040 dialogs.py:3110 dialogs.py:3157 dialogs.py:3214
-msgid "Selecting ascending will sort the shelf in series order."
+msgid "Selecting ascending will sort the collection in series order."
 msgstr ""
 "En sélectionnant l'ordre croissant, l'étagère sera triée dans l'ordre des "
 "séries."
 
 #: dialogs.py:3041 dialogs.py:3111 dialogs.py:3158 dialogs.py:3215
-msgid "Selecting descending will sort the shelf in reverse series order."
+msgid "Selecting descending will sort the collection in reverse series order."
 msgstr ""
 "En sélectionnant l'ordre décroissant, l'étagère sera triée dans l'ordre "
 "inverse des séries."
@@ -2263,7 +2259,7 @@ msgstr "Décroissant"
 #: dialogs.py:3069 dialogs.py:3139 dialogs.py:3186 dialogs.py:3243
 msgid ""
 "If this is selected, the configuration file is updated to set the selected "
-"sort for the shelves to 'Date Added'."
+"sort for the collections to 'Date Added'."
 msgstr ""
 "Si cette option est sélectionnée, le fichier de configuration est mis à jour "
 "pour définir le tri sélectionné pour les étagères à «Date d'ajout»."
@@ -2277,18 +2273,18 @@ msgstr "Supprimer"
 # modified
 #: dialogs.py:3076 dialogs.py:3146 dialogs.py:3193 dialogs.py:3250
 msgid ""
-"Remove the selected shelves from the list. This will mean the ordering for "
-"these shelves will not be changed."
+"Remove the selected collections from the list. This will mean the ordering for "
+"these collections will not be changed."
 msgstr ""
 "Retirez les étagères sélectionnés de la liste. Cela signifie que l'ordre de "
 "ces étagères ne sera pas modifié."
 
 #: dialogs.py:3117 dialogs.py:3187 dialogs.py:3234 dialogs.py:3291
-msgid "Shelf/Series Name"
+msgid "Collection/Series Name"
 msgstr "Etagères/Nom de séries"
 
 #: dialogs.py:3117 dialogs.py:3187 dialogs.py:3234 dialogs.py:3291
-msgid "Books on Shelf"
+msgid "Books in Collection"
 msgstr "Livres sur l'étagère"
 
 #: dialogs.py:3215 dialogs.py:3285 dialogs.py:3332 dialogs.py:3389
@@ -2884,7 +2880,7 @@ msgstr ""
 
 #: action.py:3144 action.py:3397
 #, python-brace-format
-msgid "Updating shelf: {0}"
+msgid "Updating collection: {0}"
 msgstr ""
 
 #: action.py:4131 action.py:4384

@@ -1326,7 +1326,7 @@ class GetShelvesFromDeviceDialog(SizePersistedDialog):
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/icon.png", "Get Shelves from Device"
+            self, "images/icon.png", _("Get Collections from Device")
         )
         layout.addLayout(title_layout)
 
@@ -1335,9 +1335,9 @@ class GetShelvesFromDeviceDialog(SizePersistedDialog):
         options_layout = QGridLayout()
         options_group.setLayout(options_layout)
 
-        shelf_column_label = QLabel(_("Shelf column:"), self)
+        shelf_column_label = QLabel(_("Collection column:"), self)
         shelf_column_tooltip = _(
-            "Select a custom column to store the retrieved shelf names. The column type must\nbe of type 'text'."
+            "Select a custom column to store the retrieved collection names. The column type must\nbe of type 'text'."
         )
         shelf_column_label.setToolTip(shelf_column_tooltip)
         self.shelf_column_combo = CustomColumnComboBox(self)
@@ -1399,8 +1399,10 @@ class GetShelvesFromDeviceDialog(SizePersistedDialog):
         if not options[cfg.KEY_SHELVES_CUSTOM_COLUMN]:
             error_dialog(
                 self,
-                _("No shelf column selected"),
-                "You must select a column to populate from the shelves on the device",
+                _("No collection column selected"),
+                _(
+                    "You must select a column to populate from the collections on the device"
+                ),
                 show=True,
                 show_copy_button=False,
             )
@@ -3576,7 +3578,7 @@ class FixDuplicateShelvesDialog(SizePersistedDialog):
         options_layout = QGridLayout()
         options_group.setLayout(options_layout)
 
-        options_layout.addWidget(QLabel(_("Shelf to Keep")), 0, 0, 1, 1)
+        options_layout.addWidget(QLabel(_("Collection to Keep")), 0, 0, 1, 1)
         self.keep_oldest_radiobutton = QRadioButton(_("Oldest"), self)
         options_layout.addWidget(self.keep_oldest_radiobutton, 0, 1, 1, 1)
         self.keep_oldest_radiobutton.setEnabled(True)
@@ -3586,7 +3588,7 @@ class FixDuplicateShelvesDialog(SizePersistedDialog):
         self.keep_newest_radiobutton.setEnabled(True)
         self.keep_newest_radiobutton.click()
 
-        self.purge_checkbox = QCheckBox(_("Purge duplicate shelves"), self)
+        self.purge_checkbox = QCheckBox(_("Purge duplicate collections"), self)
         self.purge_checkbox.setToolTip(
             _(
                 "When this option is selected, the duplicated rows are deleted from the database. "
@@ -3647,7 +3649,7 @@ class DuplicateShelvesInDeviceDatabaseTableWidget(QTableWidget):
         self.setAlternatingRowColors(True)
         self.setRowCount(len(shelves))
         header_labels = [
-            _("Shelf Name"),
+            _("Collection Name"),
             _("Oldest"),
             _("Newest"),
             _("Number"),
@@ -3677,7 +3679,7 @@ class DuplicateShelvesInDeviceDatabaseTableWidget(QTableWidget):
 
     def populate_table_row(self, row, shelf):
         self.blockSignals(True)
-        shelf_name = shelf[0] if shelf[0] else _("(Unnamed shelf)")
+        shelf_name = shelf[0] if shelf[0] else _("(Unnamed collection)")
         titleColumn = QTableWidgetItem(shelf_name)
         titleColumn.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
         self.setItem(row, 0, titleColumn)
@@ -3745,11 +3747,11 @@ class OrderSeriesShelvesDialog(SizePersistedDialog):
         self.resize_dialog()
 
     def initialize_controls(self):
-        self.setWindowTitle(_("Order Series Shelves"))
+        self.setWindowTitle(_("Order Series Collections"))
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/manage_series.png", _("Order Series Shelves")
+            self, "images/manage_series.png", _("Order Series Collections")
         )
         layout.addLayout(title_layout)
 
@@ -3760,7 +3762,7 @@ class OrderSeriesShelvesDialog(SizePersistedDialog):
             _("Order all collections."),
         ]
 
-        order_shelves_type_group_box = QGroupBox(_("Shelves to order"), self)
+        order_shelves_type_group_box = QGroupBox(_("Collections to order"), self)
         layout.addWidget(order_shelves_type_group_box)
         order_shelves_type_group_box_layout = QHBoxLayout()
         order_shelves_type_group_box.setLayout(order_shelves_type_group_box_layout)
@@ -3778,7 +3780,7 @@ class OrderSeriesShelvesDialog(SizePersistedDialog):
         )
         layout.addSpacing(5)
 
-        self.fetch_button = QPushButton(_("Get shelves"), self)
+        self.fetch_button = QPushButton(_("Get collections"), self)
         self.fetch_button.setToolTip(
             _("Edit the keyboard shortcuts associated with this plugin")
         )
@@ -3847,7 +3849,7 @@ class OrderSeriesShelvesDialog(SizePersistedDialog):
         options_layout.addWidget(self.update_config_checkbox, 0, 2, 1, 1)
         self.update_config_checkbox.setToolTip(
             _(
-                "If this is selected, the configuration file is updated to set the selected sort for the shelves to 'Date Added'."
+                "If this is selected, the configuration file is updated to set the selected sort for the collections to 'Date Added'."
             )
         )
 
@@ -3860,7 +3862,7 @@ class OrderSeriesShelvesDialog(SizePersistedDialog):
         )
         self.remove_selected_button.setToolTip(
             _(
-                "Remove the selected shelves from the list. This will mean the ordering for these shelves will not be changed."
+                "Remove the selected collections from the list. This will mean the ordering for these collections will not be changed."
             )
         )
         self.remove_selected_button.clicked.connect(self._remove_selected_clicked)
@@ -3908,7 +3910,7 @@ class OrderSeriesShelvesTableWidget(QTableWidget):
     def __init__(self, parent):
         QTableWidget.__init__(self, parent)
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.header_labels = [_("Shelf/Series Name"), _("Books on Shelf")]
+        self.header_labels = [_("Collection/Series Name"), _("Books in Collection")]
         self.shelves = {}
 
     def populate_table(self, shelves):

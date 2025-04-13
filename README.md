@@ -3,7 +3,7 @@
 ## Overview
 
 This is a plugin for the [Calibre Ebook reader](https://calibre-ebook.com/)
-that provides additional functionality when working with Kobo eReaders.
+that provides additional functionality when working with Kobo and newer Tolino (2024 onwards) eReaders.
 
 It was originally written by [David Forrester](https://github.com/davidfor)
 and is now maintained by me.

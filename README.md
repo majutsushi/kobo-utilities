@@ -19,6 +19,8 @@ The main homepage for the plugin is the thread on the MobileRead Forum:
 Contributions are always welcome.
 
 The `scripts/run` tool is the main way to build and test the plugin.
+The script uses [uv](https://docs.astral.sh/uv/) for dependency management,
+so you may have to install that first.
 It can run various tasks:
 
 - `scripts/run build`: Build the plugin.
@@ -33,7 +35,9 @@ It can run various tasks:
 - `scripts/run install-and-debug`: Build and install the plugin in Calibre,
   and then start Calibre in debug mode.
 
-Note that `calibre-customize -b .` will not work due to the project structure
+Note that on Windows you may have to run the script as `uv run scripts/run <task>` instead.
+
+Note also that `calibre-customize -b .` will not work due to the project structure
 being different from how that command expects it.
 
 The project uses pyright for type checking and ruff for linting and formatting,

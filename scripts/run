@@ -1,4 +1,4 @@
-#!/usr/bin/env -S pipx run  # noqa: EXE003
+#!/usr/bin/env -S uv run --script --no-config
 # Author: Jan Larres <jan@majutsushi.net>
 # License: MIT/X11
 #

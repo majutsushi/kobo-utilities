@@ -65,6 +65,9 @@ except ImportError:
     debug("CreateNewCustomColumn is not supported")
     SUPPORTS_CREATE_CUSTOM_COLUMN = False  # type: ignore[reportConstantRedefinition]
 
+load_translations()
+
+
 # Redefine the debug here so the jobs can see it.
 DEBUG = _DEBUG
 
@@ -424,9 +427,6 @@ plugin_prefs.defaults[STORE_OPTIONS_STORE_NAME] = STORE_OPTIONS_DEFAULTS
 plugin_prefs.defaults[READING_POSITION_CHANGES_STORE_NAME] = (
     READING_POSITION_CHANGES_DEFAULTS
 )
-
-
-load_translations()
 
 
 def get_plugin_pref(store_name: str, option: str):

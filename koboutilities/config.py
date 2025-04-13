@@ -337,61 +337,61 @@ CUSTOM_COLUMN_DEFAULT_LOOKUP_TIME_SPENT_READING = "#kobo_time_spent_reading"
 CUSTOM_COLUMN_DEFAULT_LOOKUP_REST_OF_BOOK_ESTIMATE = "#kobo_rest_of_book_estimate"
 CUSTOM_COLUMN_DEFAULTS = {
     CUSTOM_COLUMN_DEFAULT_LOOKUP_READING_LOCATION: {
-        "column_heading": _("Kobo Reading Location"),
+        "column_heading": _("Kobo reading location"),
         "datatype": "text",
-        "description": _("Kobo Reading location from the device."),
+        "description": _("Kobo reading location from the device."),
         "columns_list": "avail_text_columns",
-        "config_label": _("Current Reading Location Column:"),
+        "config_label": _("Current reading location column:"),
         "config_tool_tip": _(
             "Select a custom column to store the current reading location. The column type must be 'text' or 'comments.' Leave this blank if you do not want to store or restore the current reading location."
         ),
     },
     CUSTOM_COLUMN_DEFAULT_LOOKUP_PERCENT_READ: {
-        "column_heading": _("Kobo % Read"),
+        "column_heading": _("Kobo % read"),
         "datatype": "int",
         "description": _("Percentage read for the book"),
         "columns_list": "avail_number_columns",
-        "config_label": _("Percent Read Column:"),
+        "config_label": _("Percent read column:"),
         "config_tool_tip": _(
             "Column used to store the current percent read. The column type must be 'integer' or 'float'. Leave this blank if you do not want to store or restore the percentage read."
         ),
     },
     CUSTOM_COLUMN_DEFAULT_LOOKUP_RATING: {
-        "column_heading": _("Kobo Rating"),
+        "column_heading": _("Kobo rating"),
         "datatype": "rating",
         "description": _("Rating for the book on the Kobo device."),
         "columns_list": "avail_rating_columns",
-        "config_label": _("Rating Column:"),
+        "config_label": _("Rating column:"),
         "config_tool_tip": _(
             "Column used to store the rating. The column type must be a 'integer'. Leave this blank if you do not want to store or restore the rating."
         ),
     },
     CUSTOM_COLUMN_DEFAULT_LOOKUP_LAST_READ: {
-        "column_heading": _("Kobo Last Read"),
+        "column_heading": _("Kobo last read"),
         "datatype": "datetime",
         "description": _("When the book was last read on the Kobo device."),
         "columns_list": "avail_date_columns",
-        "config_label": _("Last Read Column:"),
+        "config_label": _("Last read column:"),
         "config_tool_tip": _(
             "Column used to store when the book was last read. The column type must be a 'Date'. Leave this blank if you do not want to store the last read timestamp."
         ),
     },
     CUSTOM_COLUMN_DEFAULT_LOOKUP_TIME_SPENT_READING: {
-        "column_heading": _("Kobo Time Spent Reading"),
+        "column_heading": _("Kobo time spent reading"),
         "datatype": "int",
         "description": _("The time already spent reading the book, in seconds."),
         "columns_list": "avail_number_columns",
-        "config_label": _("Time Spent Reading Column:"),
+        "config_label": _("Time spent reading column:"),
         "config_tool_tip": _(
             "Column used to store how much time was spent reading the book, in seconds. The column type must be 'integer'. Leave this blank if you do not want to store the time spent reading the book."
         ),
     },
     CUSTOM_COLUMN_DEFAULT_LOOKUP_REST_OF_BOOK_ESTIMATE: {
-        "column_heading": _("Kobo Rest of Book Estimate"),
+        "column_heading": _("Kobo rest of book estimate"),
         "datatype": "int",
         "description": _("The estimate of the time left to read the book, in seconds."),
         "columns_list": "avail_number_columns",
-        "config_label": _("Rest of Book Estimate Column:"),
+        "config_label": _("Rest of book estimate column:"),
         "config_tool_tip": _(
             "Column used to store the estimate of how much time is left in the book, in seconds. The column type must be 'integer'. Leave this blank if you do not want to store the estimate of the time left."
         ),
@@ -652,7 +652,7 @@ class ProfilesTab(QWidget):
         device_layout.addWidget(device_label)
         device_layout.addWidget(self.device_combo)
 
-        custom_column_group = QGroupBox(_("Custom Columns"), self)
+        custom_column_group = QGroupBox(_("Custom columns"), self)
         layout.addWidget(custom_column_group)
         options_layout = QGridLayout()
         custom_column_group.setLayout(options_layout)
@@ -1481,7 +1481,7 @@ class DevicesTab(QWidget):
         path = choose_dir(
             self,
             "backup annotations destination dialog",
-            _("Choose Backup Destination"),
+            _("Choose backup destination"),
         )
         if path:
             self.dest_directory_edit.setText(path)
@@ -1610,8 +1610,8 @@ class DevicesTableWidget(QTableWidget):
             _("Menu"),
             _("Name"),
             _("Model"),
-            _("Serial Number"),
-            _("FW Version"),
+            _("Serial number"),
+            _("FW version"),
             _("Status"),
         ]
         self.setColumnCount(len(header_labels))
@@ -1708,12 +1708,12 @@ class OtherTab(QWidget):
         layout = QVBoxLayout()
         self.setLayout(layout)
 
-        other_options_group = QGroupBox(_("Other Options"), self)
+        other_options_group = QGroupBox(_("Other options"), self)
         layout.addWidget(other_options_group)
         options_layout = QGridLayout()
         other_options_group.setLayout(options_layout)
 
-        library_default_label = QLabel(_("&Library Button default:"), self)
+        library_default_label = QLabel(_("&Library button default:"), self)
         library_default_label.setToolTip(
             _(
                 "If plugin is placed as a toolbar button, choose a default action when clicked on"
@@ -1728,7 +1728,7 @@ class OtherTab(QWidget):
         options_layout.addWidget(library_default_label, 0, 0, 1, 1)
         options_layout.addWidget(self.library_default_combo, 0, 1, 1, 2)
 
-        device_default_label = QLabel(_("&Device Button default:"), self)
+        device_default_label = QLabel(_("&Device button default:"), self)
         device_default_label.setToolTip(
             _(
                 "If plugin is placed as a toolbar button, choose a default action when clicked on"
@@ -1783,7 +1783,7 @@ class ConfigWidget(QWidget):
         self.supports_create_custom_column = SUPPORTS_CREATE_CUSTOM_COLUMN
 
         title_layout = ImageTitleLayout(
-            self, "images/icon.png", _("Kobo Utilities Options")
+            self, "images/icon.png", _("Kobo Utilities options")
         )
         layout.addLayout(title_layout)
 

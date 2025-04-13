@@ -492,7 +492,7 @@ class ReaderOptionsDialog(SizePersistedDialog):
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/icon.png", _("Kobo eReader Font Settings")
+            self, "images/icon.png", _("Kobo eReader font settings")
         )
         layout.addLayout(title_layout)
 
@@ -501,10 +501,10 @@ class ReaderOptionsDialog(SizePersistedDialog):
         options_layout = QGridLayout()
         options_group.setLayout(options_layout)
 
-        options_layout.addWidget(QLabel(_("Font Face")), 0, 0, 1, 1)
+        options_layout.addWidget(QLabel(_("Font face")), 0, 0, 1, 1)
         self.font_choice = FontChoiceComboBox(self, self.font_list)
         options_layout.addWidget(self.font_choice, 0, 1, 1, 4)
-        options_layout.addWidget(QLabel(_("Font Size")), 1, 0, 1, 1)
+        options_layout.addWidget(QLabel(_("Font size")), 1, 0, 1, 1)
         self.font_size_spin = QSpinBox(self)
         self.font_size_spin.setMinimum(12)
         self.font_size_spin.setMaximum(58)
@@ -513,7 +513,7 @@ class ReaderOptionsDialog(SizePersistedDialog):
         )
         options_layout.addWidget(self.font_size_spin, 1, 1, 1, 1)
 
-        options_layout.addWidget(QLabel(_("Line Spacing")), 2, 0, 1, 1)
+        options_layout.addWidget(QLabel(_("Line spacing")), 2, 0, 1, 1)
         self.line_spacing_spin = QSpinBox(self)
         self.line_spacing_spin.setMinimum(0)
         self.line_spacing_spin.setMaximum(len(self.line_spacings) - 1)
@@ -1025,14 +1025,14 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         options_layout.addWidget(self.description_template_edit, widget_line, 2, 1, 2)
 
         widget_line += 1
-        self.series_checkbox = QCheckBox(_("Series and Index"), self)
+        self.series_checkbox = QCheckBox(_("Series and index"), self)
         options_layout.addWidget(self.series_checkbox, widget_line, 0, 1, 2)
 
         self.publisher_checkbox = QCheckBox(_("Publisher"), self)
         options_layout.addWidget(self.publisher_checkbox, widget_line, 2, 1, 2)
 
         widget_line += 1
-        self.published_checkbox = QCheckBox(_("Published Date"), self)
+        self.published_checkbox = QCheckBox(_("Published date"), self)
         options_layout.addWidget(self.published_checkbox, widget_line, 0, 1, 2)
 
         self.isbn_checkbox = QCheckBox(_("ISBN"), self)
@@ -1060,7 +1060,7 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         options_layout.addWidget(self.subtitle_template_edit, widget_line, 2, 1, 2)
 
         widget_line += 1
-        self.reading_direction_checkbox = QCheckBox(_("Reading Direction"), self)
+        self.reading_direction_checkbox = QCheckBox(_("Reading direction"), self)
         reading_direction_checkbox_tooltip = _("Set the reading direction")
         self.reading_direction_checkbox.setToolTip(reading_direction_checkbox_tooltip)
         options_layout.addWidget(self.reading_direction_checkbox, widget_line, 0, 1, 1)
@@ -1074,7 +1074,7 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         self.reading_direction_combo.setToolTip(reading_direction_checkbox_tooltip)
         options_layout.addWidget(self.reading_direction_combo, widget_line, 1, 1, 1)
 
-        self.date_added_checkbox = QCheckBox(_("Date Added"), self)
+        self.date_added_checkbox = QCheckBox(_("Date added"), self)
         date_added_checkbox_tooltip = _(
             "Set the date added to the device. This is used when sorting."
         )
@@ -1087,7 +1087,7 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         options_layout.addWidget(self.date_added_column_combo, widget_line, 3, 1, 1)
 
         widget_line += 1
-        self.use_plugboard_checkbox = QCheckBox(_("Use Plugboard"), self)
+        self.use_plugboard_checkbox = QCheckBox(_("Use plugboard"), self)
         self.use_plugboard_checkbox.setToolTip(
             _(
                 "Set the metadata on the device using the plugboard for the device and book format."
@@ -1326,7 +1326,7 @@ class GetShelvesFromDeviceDialog(SizePersistedDialog):
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/icon.png", _("Get Collections from Device")
+            self, "images/icon.png", _("Get collections from device")
         )
         layout.addLayout(title_layout)
 
@@ -1503,7 +1503,7 @@ class BookmarkOptionsDialog(SizePersistedDialog):
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/icon.png", _("Store or Restore Bookmark")
+            self, "images/icon.png", _("Store or restore bookmark")
         )
         layout.addLayout(title_layout)
 
@@ -1686,7 +1686,7 @@ class ChangeReadingStatusOptionsDialog(SizePersistedDialog):
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/icon.png", _("Change Reading Status in device library")
+            self, "images/icon.png", _("Change reading status in device library")
         )
         layout.addLayout(title_layout)
 
@@ -1760,7 +1760,7 @@ class BackupAnnotationsOptionsDialog(SizePersistedDialog):
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/icon.png", _("Backup Annotations Files")
+            self, "images/icon.png", _("Backup annotations files")
         )
         layout.addLayout(title_layout)
         options_layout = QGridLayout()
@@ -1841,7 +1841,7 @@ class RemoveAnnotationsOptionsDialog(SizePersistedDialog):
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/icon.png", _("Remove Annotations Files")
+            self, "images/icon.png", _("Remove annotations files")
         )
         layout.addLayout(title_layout)
         options_layout = QGridLayout()
@@ -1979,20 +1979,20 @@ class CoverUploadOptionsDialog(SizePersistedDialog):
         self.setWindowTitle(DIALOG_NAME)
         layout = QVBoxLayout(self)
         self.setLayout(layout)
-        title_layout = ImageTitleLayout(self, "default_cover.png", _("Upload Covers"))
+        title_layout = ImageTitleLayout(self, "default_cover.png", _("Upload covers"))
         layout.addLayout(title_layout, stretch=0)
 
-        options_group = QGroupBox(_("Upload Covers"), self)
+        options_group = QGroupBox(_("Upload covers"), self)
         layout.addWidget(options_group)
         options_layout = QGridLayout()
         options_group.setLayout(options_layout)
 
-        self.blackandwhite_checkbox = QCheckBox(_("Black and White Covers"), self)
+        self.blackandwhite_checkbox = QCheckBox(_("Black and white covers"), self)
         options_layout.addWidget(self.blackandwhite_checkbox, 0, 0, 1, 1)
         self.blackandwhite_checkbox.clicked.connect(self.blackandwhite_checkbox_clicked)
-        self.ditheredcovers_checkbox = QCheckBox(_("Dithered Covers"), self)
+        self.ditheredcovers_checkbox = QCheckBox(_("Dithered covers"), self)
         options_layout.addWidget(self.ditheredcovers_checkbox, 0, 1, 1, 1)
-        self.pngcovers_checkbox = QCheckBox(_("PNG Covers"), self)
+        self.pngcovers_checkbox = QCheckBox(_("PNG covers"), self)
         options_layout.addWidget(self.pngcovers_checkbox, 0, 2, 1, 2)
 
         self.keep_cover_aspect_checkbox = QCheckBox(_("Keep cover aspect ratio"), self)
@@ -2000,7 +2000,7 @@ class CoverUploadOptionsDialog(SizePersistedDialog):
         self.keep_cover_aspect_checkbox.clicked.connect(
             self.keep_cover_aspect_checkbox_clicked
         )
-        self.letterbox_checkbox = QCheckBox(_("Letterbox Covers"), self)
+        self.letterbox_checkbox = QCheckBox(_("Letterbox covers"), self)
         options_layout.addWidget(self.letterbox_checkbox, 1, 1, 1, 1)
         self.letterbox_checkbox.clicked.connect(self.letterbox_checkbox_clicked)
 
@@ -2013,7 +2013,7 @@ class CoverUploadOptionsDialog(SizePersistedDialog):
         )
         options_layout.addWidget(self.letterbox_colorbutton, 1, 2, 1, 1)
 
-        self.kepub_covers_checkbox = QCheckBox(_("Upload Covers for Kobo ePubs"), self)
+        self.kepub_covers_checkbox = QCheckBox(_("Upload covers for Kobo ePubs"), self)
         options_layout.addWidget(self.kepub_covers_checkbox, 2, 0, 1, 3)
         options_layout.setColumnStretch(0, 0)
         options_layout.setColumnStretch(1, 0)
@@ -2106,10 +2106,10 @@ class RemoveCoverOptionsDialog(SizePersistedDialog):
         self.setWindowTitle(DIALOG_NAME)
         layout = QVBoxLayout(self)
         self.setLayout(layout)
-        title_layout = ImageTitleLayout(self, "default_cover.png", _("Remove Covers"))
+        title_layout = ImageTitleLayout(self, "default_cover.png", _("Remove covers"))
         layout.addLayout(title_layout)
 
-        options_group = QGroupBox(_("Remove Covers"), self)
+        options_group = QGroupBox(_("Remove covers"), self)
         layout.addWidget(options_group)
         options_layout = QGridLayout()
         options_group.setLayout(options_layout)
@@ -2170,10 +2170,10 @@ class BlockAnalyticsOptionsDialog(SizePersistedDialog):
         self.setWindowTitle(DIALOG_NAME)
         layout = QVBoxLayout(self)
         self.setLayout(layout)
-        title_layout = ImageTitleLayout(self, "images/icon.png", _("Block Analytics"))
+        title_layout = ImageTitleLayout(self, "images/icon.png", _("Block analytics"))
         layout.addLayout(title_layout)
 
-        options_group = QGroupBox(_("AnalyticsEvents Database Trigger"), self)
+        options_group = QGroupBox(_("AnalyticsEvents database trigger"), self)
         options_group.setToolTip(
             _("When an entry is added to the AnalyticsEvents, it will be removed.")
         )
@@ -2254,11 +2254,11 @@ class CleanImagesDirOptionsDialog(SizePersistedDialog):
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/icon.png", _("Clean Images Directory")
+            self, "images/icon.png", _("Clean images directory")
         )
         layout.addLayout(title_layout)
 
-        options_group = QGroupBox(_("Clean Images"), self)
+        options_group = QGroupBox(_("Clean images"), self)
         layout.addWidget(options_group)
         options_layout = QGridLayout()
         options_group.setLayout(options_layout)
@@ -2300,11 +2300,11 @@ class LockSeriesDialog(SizePersistedDialog):
         self.resize_dialog()
 
     def initialize_controls(self, title, initial_value):
-        self.setWindowTitle(_("Lock Series Index"))
+        self.setWindowTitle(_("Lock series index"))
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/lock32.png", _("Lock Series Index")
+            self, "images/lock32.png", _("Lock series index")
         )
         layout.addLayout(title_layout)
 
@@ -2657,11 +2657,11 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         self.resize_dialog()
 
     def initialize_controls(self):
-        self.setWindowTitle(_("Manage Series"))
+        self.setWindowTitle(_("Manage series"))
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/manage_series.png", _("Manage Series On Device")
+            self, "images/manage_series.png", _("Manage series on device")
         )
         layout.addLayout(title_layout)
 
@@ -2694,7 +2694,7 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         series_label.setBuddy(self.series_combo)
         series_name_layout.addWidget(self.series_combo)
         series_name_layout.addSpacing(20)
-        series_start_label = QLabel(_("&Start At:"), self)
+        series_start_label = QLabel(_("&Start at:"), self)
         series_name_layout.addWidget(series_start_label)
         self.series_start_number = QSpinBox(self)
         self.series_start_number.setRange(0, 99000000)
@@ -2789,7 +2789,7 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
         keep_button = button_box.addButton(
-            _(" &Restore Original Series "), QDialogButtonBox.ResetRole
+            _(" &Restore original series "), QDialogButtonBox.ResetRole
         )
         keep_button.clicked.connect(self.restore_original_series)
 
@@ -3157,9 +3157,9 @@ class BooksNotInDeviceDatabaseTableWidget(QTableWidget):
         header_labels = [
             _("Title"),
             _("Author(s)"),
-            _("File Path"),
+            _("File path"),
             _("PubDate"),
-            _("File Timestamp"),
+            _("File timestamp"),
         ]
         self.setColumnCount(len(header_labels))
         self.setHorizontalHeaderLabels(header_labels)
@@ -3241,11 +3241,11 @@ class ShowBooksNotInDeviceDatabaseDialog(SizePersistedDialog):
         self.resize_dialog()
 
     def initialize_controls(self):
-        self.setWindowTitle(_("Books not in Device Database"))
+        self.setWindowTitle(_("Books not in device database"))
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/manage_series.png", _("Books not in Device Database")
+            self, "images/manage_series.png", _("Books not in device database")
         )
         layout.addLayout(title_layout)
 
@@ -3329,11 +3329,11 @@ class ShowReadingPositionChangesDialog(SizePersistedDialog):
         self.resize_dialog()
 
     def initialize_controls(self):
-        self.setWindowTitle(_("Show Reading Position Changes"))
+        self.setWindowTitle(_("Show reading position changes"))
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/manage_series.png", _("Show Reading Position Changes")
+            self, "images/manage_series.png", _("Show reading position changes")
         )
         layout.addLayout(title_layout)
 
@@ -3439,8 +3439,8 @@ class ShowReadingPositionChangesTableWidget(QTableWidget):
             _("Authors(s)"),
             _("Current %"),
             _("New %"),
-            _("Current Date"),
-            _("New Date"),
+            _("Current date"),
+            _("New date"),
             _("Book ID"),
         ]
         self.setColumnCount(len(header_labels))
@@ -3558,13 +3558,13 @@ class FixDuplicateShelvesDialog(SizePersistedDialog):
         self.resize_dialog()
 
     def initialize_controls(self):
-        self.setWindowTitle(_("Duplicate Collections in Device Database"))
+        self.setWindowTitle(_("Duplicate collections in device database"))
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
             self,
             "images/manage_series.png",
-            _("Duplicate Collections in Device Database"),
+            _("Duplicate collections in device database"),
         )
         layout.addLayout(title_layout)
 
@@ -3580,7 +3580,7 @@ class FixDuplicateShelvesDialog(SizePersistedDialog):
         options_layout = QGridLayout()
         options_group.setLayout(options_layout)
 
-        options_layout.addWidget(QLabel(_("Collection to Keep")), 0, 0, 1, 1)
+        options_layout.addWidget(QLabel(_("Collection to keep")), 0, 0, 1, 1)
         self.keep_oldest_radiobutton = QRadioButton(_("Oldest"), self)
         options_layout.addWidget(self.keep_oldest_radiobutton, 0, 1, 1, 1)
         self.keep_oldest_radiobutton.setEnabled(True)
@@ -3651,7 +3651,7 @@ class DuplicateShelvesInDeviceDatabaseTableWidget(QTableWidget):
         self.setAlternatingRowColors(True)
         self.setRowCount(len(shelves))
         header_labels = [
-            _("Collection Name"),
+            _("Collection name"),
             _("Oldest"),
             _("Newest"),
             _("Number"),
@@ -3749,11 +3749,11 @@ class OrderSeriesShelvesDialog(SizePersistedDialog):
         self.resize_dialog()
 
     def initialize_controls(self):
-        self.setWindowTitle(_("Order Series Collections"))
+        self.setWindowTitle(_("Order series collections"))
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/manage_series.png", _("Order Series Collections")
+            self, "images/manage_series.png", _("Order series collections")
         )
         layout.addLayout(title_layout)
 
@@ -3851,7 +3851,7 @@ class OrderSeriesShelvesDialog(SizePersistedDialog):
         options_layout.addWidget(self.update_config_checkbox, 0, 2, 1, 1)
         self.update_config_checkbox.setToolTip(
             _(
-                "If this is selected, the configuration file is updated to set the selected sort for the collections to 'Date Added'."
+                "If this is selected, the configuration file is updated to set the selected sort for the collections to 'Date added'."
             )
         )
 
@@ -3912,7 +3912,7 @@ class OrderSeriesShelvesTableWidget(QTableWidget):
     def __init__(self, parent):
         QTableWidget.__init__(self, parent)
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.header_labels = [_("Collection/Series Name"), _("Books in Collection")]
+        self.header_labels = [_("Collection/series name"), _("Books in collection")]
         self.shelves = {}
 
     def populate_table(self, shelves):
@@ -3985,7 +3985,7 @@ class SetRelatedBooksDialog(SizePersistedDialog):
         self.related_types = related_types
         self.block_events = True
         self.help_anchor = "SetRelatedBooks"
-        self.dialog_title = _("Set Related Books")
+        self.dialog_title = _("Set related books")
 
         self.options = cfg.get_plugin_prefs(cfg.SETRELATEDBOOKS_OPTIONS_STORE_NAME)
         self.initialize_controls()
@@ -4059,7 +4059,7 @@ class SetRelatedBooksDialog(SizePersistedDialog):
 
         self.related_types_table = OrderSeriesShelvesTableWidget(self)
         self.related_types_table.header_labels = [
-            _("Series/Author Name"),
+            _("Series/author name"),
             _("Number of books"),
         ]
         table_layout.addWidget(self.related_types_table)
@@ -4286,7 +4286,7 @@ class UpdateBooksToCDialog(SizePersistedDialog):
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "toc.png", _("Update ToCs in Device Database")
+            self, "toc.png", _("Update ToCs in device database")
         )
         layout.addLayout(title_layout)
 
@@ -4310,7 +4310,7 @@ class UpdateBooksToCDialog(SizePersistedDialog):
         self.remove_button.clicked.connect(self.remove_from_list)
 
         self.send_books_button = button_box.addButton(
-            _("Send Books"), QDialogButtonBox.ActionRole
+            _("Send books"), QDialogButtonBox.ActionRole
         )
         self.send_books_button.setToolTip(
             _("Send books to device that have been updated in the library.")
@@ -4324,7 +4324,7 @@ class UpdateBooksToCDialog(SizePersistedDialog):
         self.select_all_button.setToolTip(_("Select all books in the list."))
 
         self.select_books_to_send_button = button_box.addButton(
-            _("Select Books to send"), QDialogButtonBox.ResetRole
+            _("Select books to send"), QDialogButtonBox.ResetRole
         )
         self.select_books_to_send_button.clicked.connect(
             self._select_books_to_send_clicked
@@ -4334,7 +4334,7 @@ class UpdateBooksToCDialog(SizePersistedDialog):
         )
 
         self.select_books_to_update_button = button_box.addButton(
-            _("Select Books to update"), QDialogButtonBox.ResetRole
+            _("Select books to update"), QDialogButtonBox.ResetRole
         )
         self.select_books_to_update_button.clicked.connect(
             self._select_books_to_update_clicked
@@ -4366,7 +4366,7 @@ class UpdateBooksToCDialog(SizePersistedDialog):
         debug("ids_to_sync=", ids_to_sync)
         if not question_dialog(
             self.parent,
-            _("Update Books"),
+            _("Update books"),
             "<p>"
             + _(
                 "There are {0} books that need to be updated on the device. "
@@ -4388,7 +4388,7 @@ class UpdateBooksToCDialog(SizePersistedDialog):
         debug("ids_to_sync=", ids_to_sync)
         if not question_dialog(
             self.parent,
-            _("Update Books"),
+            _("Update books"),
             "<p>"
             + _(
                 "There are {0} books that need to have their ToC updated on the device. "
@@ -4440,15 +4440,15 @@ class ToCBookListTableWidget(QTableWidget):
             TITLE_COLUMN_NO: _("Title"),
             AUTHOR_COLUMN_NO: _("Author"),
             LIBRARY_CHAPTERS_COUNT_COLUMN_NO: _("Library ToC"),
-            LIBRARY_FORMAT_COLUMN_NO: _("Library Format"),
+            LIBRARY_FORMAT_COLUMN_NO: _("Library format"),
             KOBO_DISC_CHAPTERS_COUNT_COLUMN_NO: _("Kobo ToC"),
-            KOBO_DISC_FORMAT_COLUMN_NO: _("Kobo Format"),
+            KOBO_DISC_FORMAT_COLUMN_NO: _("Kobo format"),
             KOBO_DISC_STATUS_COLUMN_NO: _("Status"),
             SEND_TO_DEVICE_COLUMN_NO: _("Send"),
-            KOBO_DATABASE_CHAPTERS_COUNT_COLUMN_NO: _("Kobo Database ToC"),
+            KOBO_DATABASE_CHAPTERS_COUNT_COLUMN_NO: _("Kobo database ToC"),
             KOBO_DATABASE_STATUS_COLUMN_NO: _("Status"),
             UPDATE_TOC_COLUMN_NO: _("ToC"),
-            READING_POSITION_COLUMN_NO: _("Reading Position"),
+            READING_POSITION_COLUMN_NO: _("Reading position"),
             STATUS_COMMENT_COLUMN_NO: _("Comment"),
         }
     )

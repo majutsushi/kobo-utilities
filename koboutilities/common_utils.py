@@ -804,7 +804,7 @@ def prompt_for_restart(parent, title, message):
 
 class PrefsViewerDialog(SizePersistedDialog):
     def __init__(self, gui, namespace):
-        super(PrefsViewerDialog, self).__init__(gui, _("Prefs Viewer dialog"))
+        super(PrefsViewerDialog, self).__init__(gui, _("Prefs viewer dialog"))
         self.setWindowTitle(_("Preferences for: ") + namespace)
 
         self.gui = gui

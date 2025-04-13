@@ -22,19 +22,19 @@ msgid "Utilities to use with Kobo ereaders"
 msgstr "Utilidades para utilizar con lectores Kobo"
 
 #: action.py:296 action.py:324 action.py:325 action.py:350 action.py:359
-msgid "&Set Reader Font for Selected Books"
+msgid "&Set reader font for selected books"
 msgstr "E&stablecer la fuente del lector para los libros seleccionados"
 
 #: action.py:298 action.py:326 action.py:327 action.py:352 action.py:361
-msgid "Set Reader Font for Selected Books"
+msgid "Set reader font for selected books"
 msgstr "Establecer la fuente del lector para los libros seleccionados"
 
 #: action.py:306 action.py:334 action.py:335 action.py:360 action.py:367
-msgid "&Remove Reader Font for Selected Books"
+msgid "&Remove reader font for selected books"
 msgstr "Elimina&r la fuente del lector en los libros seleccionados"
 
 #: action.py:308 action.py:336 action.py:337 action.py:362 action.py:369
-msgid "Remove Reader Font for Selected Books"
+msgid "Remove reader font for selected books"
 msgstr "Eliminar la fuente del lector para los libros seleccionados"
 
 #: action.py:316
@@ -54,43 +54,43 @@ msgid "Update metadata in device library"
 msgstr "Actualizar metadatos en la biblioteca del dispositivo"
 
 #: action.py:335 action.py:372 action.py:369 action.py:394 action.py:400
-msgid "&Change Reading Status in device library"
+msgid "&Change reading status in device library"
 msgstr "&Cambiar el estatus de lectura en la biblioteca del dispositivo"
 
 #: action.py:337 action.py:374 action.py:371 action.py:396 action.py:402
-msgid "Change Reading Status in device library"
+msgid "Change reading status in device library"
 msgstr "Cambiar estado de lectura en la biblioteca del dispositivo"
 
 #: action.py:350 action.py:387 action.py:384 action.py:409 action.py:415
-msgid "&Manage Series Information in device library"
+msgid "&Manage series information in device library"
 msgstr "Gestionar infor&mación de series en la biblioteca del dispositivo"
 
 #: action.py:352 action.py:389 action.py:386 action.py:411 action.py:417
-msgid "Manage Series Information in device library"
+msgid "Manage series information in device library"
 msgstr "Gestionar información de series en la biblioteca del dispositivo"
 
 #: action.py:357 action.py:394 action.py:391 action.py:416 action.py:422
-msgid "&Store/Restore current bookmark"
+msgid "&Store/restore current bookmark"
 msgstr "(&S)Almacenar/Restaurar marcadores actuales"
 
 #: action.py:359 action.py:396 action.py:393 action.py:418 action.py:424
-msgid "Store/Restore current bookmark"
+msgid "Store/restore current bookmark"
 msgstr "Almacenar/Restaurar marcadores actuales"
 
 #: action.py:365 action.py:402 action.py:399 action.py:424 action.py:441
-msgid "&Upload covers for Selected Books"
+msgid "&Upload covers for selected books"
 msgstr "S&ubir portadas para los libros seleccionados"
 
 #: action.py:367 action.py:404 action.py:401 action.py:426 action.py:443
-msgid "Upload covers for Selected Books"
+msgid "Upload covers for selected books"
 msgstr "Subir portadas para los libros seleccionados"
 
 #: action.py:372 action.py:409 action.py:406 action.py:431 action.py:448
-msgid "&Remove covers for Selected Books"
+msgid "&Remove covers for selected books"
 msgstr "Elimina&r portadas para los libros seleccionados"
 
 #: action.py:374 action.py:411 action.py:408 action.py:433 action.py:450
-msgid "Remove covers for Selected Books"
+msgid "Remove covers for selected books"
 msgstr "Eliminar portadas de los libros seleccionados"
 
 #: action.py:380 action.py:417 action.py:414 action.py:439 action.py:456
@@ -106,12 +106,12 @@ msgstr "Limpiar el directorio de imágenes de imágenes de portada extra"
 #: action.py:463 action.py:465 action.py:1502 action.py:3110 dialogs.py:3092
 #: action.py:480 action.py:482 action.py:1623 action.py:3363 dialogs.py:3149
 #: dialogs.py:3152
-msgid "Order Series Collections"
+msgid "Order series collections"
 msgstr "Estanterías por orden de series"
 
 #: action.py:405 action.py:407 action.py:442 action.py:444 action.py:439
 #: action.py:441 action.py:471 action.py:473 action.py:488 action.py:490
-msgid "Get Collections From Device"
+msgid "Get collections from device"
 msgstr "Obtener estanterías del dispositivo"
 
 #: action.py:413 action.py:415 action.py:1310 action.py:2921 dialogs.py:2919
@@ -119,22 +119,22 @@ msgstr "Obtener estanterías del dispositivo"
 #: action.py:447 action.py:449 action.py:1475 action.py:3070 dialogs.py:3263
 #: action.py:479 action.py:481 action.py:1534 action.py:3265 dialogs.py:3310
 #: action.py:496 action.py:498 action.py:1655 action.py:3518 dialogs.py:3367
-msgid "Set Related Books"
+msgid "Set related books"
 msgstr "Establecer libros relacionados"
 
 #: action.py:421 action.py:423 action.py:458 action.py:460 action.py:455
 #: action.py:457 action.py:487 action.py:489 action.py:504 action.py:506
-msgid "Copy annotation for Selected Book"
+msgid "Copy annotation for selected book"
 msgstr "Copiar las anotaciones del libro seleccionado"
 
 #: action.py:427 action.py:429 action.py:464 action.py:466 action.py:461
 #: action.py:463 action.py:493 action.py:495 action.py:510 action.py:512
-msgid "Backup Annotation File"
+msgid "Backup annotation file"
 msgstr "Hacer copia de seguridad del archivo de anotaciones"
 
 #: action.py:433 action.py:435 action.py:470 action.py:472 action.py:467
 #: action.py:469 action.py:499 action.py:501 action.py:516 action.py:518
-msgid "Remove Annotation Files"
+msgid "Remove annotation files"
 msgstr "Eliminar archivos de anotaciones"
 
 #: action.py:443 action.py:445 action.py:480 action.py:482 action.py:477
@@ -155,12 +155,12 @@ msgstr "Base de datos"
 #: action.py:498 action.py:1574 action.py:1578 action.py:493 action.py:495
 #: action.py:1584 action.py:1588 action.py:525 action.py:527 action.py:1643
 #: action.py:1647 action.py:542 action.py:544 action.py:1764 action.py:1768
-msgid "Block Analytics Events"
+msgid "Block analytics events"
 msgstr "Bloquear eventos analíticos"
 
 #: action.py:467 action.py:469 action.py:504 action.py:506 action.py:501
 #: action.py:503 action.py:533 action.py:535 action.py:550 action.py:552
-msgid "Fix Duplicate Collections"
+msgid "Fix duplicate collections"
 msgstr "Arreglar las estanterías duplicadas"
 
 #: action.py:474 action.py:476 action.py:511 action.py:513 action.py:508
@@ -192,7 +192,7 @@ msgid "Customize plugin"
 msgstr "Personalizar plugin"
 
 #: action.py:533 action.py:588 action.py:589 action.py:629 action.py:646
-msgid "&About Plugin"
+msgid "&About plugin"
 msgstr "&Acerca del plugin"
 
 #: action.py:536 action.py:591 action.py:592 action.py:632 action.py:649
@@ -298,7 +298,7 @@ msgid "Cannot remove reader font settings"
 msgstr "No se puede eliminar la configuración de fuentes del lector"
 
 #: action.py:693 action.py:810 action.py:820 action.py:859 action.py:888
-msgid "Remove Reader settings"
+msgid "Remove reader settings"
 msgstr "Eliminar configuraciones del lector"
 
 #: action.py:693 action.py:810 action.py:820 action.py:859 action.py:888
@@ -456,7 +456,7 @@ msgstr ""
 
 #: action.py:1047 config.py:1012 action.py:1198 config.py:1088 action.py:1208
 #: config.py:1097 action.py:1269 config.py:1109 action.py:1390 config.py:1111
-msgid "Choose Backup Destination"
+msgid "Choose backup destination"
 msgstr "Elija destino de la copia de seguridad"
 
 #: action.py:1048 action.py:1199 action.py:1209 action.py:1270 action.py:1391
@@ -533,7 +533,7 @@ msgstr ""
 "\tTotal de estanterías={2}"
 
 #: action.py:1250 action.py:1405 action.py:1415 action.py:1474 action.py:1595
-msgid "Duplicate Collections Fixed"
+msgid "Duplicate collections fixed"
 msgstr "Estanterías duplicadas eliminadas"
 
 #: action.py:1260 action.py:1415 action.py:1425 action.py:1484 action.py:1605
@@ -614,16 +614,12 @@ msgstr "Número de libros para los que conseguir estanterías {0}"
 #, python-brace-format
 msgid ""
 "Books processed={0}\n"
-"\tBooks with Collections={1}\n"
-"\tBooks without Collections={2}"
+"\tBooks with collections={1}\n"
+"\tBooks without collections={2}"
 msgstr ""
 "Libros procesados={0}\n"
 "\tLibros con estanterías={1}\n"
 "\tLibros sin estanterías={2}"
-
-#: action.py:1380 action.py:1533 action.py:1543 action.py:1602 action.py:1723
-msgid "Get Collections from Device"
-msgstr "Obtener estanterías del dispositivo"
 
 #: action.py:1389 action.py:1542 action.py:1552 action.py:1611 action.py:1732
 msgid "Cannot check Kobo device database."
@@ -662,7 +658,7 @@ msgstr ""
 "\tTamaño comprimido = {1}MB"
 
 #: action.py:1446 action.py:1599 action.py:1609 action.py:1668 action.py:1789
-msgid "Compress Device Database"
+msgid "Compress device database"
 msgstr "Comprimir la base de datos del dispositivo"
 
 #: action.py:1451 action.py:1604 action.py:1614 action.py:1673 action.py:1794
@@ -682,7 +678,7 @@ msgid "No changes made to series information."
 msgstr "No se ha hecho ningún cambio a la información de series."
 
 #: action.py:1533 action.py:1687 action.py:1697 action.py:1756 action.py:1877
-msgid "Manage Series On Device"
+msgid "Manage series on device"
 msgstr "Gestionar las series en el dispositivo."
 
 #: action.py:1570 action.py:1707 action.py:1724 action.py:1859 action.py:1734
@@ -903,14 +899,14 @@ msgstr "Estableciendo libros relacionados para "
 
 #: action.py:2997 action.py:3017 action.py:3128 action.py:3141 action.py:3138
 #: action.py:3151 action.py:3333 action.py:3346 action.py:3586 action.py:3599
-msgid "Delete Related Books"
+msgid "Delete related books"
 msgstr "Eliminar libros relacionados"
 
 #: action.py:3041 dialogs.py:2540 dialogs.py:2543 action.py:3160
 #: dialogs.py:2812 dialogs.py:2815 action.py:3170 dialogs.py:2882
 #: dialogs.py:2885 action.py:3365 dialogs.py:2929 dialogs.py:2932
 #: action.py:3618 dialogs.py:2986 dialogs.py:2989
-msgid "Duplicate Collections in Device Database"
+msgid "Duplicate collections in device database"
 msgstr "Estanterías duplicadas en la base de datos del dispositivo"
 
 #: action.py:3093 action.py:3210 action.py:3220 action.py:3415 action.py:3668
@@ -1082,11 +1078,11 @@ msgid "Reader font settings"
 msgstr "Opciones de la fuente del lector"
 
 #: dialogs.py:370 dialogs.py:398 dialogs.py:409 dialogs.py:401 dialogs.py:404
-msgid "Font Face"
+msgid "Font face"
 msgstr "Tipo de fuente"
 
 #: dialogs.py:373 dialogs.py:401 dialogs.py:412 dialogs.py:404 dialogs.py:407
-msgid "Font Size"
+msgid "Font size"
 msgstr "Tamaño de fuente"
 
 #: dialogs.py:377 dialogs.py:405 dialogs.py:416 dialogs.py:408 dialogs.py:411
@@ -1096,7 +1092,7 @@ msgstr ""
 "dispositivo está alrededor de 22."
 
 #: dialogs.py:380 dialogs.py:408 dialogs.py:419 dialogs.py:411 dialogs.py:414
-msgid "Line Spacing"
+msgid "Line spacing"
 msgstr "Espaciado de líneas"
 
 #: dialogs.py:385 dialogs.py:413 dialogs.py:424 dialogs.py:416 dialogs.py:419
@@ -1222,7 +1218,7 @@ msgid "Use 'Author Sort'"
 msgstr "Usar \"Orden de autor\""
 
 #: dialogs.py:641 dialogs.py:708 dialogs.py:734 dialogs.py:728 dialogs.py:733
-msgid "Series and Index"
+msgid "Series and index"
 msgstr "Serie y número de serie"
 
 #: dialogs.py:644 dialogs.py:696 dialogs.py:721 dialogs.py:715 dialogs.py:720
@@ -1234,7 +1230,7 @@ msgid "Publisher"
 msgstr "Editorial"
 
 #: dialogs.py:650 dialogs.py:714 dialogs.py:741 dialogs.py:735 dialogs.py:740
-msgid "Published Date"
+msgid "Published date"
 msgstr "Fecha de publicación"
 
 #: dialogs.py:653 dialogs.py:717 dialogs.py:744 dialogs.py:738 dialogs.py:743
@@ -1255,7 +1251,7 @@ msgid "Tags in subtitle"
 msgstr "Etiquetas en subtítulo"
 
 #: dialogs.py:665 dialogs.py:735 dialogs.py:786 dialogs.py:780 dialogs.py:785
-msgid "Use Plugboard"
+msgid "Use plugboard"
 msgstr "Usar panel de conexiones de metadatos"
 
 #: dialogs.py:666 dialogs.py:736 dialogs.py:787 dialogs.py:781 dialogs.py:786
@@ -1363,7 +1359,7 @@ msgstr ""
 
 #: dialogs.py:867 dialogs.py:977 dialogs.py:1047 dialogs.py:1046
 #: dialogs.py:1055
-msgid "Database Trigger"
+msgid "Database trigger"
 msgstr "Trigger de la base de datos"
 
 #: dialogs.py:868 dialogs.py:978 dialogs.py:1048 dialogs.py:1047
@@ -1576,7 +1572,7 @@ msgstr "..."
 
 #: dialogs.py:1237 dialogs.py:1457 dialogs.py:1527 dialogs.py:1526
 #: dialogs.py:1553
-msgid "Remove Annotations Files"
+msgid "Remove annotations files"
 msgstr "Eliminar archivos de anotaciones"
 
 #: dialogs.py:1242 dialogs.py:1462 dialogs.py:1532 dialogs.py:1531
@@ -1638,12 +1634,12 @@ msgstr "Solo elimina los archivos de anotaciones si contienen anotaciones"
 
 #: dialogs.py:1311 dialogs.py:1531 dialogs.py:1601 dialogs.py:1615
 #: dialogs.py:1649
-msgid "Upload Covers"
+msgid "Upload covers"
 msgstr "Cargar portadas"
 
 #: dialogs.py:1315 dialogs.py:1535 dialogs.py:1605 dialogs.py:1620
 #: dialogs.py:1654
-msgid "Black and White Covers"
+msgid "Black and white covers"
 msgstr "Portadas en blanco y negro"
 
 #: dialogs.py:1317 dialogs.py:1537 dialogs.py:1607 dialogs.py:1628
@@ -1657,7 +1653,7 @@ msgstr "Cargar portadas para epubs de Kobo"
 
 #: dialogs.py:1362 dialogs.py:1582 dialogs.py:1652 dialogs.py:1690
 #: dialogs.py:1740 dialogs.py:1743
-msgid "Remove Covers"
+msgid "Remove covers"
 msgstr "Eliminar portadas"
 
 #: dialogs.py:1366 dialogs.py:1586 dialogs.py:1656 dialogs.py:1699
@@ -1676,7 +1672,7 @@ msgstr ""
 
 #: dialogs.py:1403 dialogs.py:1623 dialogs.py:1693 dialogs.py:1737
 #: dialogs.py:1792
-msgid "AnalyticsEvents Database Trigger"
+msgid "AnalyticsEvents database trigger"
 msgstr "Trigger de base de datos de eventos analíticos."
 
 #: dialogs.py:1404 dialogs.py:1624 dialogs.py:1694 dialogs.py:1738
@@ -1686,7 +1682,7 @@ msgstr "Cuando se añada una entra a los eventos analíticos se eliminará."
 
 #: dialogs.py:1462 dialogs.py:1684 dialogs.py:1754 dialogs.py:1798
 #: dialogs.py:1853
-msgid "Clean Images"
+msgid "Clean images"
 msgstr "Limpiar imágenes"
 
 #: dialogs.py:1466 dialogs.py:1688 dialogs.py:1758 dialogs.py:1802
@@ -1705,7 +1701,7 @@ msgstr ""
 
 #: dialogs.py:1494 dialogs.py:1716 dialogs.py:1786 dialogs.py:1830
 #: dialogs.py:1887
-msgid "Lock Series Index"
+msgid "Lock series index"
 msgstr "Fijar el índice de la serie"
 
 #: dialogs.py:1515 dialogs.py:1737 dialogs.py:1807 dialogs.py:1851
@@ -1761,7 +1757,7 @@ msgstr "Desbloquear el índice de todas las series"
 
 #: dialogs.py:1811 dialogs.py:2033 dialogs.py:2103 dialogs.py:2147
 #: dialogs.py:2204
-msgid "Manage Series"
+msgid "Manage series"
 msgstr "Gestionar series"
 
 #: dialogs.py:1821 dialogs.py:2043 dialogs.py:2113 dialogs.py:2157
@@ -1776,7 +1772,7 @@ msgstr "&Nombre de serie:"
 
 #: dialogs.py:1842 dialogs.py:2064 dialogs.py:2134 dialogs.py:2178
 #: dialogs.py:2235
-msgid "&Start At:"
+msgid "&Start at:"
 msgstr "(&S)Comienza en:"
 
 #: dialogs.py:1855 dialogs.py:2077 dialogs.py:2147 dialogs.py:2191
@@ -1846,7 +1842,7 @@ msgstr "Alt+Derecha"
 
 #: dialogs.py:1922 dialogs.py:2144 dialogs.py:2214 dialogs.py:2258
 #: dialogs.py:2315
-msgid " &Restore Original Series "
+msgid " &Restore original series "
 msgstr "&Restaurar la serie original"
 
 #: dialogs.py:2102 config.py:933 dialogs.py:2324 config.py:1009 dialogs.py:2394
@@ -1863,12 +1859,12 @@ msgstr ""
 
 #: dialogs.py:2336 dialogs.py:2558 dialogs.py:2628 dialogs.py:2675
 #: dialogs.py:2732
-msgid "Books not in Device Database"
+msgid "Books not in device database"
 msgstr "Libros que no están en la base de datos del dispositivo"
 
 #: dialogs.py:2381 dialogs.py:2615 dialogs.py:2685 dialogs.py:2732
 #: dialogs.py:2789
-msgid "Show Reading Position Changes"
+msgid "Show reading position changes"
 msgstr "Mostrar los cambios de las posiciones de lectura"
 
 #: dialogs.py:2391 dialogs.py:2625 dialogs.py:2695 dialogs.py:2742
@@ -1900,12 +1896,12 @@ msgstr "Nuevo %"
 
 #: dialogs.py:2438 dialogs.py:2701 dialogs.py:2771 dialogs.py:2818
 #: dialogs.py:2875
-msgid "Current Date"
+msgid "Current date"
 msgstr "Fecha actual"
 
 #: dialogs.py:2438 dialogs.py:2701 dialogs.py:2771 dialogs.py:2818
 #: dialogs.py:2875
-msgid "New Date"
+msgid "New date"
 msgstr "Nueva fecha"
 
 #: dialogs.py:2438 dialogs.py:2701 dialogs.py:2771 dialogs.py:2818
@@ -1915,7 +1911,7 @@ msgstr "ID de libro"
 
 #: dialogs.py:2559 dialogs.py:2831 dialogs.py:2901 dialogs.py:2948
 #: dialogs.py:3005
-msgid "Collection to Keep"
+msgid "Collection to keep"
 msgstr "Estanterías que se van a mantener"
 
 #: dialogs.py:2560 dialogs.py:2620 dialogs.py:2832 dialogs.py:2894
@@ -1948,7 +1944,7 @@ msgstr ""
 
 #: dialogs.py:2620 dialogs.py:2894 dialogs.py:2964 dialogs.py:3011
 #: dialogs.py:3068
-msgid "Collection Name"
+msgid "Collection name"
 msgstr "Nombre de estantería"
 
 #: dialogs.py:2620 dialogs.py:2894 dialogs.py:2964 dialogs.py:3011
@@ -2032,11 +2028,6 @@ msgstr "Ordenar por la fecha de publicación."
 msgid "Order by"
 msgstr "Ordenar por"
 
-#: dialogs.py:2758 dialogs.py:3032 dialogs.py:3102 dialogs.py:3149
-#: dialogs.py:3206
-msgid "Published date"
-msgstr "Fecha de publicación."
-
 #: dialogs.py:2766 dialogs.py:3040 dialogs.py:3110 dialogs.py:3157
 #: dialogs.py:3214
 msgid "Selecting ascending will sort the collection in series order."
@@ -2069,7 +2060,7 @@ msgstr "Descendente"
 #: dialogs.py:3243
 msgid ""
 "If this is selected, the configuration file is updated to set the selected "
-"sort for the collections to 'Date Added'."
+"sort for the collections to 'Date added'."
 msgstr ""
 "Si se selecciona, el ficheo de configuración se modifica para fijar el orden "
 "seleccionado por las estantería a \"Fecha en que se añadió\""
@@ -2091,12 +2082,12 @@ msgstr ""
 
 #: dialogs.py:2843 dialogs.py:3117 dialogs.py:3187 dialogs.py:3234
 #: dialogs.py:3291
-msgid "Collection/Series Name"
+msgid "Collection/series name"
 msgstr "Nombre de estantería/serie"
 
 #: dialogs.py:2843 dialogs.py:3117 dialogs.py:3187 dialogs.py:3234
 #: dialogs.py:3291
-msgid "Books in Collection"
+msgid "Books in collection"
 msgstr "Libros en la estantería"
 
 #: dialogs.py:2941 dialogs.py:3215 dialogs.py:3285 dialogs.py:3332
@@ -2127,7 +2118,7 @@ msgstr ""
 
 #: dialogs.py:2972 dialogs.py:3246 dialogs.py:3316 dialogs.py:3363
 #: dialogs.py:3420
-msgid "Series/Author Name"
+msgid "Series/author name"
 msgstr "Nombre de series/autor"
 
 #: dialogs.py:2972 dialogs.py:3246 dialogs.py:3316 dialogs.py:3363
@@ -2236,11 +2227,11 @@ msgid "Select the device this profile is for."
 msgstr "Selecciona el dispositivo al que se asocia este perfil."
 
 #: config.py:484 config.py:560 config.py:569 config.py:581 config.py:583
-msgid "Custom Columns"
+msgid "Custom columns"
 msgstr "Columnas personalizadas"
 
 #: config.py:494 config.py:570 config.py:579 config.py:591 config.py:593
-msgid "Current Reading Location Column:"
+msgid "Current reading location column:"
 msgstr "Columna de posición de lectura actual:"
 
 #: config.py:495 config.py:571 config.py:580 config.py:592 config.py:594
@@ -2268,7 +2259,7 @@ msgstr ""
 "porcentaje de lectura leído."
 
 #: config.py:508 config.py:584 config.py:593 config.py:605 config.py:607
-msgid "Rating Column:"
+msgid "Rating column:"
 msgstr "Columna de valoración:"
 
 #: config.py:509 config.py:585 config.py:594 config.py:606 config.py:608
@@ -2280,7 +2271,7 @@ msgstr ""
 "'integer'. Déjela en blanco si no quiere almacenar o restaurar la valoración."
 
 #: config.py:515 config.py:591 config.py:600 config.py:612 config.py:614
-msgid "Last Read Column:"
+msgid "Last read column:"
 msgstr "Columna de último leído:"
 
 #: config.py:516 config.py:592 config.py:601 config.py:613 config.py:615
@@ -2423,7 +2414,7 @@ msgstr ""
 "dispositivo."
 
 #: config.py:816 config.py:892 config.py:901 config.py:913 config.py:915
-msgid "Device Database Backup"
+msgid "Device database backup"
 msgstr "Hacer copia de seguridad de la base de datos del dispositivo"
 
 #: config.py:821 config.py:897 config.py:906 config.py:918 config.py:920
@@ -2543,7 +2534,7 @@ msgid "Model"
 msgstr "Modelo"
 
 #: config.py:1147 config.py:1223 config.py:1232 config.py:1249 config.py:1251
-msgid "Serial Number"
+msgid "Serial number"
 msgstr "Número de serie"
 
 #: config.py:1147 config.py:1223 config.py:1232 config.py:1249 config.py:1251
@@ -2556,11 +2547,11 @@ msgid "Status"
 msgstr "Estado"
 
 #: config.py:1238 config.py:1314 config.py:1323 config.py:1340 config.py:1342
-msgid "Other Options"
+msgid "Other options"
 msgstr "Otras opciones"
 
 #: config.py:1243 config.py:1319 config.py:1328 config.py:1345 config.py:1347
-msgid "&Library Button default:"
+msgid "&Library button default:"
 msgstr "Botón de bib&lioteca por defecto:"
 
 #: config.py:1244 config.py:1251 config.py:1320 config.py:1327 config.py:1329
@@ -2573,7 +2564,7 @@ msgstr ""
 "acción por defecta para cuando se le pulse"
 
 #: config.py:1250 config.py:1326 config.py:1335 config.py:1352 config.py:1354
-msgid "&Device Button default:"
+msgid "&Device button default:"
 msgstr "&Defecto para el botón del dispositivo:"
 
 #: config.py:1257 config.py:1333 config.py:1342 config.py:1359 config.py:1361
@@ -2591,7 +2582,7 @@ msgstr ""
 "plugin"
 
 #: config.py:1287 config.py:1363 config.py:1372 config.py:1389 config.py:1391
-msgid "Kobo Utilities Options"
+msgid "Kobo Utilities options"
 msgstr "Opciones de Kobo Utilities"
 
 #: config.py:1296 config.py:1372 config.py:1381 config.py:1398 config.py:1400
@@ -2603,7 +2594,7 @@ msgid "Devices"
 msgstr "Dispositivos"
 
 #: action.py:244 action.py:245 action.py:270 action.py:276
-msgid "Connected Device: "
+msgid "Connected device: "
 msgstr "Dispositivo conectado:"
 
 #: action.py:247 action.py:248 action.py:273 action.py:279
@@ -2627,11 +2618,11 @@ msgid "Driver"
 msgstr "Driver"
 
 #: action.py:562
-msgid "&Configure Driver"
+msgid "&Configure driver"
 msgstr "&Configurar driver"
 
 #: action.py:564 action.py:561 action.py:601 action.py:618
-msgid "Configure Driver"
+msgid "Configure driver"
 msgstr "Configurar driver"
 
 #: action.py:570 action.py:572 action.py:568 action.py:608 action.py:610
@@ -2852,7 +2843,7 @@ msgid "Author(s)"
 msgstr "Autor(es)"
 
 #: dialogs.py:2498 dialogs.py:2568 dialogs.py:2615 dialogs.py:2672
-msgid "File Path"
+msgid "File path"
 msgstr "Directorio de fichero"
 
 #: dialogs.py:2498 dialogs.py:2568 dialogs.py:2615 dialogs.py:2672
@@ -2860,7 +2851,7 @@ msgid "PubDate"
 msgstr "Fecha de publicación"
 
 #: dialogs.py:2498 dialogs.py:2568 dialogs.py:2615 dialogs.py:2672
-msgid "File Timestamp"
+msgid "File timestamp"
 msgstr "Hora del fichero"
 
 #: dialogs.py:2631 dialogs.py:2701 dialogs.py:2748 dialogs.py:2805
@@ -2909,7 +2900,7 @@ msgid "Dismiss tiles from home screen"
 msgstr ""
 
 #: action.py:559 action.py:599 action.py:616
-msgid "&Configure current Driver"
+msgid "&Configure current driver"
 msgstr ""
 
 #: dialogs.py:129 dialogs.py:152 dialogs.py:155
@@ -2925,7 +2916,7 @@ msgid "LTR"
 msgstr ""
 
 #: dialogs.py:765 dialogs.py:759 dialogs.py:764
-msgid "Reading Direction"
+msgid "Reading direction"
 msgstr ""
 
 #: dialogs.py:766 dialogs.py:760 dialogs.py:765
@@ -2933,7 +2924,7 @@ msgid "Set the reading direction"
 msgstr ""
 
 #: dialogs.py:775 dialogs.py:769 dialogs.py:774
-msgid "Date Added"
+msgid "Date added"
 msgstr ""
 
 #: dialogs.py:776 dialogs.py:770 dialogs.py:775
@@ -2984,19 +2975,19 @@ msgid "Checkin "
 msgstr ""
 
 #: dialogs.py:1623 dialogs.py:1657
-msgid "Dithered Covers"
+msgid "Dithered covers"
 msgstr ""
 
 #: dialogs.py:1625 dialogs.py:1659
-msgid "PNG Covers"
+msgid "PNG covers"
 msgstr ""
 
 #: dialogs.py:1631 dialogs.py:1665
-msgid "Letterbox Covers"
+msgid "Letterbox covers"
 msgstr ""
 
 #: dialogs.py:1634 dialogs.py:1676
-msgid "Upload Covers for Kobo ePubs"
+msgid "Upload covers for Kobo ePubs"
 msgstr ""
 
 #: dialogs.py:1695 dialogs.py:1748
@@ -3015,11 +3006,11 @@ msgid "* File timestamp"
 msgstr ""
 
 #: action.py:430
-msgid "&Update ToC for Selected Books"
+msgid "&Update ToC for selected books"
 msgstr ""
 
 #: action.py:433
-msgid "Update ToC for Selected Books"
+msgid "Update ToC for selected books"
 msgstr ""
 
 #: action.py:1057
@@ -3121,7 +3112,7 @@ msgid ""
 msgstr ""
 
 #: dialogs.py:3619
-msgid "Update ToCs in Device Database"
+msgid "Update ToCs in device database"
 msgstr ""
 
 #: dialogs.py:3631
@@ -3137,7 +3128,7 @@ msgid "Remove selected books from the list"
 msgstr ""
 
 #: dialogs.py:3639
-msgid "Send Books"
+msgid "Send books"
 msgstr ""
 
 #: dialogs.py:3640
@@ -3149,7 +3140,7 @@ msgid "Select all books in the list."
 msgstr ""
 
 #: dialogs.py:3647
-msgid "Select Books to send"
+msgid "Select books to send"
 msgstr ""
 
 #: dialogs.py:3649
@@ -3157,7 +3148,7 @@ msgid "Select all books that need to be sent to the device."
 msgstr ""
 
 #: dialogs.py:3651
-msgid "Select Books to update"
+msgid "Select books to update"
 msgstr ""
 
 #: dialogs.py:3657
@@ -3165,7 +3156,7 @@ msgid "Unselect all books in the list."
 msgstr ""
 
 #: dialogs.py:3674 dialogs.py:3688
-msgid "Update Books"
+msgid "Update books"
 msgstr ""
 
 #: dialogs.py:3675
@@ -3189,7 +3180,7 @@ msgid "Library ToC"
 msgstr ""
 
 #: dialogs.py:3738
-msgid "Library Format"
+msgid "Library format"
 msgstr ""
 
 #: dialogs.py:3739
@@ -3197,7 +3188,7 @@ msgid "Kobo ToC"
 msgstr ""
 
 #: dialogs.py:3740
-msgid "Kobo Format"
+msgid "Kobo format"
 msgstr ""
 
 #: dialogs.py:3742
@@ -3205,7 +3196,7 @@ msgid "Send"
 msgstr ""
 
 #: dialogs.py:3743
-msgid "Kobo Database ToC"
+msgid "Kobo database ToC"
 msgstr ""
 
 #: dialogs.py:3745
@@ -3213,7 +3204,7 @@ msgid "ToC"
 msgstr ""
 
 #: dialogs.py:3746
-msgid "Reading Position"
+msgid "Reading position"
 msgstr ""
 
 #: dialogs.py:3747

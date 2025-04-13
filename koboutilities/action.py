@@ -307,7 +307,7 @@ class KoboUtilitiesAction(InterfaceAction):
                     self.device.device.fwversion,
                 )
                 text += "\n"
-                text += _("Connected Device: ")
+                text += _("Connected device: ")
                 text += self.device.name
                 text += "\n"
                 text += _("Firmware version: ")
@@ -392,9 +392,9 @@ class KoboUtilitiesAction(InterfaceAction):
 
             self.create_menu_item_ex(
                 self.menu,
-                _("&Set Reader Font for Selected Books"),
-                unique_name="Set Reader Font for Selected Books",
-                shortcut_name=_("Set Reader Font for Selected Books"),
+                _("&Set reader font for selected books"),
+                unique_name="Set reader font for selected books",
+                shortcut_name=_("Set reader font for selected books"),
                 triggered=self.set_reader_fonts,
                 is_library_action=True,
                 is_device_action=True,
@@ -403,9 +403,9 @@ class KoboUtilitiesAction(InterfaceAction):
 
             self.create_menu_item_ex(
                 self.menu,
-                _("&Remove Reader Font for Selected Books"),
-                unique_name="Remove Reader Font for Selected Books",
-                shortcut_name=_("Remove Reader Font for Selected Books"),
+                _("&Remove reader font for selected books"),
+                unique_name="Remove reader font for selected books",
+                shortcut_name=_("Remove reader font for selected books"),
                 triggered=self.remove_reader_fonts,
                 is_library_action=True,
                 is_device_action=True,
@@ -425,18 +425,18 @@ class KoboUtilitiesAction(InterfaceAction):
 
             self.create_menu_item_ex(
                 self.menu,
-                _("&Change Reading Status in device library"),
-                unique_name="Change Reading Status in device library",
-                shortcut_name=_("Change Reading Status in device library"),
+                _("&Change reading status in device library"),
+                unique_name="Change reading status in device library",
+                shortcut_name=_("Change reading status in device library"),
                 triggered=self.change_reading_status,
                 is_device_action=True,
             )
 
             self.create_menu_item_ex(
                 self.menu,
-                _("&Manage Series Information in device library"),
-                unique_name="Manage Series Information in device library",
-                shortcut_name=_("Manage Series Information in device library"),
+                _("&Manage series information in device library"),
+                unique_name="Manage series information in device library",
+                shortcut_name=_("Manage series information in device library"),
                 triggered=self.manage_series_on_device,
                 is_device_action=True,
                 is_supported=device is not None and device.supports_series,
@@ -444,9 +444,9 @@ class KoboUtilitiesAction(InterfaceAction):
 
             self.create_menu_item_ex(
                 self.menu,
-                _("&Store/Restore current bookmark"),
-                unique_name="Store/Restore current bookmark",
-                shortcut_name=_("Store/Restore current bookmark"),
+                _("&Store/restore current bookmark"),
+                unique_name="Store/restore current bookmark",
+                shortcut_name=_("Store/restore current bookmark"),
                 triggered=self.handle_bookmarks,
                 is_library_action=True,
             )
@@ -454,10 +454,10 @@ class KoboUtilitiesAction(InterfaceAction):
             self.menu.addSeparator()
             self.create_menu_item_ex(
                 self.menu,
-                _("&Update ToC for Selected Books"),
+                _("&Update ToC for selected books"),
                 image="toc.png",
-                unique_name="Update ToC for Selected Books",
-                shortcut_name=_("Update ToC for Selected Books"),
+                unique_name="Update ToC for selected books",
+                shortcut_name=_("Update ToC for selected books"),
                 triggered=self.update_book_toc_on_device,
                 is_library_action=True,
             )
@@ -465,17 +465,17 @@ class KoboUtilitiesAction(InterfaceAction):
             self.menu.addSeparator()
             self.create_menu_item_ex(
                 self.menu,
-                _("&Upload covers for Selected Books"),
-                unique_name="Upload/covers for Selected Books",
-                shortcut_name=_("Upload covers for Selected Books"),
+                _("&Upload covers for selected books"),
+                unique_name="Upload covers for selected books",
+                shortcut_name=_("Upload covers for selected books"),
                 triggered=self.upload_covers,
                 is_library_action=True,
             )
             self.create_menu_item_ex(
                 self.menu,
-                _("&Remove covers for Selected Books"),
-                unique_name="Remove covers for Selected Books",
-                shortcut_name=_("Remove covers for Selected Books"),
+                _("&Remove covers for selected books"),
+                unique_name="Remove covers for selected books",
+                shortcut_name=_("Remove covers for selected books"),
                 triggered=self.remove_covers,
                 is_library_action=True,
                 is_device_action=True,
@@ -505,9 +505,9 @@ class KoboUtilitiesAction(InterfaceAction):
 
             self.create_menu_item_ex(
                 self.menu,
-                _("Order Series Collections"),
-                unique_name="Order Series Collections",
-                shortcut_name=_("Order Series Collections"),
+                _("Order series collections"),
+                unique_name="Order series collections",
+                shortcut_name=_("Order series collections"),
                 triggered=self.order_series_shelves,
                 is_library_action=True,
                 is_device_action=True,
@@ -515,9 +515,9 @@ class KoboUtilitiesAction(InterfaceAction):
             )
             self.create_menu_item_ex(
                 self.menu,
-                _("Get Collections From Device"),
-                unique_name="Get Collections From Device",
-                shortcut_name=_("Get Collections From Device"),
+                _("Get collections from device"),
+                unique_name="Get collections from device",
+                shortcut_name=_("Get collections from device"),
                 triggered=self.get_shelves_from_device,
                 is_library_action=True,
                 is_supported=device is not None and device.is_kobotouch,
@@ -525,9 +525,9 @@ class KoboUtilitiesAction(InterfaceAction):
             if device is not None and device.device.fwversion < (4, 4, 0):
                 self.create_menu_item_ex(
                     self.menu,
-                    _("Set Related Books"),
-                    unique_name="Set Related Books",
-                    shortcut_name=_("Set Related Books"),
+                    _("Set related books"),
+                    unique_name="Set related books",
+                    shortcut_name=_("Set related books"),
                     triggered=self.set_related_books,
                     is_library_action=True,
                     is_device_action=True,
@@ -536,26 +536,26 @@ class KoboUtilitiesAction(InterfaceAction):
             self.menu.addSeparator()
             self.create_menu_item_ex(
                 self.menu,
-                _("Copy annotation for Selected Book"),
+                _("Copy annotation for selected book"),
                 image="bookmarks.png",
-                unique_name="Copy annotation for Selected Book",
-                shortcut_name=_("Copy annotation for Selected Book"),
+                unique_name="Copy annotation for selected book",
+                shortcut_name=_("Copy annotation for selected book"),
                 triggered=self.getAnnotationForSelected,
                 is_library_action=True,
             )
             self.create_menu_item_ex(
                 self.menu,
-                _("Backup Annotation File"),
-                unique_name="Backup Annotation File",
-                shortcut_name=_("Backup Annotation File"),
+                _("Backup annotation file"),
+                unique_name="Backup annotation file",
+                shortcut_name=_("Backup annotation file"),
                 triggered=self.backup_annotation_files,
                 is_library_action=True,
             )
             self.create_menu_item_ex(
                 self.menu,
-                _("Remove Annotation Files"),
-                unique_name="Remove Annotation Files",
-                shortcut_name=_("Remove Annotation Files"),
+                _("Remove annotation files"),
+                unique_name="Remove annotation files",
+                shortcut_name=_("Remove annotation files"),
                 triggered=self.remove_annotations_files,
                 is_library_action=True,
                 is_device_action=True,
@@ -584,9 +584,9 @@ class KoboUtilitiesAction(InterfaceAction):
             databaseMenu = self.menu.addMenu(_("Database"))
             self.create_menu_item_ex(
                 databaseMenu,
-                _("Block Analytics Events"),
-                unique_name="Block Analytics Events",
-                shortcut_name=_("Block Analytics Events"),
+                _("Block analytics events"),
+                unique_name="Block analytics events",
+                shortcut_name=_("Block analytics events"),
                 triggered=self.block_analytics,
                 is_library_action=True,
                 is_device_action=True,
@@ -595,9 +595,9 @@ class KoboUtilitiesAction(InterfaceAction):
             databaseMenu.addSeparator()
             self.create_menu_item_ex(
                 databaseMenu,
-                _("Fix Duplicate Collections"),
-                unique_name="Fix Duplicate Collections",
-                shortcut_name=_("Fix Duplicate Collections"),
+                _("Fix duplicate collections"),
+                unique_name="Fix duplicate collections",
+                shortcut_name=_("Fix duplicate collections"),
                 triggered=self.fix_duplicate_shelves,
                 is_library_action=True,
                 is_device_action=True,
@@ -655,8 +655,8 @@ class KoboUtilitiesAction(InterfaceAction):
                 self.create_menu_item_ex(
                     menu,
                     menu_text,
-                    unique_name="Configure Driver",
-                    shortcut_name=_("Configure Driver"),
+                    unique_name="Configure driver",
+                    shortcut_name=_("Configure driver"),
                     image="config.png",
                     triggered=self.configure_device,
                     is_library_action=True,
@@ -672,7 +672,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 driver_menu = self.menu.addMenu(_("Driver"))
                 create_configure_driver_item(
                     driver_menu,
-                    _("&Configure current Driver") + " - " + self.device_driver_name,
+                    _("&Configure current driver") + " - " + self.device_driver_name,
                 )
                 self.create_menu_item_ex(
                     driver_menu,
@@ -701,7 +701,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
             self.create_menu_item_ex(
                 self.menu,
-                _("&About Plugin"),  # shortcut=False,
+                _("&About plugin"),  # shortcut=False,
                 image="images/icon.png",
                 unique_name="About KoboUtilities",
                 shortcut_name=_("About KoboUtilities"),
@@ -755,10 +755,10 @@ class KoboUtilitiesAction(InterfaceAction):
             tooltip = not_supported_reason
             enabled = False
         elif self.isDeviceView() and not is_device_action:
-            tooltip = _("Only supported in Library View")
+            tooltip = _("Only supported in library view")
             enabled = False
         elif not self.isDeviceView() and not is_library_action:
-            tooltip = _("Only supported in Device View")
+            tooltip = _("Only supported in device view")
             enabled = False
         else:
             tooltip = tooltip
@@ -1052,7 +1052,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
         mb = question_dialog(
             self.gui,
-            _("Remove Reader settings"),
+            _("Remove reader settings"),
             _("Do you want to remove the reader settings for the selected books?"),
             show_copy_button=False,
         )
@@ -1553,7 +1553,7 @@ class KoboUtilitiesAction(InterfaceAction):
         fd = FileDialog(
             parent=self.gui,
             name="Kobo Utilities plugin:choose backup destination",
-            title=_("Choose Backup Destination"),
+            title=_("Choose backup destination"),
             filters=[(_("SQLite database"), ["sqlite"])],
             add_all_files_filter=False,
             mode=QFileDialog.FileMode.AnyFile,
@@ -1784,7 +1784,7 @@ class KoboUtilitiesAction(InterfaceAction):
         )
         info_dialog(
             self.gui,
-            _("Kobo Utilities") + " - " + _("Duplicate Collections Fixed"),
+            _("Kobo Utilities") + " - " + _("Duplicate collections fixed"),
             result_message,
             show=True,
         )
@@ -1823,7 +1823,7 @@ class KoboUtilitiesAction(InterfaceAction):
         )
         info_dialog(
             self.gui,
-            _("Kobo Utilities") + " - " + _("Order Series Collections"),
+            _("Kobo Utilities") + " - " + _("Order series collections"),
             result_message,
             show=True,
         )
@@ -1868,7 +1868,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
         info_dialog(
             self.gui,
-            _("Kobo Utilities") + " - " + _("Set Related Books"),
+            _("Kobo Utilities") + " - " + _("Set related books"),
             result_message,
             show=True,
         )
@@ -1969,12 +1969,12 @@ class KoboUtilitiesAction(InterfaceAction):
             _("Update summary:")
             + "\n\t"
             + _(
-                "Books processed={0}\n\tBooks with Collections={1}\n\tBooks without Collections={2}"
+                "Books processed={0}\n\tBooks with collections={1}\n\tBooks without collections={2}"
             ).format(count_books, books_with_shelves, books_without_shelves)
         )
         info_dialog(
             self.gui,
-            _("Kobo Utilities") + " - " + _("Get Collections from Device"),
+            _("Kobo Utilities") + " - " + _("Get collections from device"),
             result_message,
             show=True,
         )
@@ -2027,14 +2027,14 @@ class KoboUtilitiesAction(InterfaceAction):
         if block_analytics_result:
             info_dialog(
                 self.gui,
-                _("Kobo Utilities") + " - " + _("Block Analytics Events"),
+                _("Kobo Utilities") + " - " + _("Block analytics events"),
                 block_analytics_result,
                 show=True,
             )
         else:
             result_message = _("Failed to block analytics events.")
             d = ViewLog(
-                _("Kobo Utilities") + " - " + _("Block Analytics Events"),
+                _("Kobo Utilities") + " - " + _("Block analytics events"),
                 result_message,
                 parent=self.gui,
             )
@@ -2067,7 +2067,7 @@ class KoboUtilitiesAction(InterfaceAction):
         )
         info_dialog(
             self.gui,
-            _("Kobo Utilities") + " - " + _("Compress Device Database"),
+            _("Kobo Utilities") + " - " + _("Compress device database"),
             result_message,
             show=True,
         )
@@ -2188,7 +2188,7 @@ class KoboUtilitiesAction(InterfaceAction):
             result_message = _("No changes made to series information.")
         info_dialog(
             self.gui,
-            _("Kobo Utilities") + " - " + _("Manage Series On Device"),
+            _("Kobo Utilities") + " - " + _("Manage series on device"),
             result_message,
             show=True,
         )
@@ -3851,7 +3851,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
         debug("shelves:", shelves, " options:", options)
         progressbar = ProgressBar(
-            parent=self.gui, window_title=_("Order Series Collections")
+            parent=self.gui, window_title=_("Order series collections")
         )
         progressbar.show_with_maximum(len(shelves))
         progressbar.left_align_label()
@@ -4075,7 +4075,7 @@ class KoboUtilitiesAction(InterfaceAction):
         categories_count = 0
         books_count = 0
 
-        progressbar = ProgressBar(parent=self.gui, window_title=_("Set Related Books"))
+        progressbar = ProgressBar(parent=self.gui, window_title=_("Set related books"))
         total_related_books = len(related_books)
         progressbar.show_with_maximum(total_related_books)
         progressbar.left_align_label()
@@ -4148,7 +4148,7 @@ class KoboUtilitiesAction(InterfaceAction):
         debug("options:", options)
 
         progressbar = ProgressBar(
-            parent=self.gui, window_title=_("Delete Related Books")
+            parent=self.gui, window_title=_("Delete related books")
         )
         progressbar.show_with_maximum(100)
         progressbar.left_align_label()
@@ -4161,7 +4161,7 @@ class KoboUtilitiesAction(InterfaceAction):
         )
 
         cursor = connection.cursor()
-        progressbar.set_label(_("Delete Related Books"))
+        progressbar.set_label(_("Delete related books"))
         progressbar.increment()
 
         cursor.execute(delete_query)
@@ -4175,7 +4175,7 @@ class KoboUtilitiesAction(InterfaceAction):
         shelves_removed = 0
         finished_shelves = 0
         progressbar = ProgressBar(
-            parent=self.gui, window_title=_("Duplicate Collections in Device Database")
+            parent=self.gui, window_title=_("Duplicate collections in device database")
         )
         total_shelves = len(shelves)
         progressbar.show_with_maximum(total_shelves)

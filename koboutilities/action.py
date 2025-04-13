@@ -1097,7 +1097,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
         progressbar = ProgressBar(parent=self.gui, window_title=_("Getting book list"))
         progressbar.set_label(
-            _("Number of selected books {0}").format(len(selectedIDs))
+            _("Number of selected books: {0}").format(len(selectedIDs))
         )
         progressbar.show_with_maximum(len(selectedIDs))
         debug("selectedIDs:", selectedIDs)
@@ -1125,7 +1125,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
         self.options = dlg.new_prefs
         progressbar.set_label(
-            _("Number of books to update metadata for {0}").format(len(books))
+            _("Number of books to update metadata for: {0}").format(len(books))
         )
         updated_books, unchanged_books, not_on_device_books, count_books = (
             self._update_metadata(books, progressbar)
@@ -1271,7 +1271,7 @@ class KoboUtilitiesAction(InterfaceAction):
             ]
             if len(book.contentIDs) > 0:
                 title = book.title
-                progressbar.set_label(_("Queueing ") + title)
+                progressbar.set_label(_("Queueing {}").format(title))
                 authors = authors_to_string(book.authors)
                 current_chapterid = None
                 current_percentRead = None
@@ -1949,7 +1949,7 @@ class KoboUtilitiesAction(InterfaceAction):
         debug("selectedIDs:", selectedIDs)
         books = self._convert_calibre_ids_to_books(library_db, selectedIDs)
         progressbar.set_label(
-            _("Number of books to get collections for {0}").format(len(books))
+            _("Number of books to get collections for: {0}").format(len(books))
         )
         for book in books:
             device_book_paths = self.get_device_paths_from_id(book.calibre_id)
@@ -3136,7 +3136,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 book_id, index_is_id=True, get_cover=False
             )
             book = Book("", "lpath", title=book_mi.title, other=book_mi)
-            progressbar.set_label(_("Updating ") + book_mi.title)
+            progressbar.set_label(_("Updating {}").format(book_mi.title))
             progressbar.increment()
 
             kobo_chapteridbookmarked = None
@@ -4103,7 +4103,7 @@ class KoboUtilitiesAction(InterfaceAction):
             cursor = connection.cursor()
             for related_type in related_books:
                 progressbar.set_label(
-                    _("Setting related books for ") + related_type["name"]
+                    _("Setting related books for {}").format(related_type["name"])
                 )
                 progressbar.increment()
 
@@ -4224,7 +4224,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 starting_shelves += shelf[3]
                 finished_shelves += 1
                 progressbar.set_label(
-                    _("Removing duplicates of collection ") + shelf[0]
+                    _("Removing duplicates of collection {}").format(shelf[0])
                 )
                 progressbar.increment()
 
@@ -4424,7 +4424,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 debug("kobo_series_list=", kobo_series_dict)
 
             for book in books:
-                progressbar.set_label(_("Updating metadata for ") + book.title)
+                progressbar.set_label(_("Updating metadata for {}").format(book.title))
                 progressbar.increment()
 
                 for contentID in book.contentIDs:
@@ -5110,7 +5110,7 @@ class KoboUtilitiesAction(InterfaceAction):
             count_books += 1
             mi = Metadata("Unknown")
             debug("Looking at book: %s" % book.title)
-            progressbar.set_label(_("Checkin ") + book.title)
+            progressbar.set_label(_("Checking {}").format(book.title))
             progressbar.increment()
             book_updated = False
 
@@ -5833,7 +5833,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
         cursor = connection.cursor()
         for book in books:
-            progressbar.set_label(_("Getting collections for ") + book.title)
+            progressbar.set_label(_("Getting collections for {}").format(book.title))
             progressbar.increment()
             count_books += 1
             shelf_names = []
@@ -6801,7 +6801,7 @@ class KoboUtilitiesAction(InterfaceAction):
         progressbar = ProgressBar(
             parent=self.gui, window_title=_("Updating ToC in device database")
         )
-        progressbar.set_label(_("Number of books to update {0}").format(len(books)))
+        progressbar.set_label(_("Number of books to update: {0}").format(len(books)))
         progressbar.show_with_maximum(len(books))
         connection = self.device_database_connection()
         for book in books:

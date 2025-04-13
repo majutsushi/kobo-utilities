@@ -346,7 +346,7 @@ CUSTOM_COLUMN_DEFAULTS = {
         "columns_list": "avail_text_columns",
         "config_label": _("Current reading location column:"),
         "config_tool_tip": _(
-            "Select a custom column to store the current reading location. The column type must be 'text' or 'comments.' Leave this blank if you do not want to store or restore the current reading location."
+            "Select a custom column to store the current reading location. The column type must be 'text' or 'comments'. Leave this blank if you do not want to store or restore the current reading location."
         ),
     },
     CUSTOM_COLUMN_DEFAULT_LOOKUP_PERCENT_READ: {

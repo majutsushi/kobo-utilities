@@ -312,7 +312,7 @@ class QueueProgressDialog(QProgressDialog):
             ]
             if len(book.contentIDs):
                 title = book.title
-                self.setLabelText(_("Queueing ") + title)
+                self.setLabelText(_("Queueing {}").format(title))
                 authors = authors_to_string(book.authors)
                 current_chapterid = None
                 current_percentRead = None
@@ -434,7 +434,7 @@ class QueueProgressDialog(QProgressDialog):
                 book.contentIDs = contentIDs
                 if len(book.contentIDs):
                     title = book.title
-                    self.setLabelText(_("Queueing ") + title)
+                    self.setLabelText(_("Queueing {}").format(title))
                     authors = authors_to_string(book.authors)
 
                     self.books_to_scan.append(
@@ -4717,7 +4717,7 @@ class AboutDialog(QDialog):
         self.label.setOpenExternalLinks(True)
         self.label.setWordWrap(True)
         self.label.setTextFormat(Qt.MarkdownText)
-        self.setWindowTitle(_("About " + DIALOG_NAME))
+        self.setWindowTitle(_("About {}").format(DIALOG_NAME))
         self.setWindowIcon(icon)
         self.l.addWidget(self.logo, 0, 0)
         self.l.addWidget(self.label, 0, 1)

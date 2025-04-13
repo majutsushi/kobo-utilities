@@ -607,8 +607,8 @@ msgstr "Obteniendo lista de libros"
 
 #: action.py:1369 action.py:1522 action.py:1532 action.py:1591 action.py:1712
 #, python-brace-format
-msgid "Number of books to get collections for {0}"
-msgstr "Número de libros para los que conseguir estanterías {0}"
+msgid "Number of books to get collections for: {0}"
+msgstr "Número de libros para los que conseguir estanterías: {0}"
 
 #: action.py:1379 action.py:1532 action.py:1542 action.py:1601 action.py:1722
 #, python-brace-format
@@ -855,8 +855,8 @@ msgid "Unknown"
 msgstr "Desconocido"
 
 #: action.py:2232 action.py:2404 action.py:2414 action.py:2507 action.py:2722
-msgid "Updating "
-msgstr "Actualizando "
+msgid "Updating {}"
+msgstr "Actualizando {}"
 
 #: action.py:2359 action.py:2527 action.py:2537 action.py:2630 action.py:4327
 #: action.py:2872 action.py:4580
@@ -894,8 +894,8 @@ msgstr ""
 "anotaciones solo se pueden copiar de los libros que están en el dispositivo."
 
 #: action.py:2960 action.py:3093 action.py:3103 action.py:3298 action.py:3551
-msgid "Setting related books for "
-msgstr "Estableciendo libros relacionados para "
+msgid "Setting related books for {}"
+msgstr "Estableciendo libros relacionados para {}"
 
 #: action.py:2997 action.py:3017 action.py:3128 action.py:3141 action.py:3138
 #: action.py:3151 action.py:3333 action.py:3346 action.py:3586 action.py:3599
@@ -910,8 +910,8 @@ msgid "Duplicate collections in device database"
 msgstr "Estanterías duplicadas en la base de datos del dispositivo"
 
 #: action.py:3093 action.py:3210 action.py:3220 action.py:3415 action.py:3668
-msgid "Removing duplicates of collection "
-msgstr "Eliminando duplicados de estanterías"
+msgid "Removing duplicates of collection {}"
+msgstr "Eliminando duplicados de estanterías {}"
 
 #: action.py:3193 action.py:4366 action.py:3304 action.py:4687 action.py:3314
 #: action.py:4730 action.py:3509 action.py:5095 action.py:3762 action.py:6080
@@ -920,8 +920,8 @@ msgid "Execution of '%s' failed"
 msgstr "Falló la ejecución de '%s'"
 
 #: action.py:3948 action.py:4242 action.py:4279 action.py:4609 action.py:4865
-msgid "Getting collections for "
-msgstr "Obteniendo estanterías para "
+msgid "Getting collections for {}"
+msgstr "Obteniendo estanterías para {}"
 
 #: dialogs.py:73 dialogs.py:88 dialogs.py:111 dialogs.py:114
 msgid "Awards"
@@ -1070,8 +1070,8 @@ msgstr "Preparando la lista de libro ..."
 #: dialogs.py:193 dialogs.py:308 dialogs.py:218 dialogs.py:333 dialogs.py:229
 #: dialogs.py:344 dialogs.py:255 dialogs.py:336 action.py:1081 dialogs.py:258
 #: dialogs.py:339
-msgid "Queueing "
-msgstr "Consultando"
+msgid "Queueing {}"
+msgstr "Consultando {}"
 
 #: dialogs.py:365 dialogs.py:393 dialogs.py:404 dialogs.py:396 dialogs.py:399
 msgid "Reader font settings"
@@ -2189,8 +2189,8 @@ msgstr ""
 
 #: dialogs.py:3110 dialogs.py:3432 dialogs.py:3516 dialogs.py:3563
 #: dialogs.py:3983
-msgid "About "
-msgstr "Acerca de"
+msgid "About {}"
+msgstr "Acerca de {}"
 
 #: dialogs.py:3115 dialogs.py:3437 dialogs.py:3521 dialogs.py:3568
 #: dialogs.py:3988
@@ -2235,9 +2235,10 @@ msgid "Current reading location column:"
 msgstr "Columna de posición de lectura actual:"
 
 #: config.py:495 config.py:571 config.py:580 config.py:592 config.py:594
+#, fuzzy
 msgid ""
 "Select a custom column to store the current reading location. The column "
-"type must be 'text'. Leave this blank if you do not want to store or restore "
+"type must be 'text' or 'comments'. Leave this blank if you do not want to store or restore "
 "the current reading location."
 msgstr ""
 "Selecciona una columna personalizada para almacenar la posición de lectura "
@@ -2249,9 +2250,10 @@ msgid "Percent Read Column:"
 msgstr "Columna de porcentaje de lectura:"
 
 #: config.py:502 config.py:578 config.py:587 config.py:599 config.py:601
+#, fuzzy
 msgid ""
-"Column used to store the current percent read. The column type must be a "
-"'integer'. Leave this blank if you do not want to store or restore the "
+"Column used to store the current percent read. The column type must be "
+"'integer' or 'float'. Leave this blank if you do not want to store or restore the "
 "percentage read."
 msgstr ""
 "Columna usada para almacenar el porcetaje leído actual. El tipo de columna "
@@ -2618,8 +2620,8 @@ msgid "Driver"
 msgstr "Driver"
 
 #: action.py:562
-msgid "&Configure driver"
-msgstr "&Configurar driver"
+msgid "&Configure driver..."
+msgstr "&Configurar driver..."
 
 #: action.py:564 action.py:561 action.py:601 action.py:618
 msgid "Configure driver"
@@ -2669,8 +2671,8 @@ msgstr "Obteniendo la lista de libros"
 #: action.py:834 action.py:838 action.py:844 action.py:848 action.py:883
 #: action.py:887 action.py:912 action.py:916
 #, python-brace-format
-msgid "Number of selected books {0}"
-msgstr "Número de libros seleccionados {0}"
+msgid "Number of selected books: {0}"
+msgstr "Número de libros seleccionados: {0}"
 
 #: action.py:856 action.py:866 action.py:905 action.py:934
 msgid "Updating metadata on device"
@@ -2678,8 +2680,8 @@ msgstr "Actualizando metadatos en el dispositivo"
 
 #: action.py:859 action.py:869 action.py:908 action.py:937
 #, python-brace-format
-msgid "Number of books to update metadata for {0}"
-msgstr "Número de libros a los que actualizar metadatos {0}"
+msgid "Number of books to update metadata for: {0}"
+msgstr "Número de libros a los que actualizar metadatos: {0}"
 
 #: action.py:1313 action.py:1323 action.py:1383 action.py:1504
 msgid "Changing reading status on device"
@@ -2694,8 +2696,8 @@ msgid "Updating series information on device"
 msgstr "Actualizando información de series en el dispositivo"
 
 #: action.py:3413 action.py:3425 action.py:3627 action.py:3880
-msgid "Updating metadata for "
-msgstr "Actualizando metadatos"
+msgid "Updating metadata for {}"
+msgstr "Actualizando metadatos para {}"
 
 #: action.py:3757 action.py:3794 action.py:4015 action.py:4268
 msgid "Published"
@@ -3102,7 +3104,7 @@ msgstr ""
 
 #: action.py:5778
 #, python-brace-format
-msgid "Number of books to update {0}"
+msgid "Number of books to update: {0}"
 msgstr ""
 
 #: dialogs.py:1670

@@ -1503,7 +1503,7 @@ class BookmarkOptionsDialog(SizePersistedDialog):
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/icon.png", _("Store or restore bookmark")
+            self, "images/icon.png", _("Store or restore reading positions")
         )
         layout.addLayout(title_layout)
 

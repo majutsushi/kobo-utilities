@@ -86,11 +86,13 @@ msgid "Manage series information in device library"
 msgstr "Gérer les informations de séries dans la bibliothèque du dispositif"
 
 #: action.py:394 action.py:391 action.py:416 action.py:422
-msgid "&Store/restore current bookmark"
+#, fuzzy
+msgid "&Store/restore reading positions"
 msgstr "&Enregistrer/Restaurer le signet courant"
 
 #: action.py:396 action.py:393 action.py:418 action.py:424
-msgid "Store/restore current bookmark"
+#, fuzzy
+msgid "Store/restore reading positions"
 msgstr "Enregistrer/Restaurer le signet courant"
 
 #: action.py:402 action.py:399 action.py:424 action.py:441
@@ -2481,12 +2483,14 @@ msgid "Store on connect"
 msgstr "Enregistrer à la  connexion"
 
 #: config.py:603 config.py:612 config.py:624 config.py:626
-msgid "Store current bookmarks on connect"
+#, fuzzy
+msgid "Store current bookmarks/reading position on connect"
 msgstr "Enregistrer les signets actuels à la connexion"
 
 #: config.py:604 config.py:613 config.py:625 config.py:627
+#, fuzzy
 msgid ""
-"When this is checked, the library will be updated with the current bookmark "
+"When this is checked, the library will be updated with the current reading position "
 "for all books on the device."
 msgstr ""
 "Lorsque cette option est cochée, la bibliothèque est mise à jour avec le "
@@ -2497,8 +2501,9 @@ msgid "Prompt to store any changes"
 msgstr "Demander pour enregistrer les modifications"
 
 #: config.py:609 config.py:618 config.py:630 config.py:632
+#, fuzzy
 msgid ""
-"Enable this to be prompted to save the changed bookmarks after an automatic "
+"Enable this to be prompted to save the changed reading positions after an automatic "
 "store is done."
 msgstr ""
 "Activez cette option pour être invité à enregistrer les signets modifiés "

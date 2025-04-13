@@ -444,9 +444,9 @@ class KoboUtilitiesAction(InterfaceAction):
 
             self.create_menu_item_ex(
                 self.menu,
-                _("&Store/restore current bookmark"),
-                unique_name="Store/restore current bookmark",
-                shortcut_name=_("Store/restore current bookmark"),
+                _("&Store/restore reading positions"),
+                unique_name="Store/restore reading positions",
+                shortcut_name=_("Store/restore reading positions"),
                 triggered=self.handle_bookmarks,
                 is_library_action=True,
             )

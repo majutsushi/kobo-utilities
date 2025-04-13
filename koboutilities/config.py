@@ -706,7 +706,7 @@ class ProfilesTab(QWidget):
         )
         self.store_on_connect_checkbox.setToolTip(
             _(
-                "When this is checked, the library will be updated with the current bookmark for all books on the device."
+                "When this is checked, the library will be updated with the current reading position for all books on the device."
             )
         )
         self.store_on_connect_checkbox.clicked.connect(
@@ -719,7 +719,7 @@ class ProfilesTab(QWidget):
         )
         self.prompt_to_store_checkbox.setToolTip(
             _(
-                "Enable this to be prompted to save the changed bookmarks after an automatic store is done."
+                "Enable this to be prompted to save the changed reading positions after an automatic store is done."
             )
         )
         options_layout.addWidget(self.prompt_to_store_checkbox, 1, 0, 1, 1)

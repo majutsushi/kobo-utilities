@@ -2706,7 +2706,7 @@ msgid "Enter a new display name for this device:"
 msgstr "Saisir un nouveau nom pour ce dispositif :"
 
 #: config.py:1000 config.py:1009 config.py:1021 config.py:1023
-msgid "An error occured while renaming."
+msgid "An error occurred while renaming."
 msgstr "Une erreur est survenue pendant le renommage."
 
 # modified

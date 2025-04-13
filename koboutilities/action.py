@@ -954,7 +954,7 @@ class KoboUtilitiesAction(InterfaceAction):
         self.interface_action_base_plugin.do_user_config(self.gui)
         debug("after do_user_config")
         restart_message = _(
-            "New custom colums have been created."
+            "New custom columns have been created."
             "\nYou will need to restart calibre for this change to be applied."
         )
         self.check_if_restart_needed(restart_message=restart_message)

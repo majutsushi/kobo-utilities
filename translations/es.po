@@ -2505,7 +2505,7 @@ msgid "Enter a new display name for this device:"
 msgstr "Introduce el nuevo nombre que se mostrará para este dispositivo:"
 
 #: config.py:924 config.py:1000 config.py:1009 config.py:1021 config.py:1023
-msgid "An error occured while renaming."
+msgid "An error occurred while renaming."
 msgstr "Se produjo un error mientras renombraba"
 
 #: config.py:930 config.py:1006 config.py:1015 config.py:1027 config.py:1029

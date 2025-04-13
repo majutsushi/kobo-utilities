@@ -1366,7 +1366,7 @@ class DevicesTab(QWidget):
             error_dialog(
                 self,
                 _("Rename failed"),
-                _("An error occured while renaming."),
+                _("An error occurred while renaming."),
                 det_msg=traceback.format_exc(),
                 show=True,
             )

@@ -1204,11 +1204,11 @@ class DevicesTab(QWidget):
 
         options_layout = QGridLayout()
         self.do_daily_backp_checkbox = QCheckBox(
-            _("Backup the device database daily"), self
+            _("Back up the device database daily"), self
         )
         self.do_daily_backp_checkbox.setToolTip(
             _(
-                "If this is selected the plugin will backup the device database the first time it is connected each day."
+                "If this is selected the plugin will back up the device database the first time it is connected each day."
             )
         )
         self.do_daily_backp_checkbox.clicked.connect(
@@ -1217,11 +1217,11 @@ class DevicesTab(QWidget):
         options_layout.addWidget(self.do_daily_backp_checkbox, 0, 0, 1, 2)
 
         self.backup_each_connection_checkbox = QCheckBox(
-            _("Backup the device database on each connection"), self
+            _("Back up the device database on each connection"), self
         )
         self.backup_each_connection_checkbox.setToolTip(
             _(
-                "If this is selected the plugin will backup the device database each time the device is connected."
+                "If this is selected the plugin will back up the device database each time the device is connected."
             )
         )
         self.backup_each_connection_checkbox.clicked.connect(
@@ -1231,7 +1231,7 @@ class DevicesTab(QWidget):
 
         self.dest_directory_label = QLabel(_("Destination:"), self)
         self.dest_directory_label.setToolTip(
-            _("Select the destination to backup the device database to.")
+            _("Select the destination to back up the device database to.")
         )
         self.dest_directory_edit = QLineEdit(self)
         self.dest_directory_edit.setMinimumSize(150, 0)
@@ -1246,7 +1246,7 @@ class DevicesTab(QWidget):
         self.copies_to_keep_checkbox = QCheckBox(_("Copies to keep"), self)
         self.copies_to_keep_checkbox.setToolTip(
             _(
-                "Select this to limit the number of backup kept. If not set, the backup files must be manually deleted."
+                "Select this to limit the number of backups kept. If not set, the backup files must be manually deleted."
             )
         )
         self.copies_to_keep_spin = QSpinBox(self)
@@ -1480,7 +1480,7 @@ class DevicesTab(QWidget):
     def _get_dest_directory_name(self):
         path = choose_dir(
             self,
-            "backup annotations destination dialog",
+            "back up annotations destination dialog",
             _("Choose backup destination"),
         )
         if path:

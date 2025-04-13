@@ -1760,7 +1760,7 @@ class BackupAnnotationsOptionsDialog(SizePersistedDialog):
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/icon.png", _("Backup annotations files")
+            self, "images/icon.png", _("Back up annotations files")
         )
         layout.addLayout(title_layout)
         options_layout = QGridLayout()
@@ -1808,7 +1808,7 @@ class BackupAnnotationsOptionsDialog(SizePersistedDialog):
     def _get_dest_directory_name(self):
         path = choose_dir(
             self,
-            "backup annotations destination dialog",
+            "back up annotations destination dialog",
             _("Choose destination directory"),
         )
         self.dest_directory_edit.setText(path)

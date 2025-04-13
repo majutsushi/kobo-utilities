@@ -545,9 +545,9 @@ class KoboUtilitiesAction(InterfaceAction):
             )
             self.create_menu_item_ex(
                 self.menu,
-                _("Backup annotation file"),
-                unique_name="Backup annotation file",
-                shortcut_name=_("Backup annotation file"),
+                _("Back up annotation file"),
+                unique_name="Back up annotation file",
+                shortcut_name=_("Back up annotation file"),
                 triggered=self.backup_annotation_files,
                 is_library_action=True,
             )
@@ -627,9 +627,9 @@ class KoboUtilitiesAction(InterfaceAction):
             )
             self.create_menu_item_ex(
                 databaseMenu,
-                _("Backup device database"),
-                unique_name="Backup device database",
-                shortcut_name=_("Backup device database"),
+                _("Back up device database"),
+                unique_name="Back up device database",
+                shortcut_name=_("Back up device database"),
                 triggered=self.backup_device_database,
                 is_library_action=True,
                 is_device_action=True,
@@ -1544,7 +1544,7 @@ class KoboUtilitiesAction(InterfaceAction):
         if self.device is None:
             error_dialog(
                 self.gui,
-                _("Cannot backup the device database."),
+                _("Cannot back up the device database."),
                 _("No device connected."),
                 show=True,
             )
@@ -1581,7 +1581,7 @@ class KoboUtilitiesAction(InterfaceAction):
         if self.device is None:
             error_dialog(
                 self.gui,
-                _("Cannot backup annotation files from device."),
+                _("Cannot back up annotation files from device."),
                 _("No device connected."),
                 show=True,
             )
@@ -2767,7 +2767,7 @@ class KoboUtilitiesAction(InterfaceAction):
     def _device_database_backup_completed(self, job):
         if job.failed:
             self.gui.job_exception(
-                job, dialog_title=_("Failed to backup device database")
+                job, dialog_title=_("Failed to back up device database")
             )
             return
 

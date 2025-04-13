@@ -145,7 +145,7 @@ msgstr "Copier l'annotation pour les livres sélectionnés"
 
 #: action.py:464 action.py:466 action.py:461 action.py:463 action.py:493
 #: action.py:495 action.py:510 action.py:512
-msgid "Backup annotation file"
+msgid "Back up annotation file"
 msgstr "Sauvegarder le fichier d'annotation"
 
 #: action.py:470 action.py:472 action.py:467 action.py:469 action.py:499
@@ -191,7 +191,7 @@ msgstr "Compacter la base de données du dispositif"
 
 #: action.py:525 action.py:527 action.py:522 action.py:524 action.py:554
 #: action.py:556 action.py:571 action.py:573
-msgid "Backup device database"
+msgid "Back up device database"
 msgstr "Sauvegarder la base de données du dispositif"
 
 #: action.py:541 action.py:543 action.py:538 action.py:540 action.py:570
@@ -529,7 +529,7 @@ msgstr ""
 "\tTotal de livres={2}"
 
 #: action.py:1190 action.py:1200 action.py:1261 action.py:1382
-msgid "Cannot backup the device database."
+msgid "Cannot back up the device database."
 msgstr "Impossible de sauvegarder la base de données du dispositif."
 
 #: action.py:1198 config.py:1088 action.py:1208 config.py:1097 action.py:1269
@@ -542,7 +542,7 @@ msgid "SQLite database"
 msgstr "Base de données SQLite"
 
 #: action.py:1220 action.py:1230 action.py:1291 action.py:1412
-msgid "Cannot backup annotation files from device."
+msgid "Cannot back up annotation files from device."
 msgstr "Impossible de sauvegarder les fichiers d'annotation sur le dispositif."
 
 #: action.py:1246 action.py:1256 action.py:1317 action.py:1438
@@ -864,7 +864,7 @@ msgid "Backing up Kobo device database"
 msgstr "Sauvegarde de la base de données du dispositif Kobo en cours"
 
 #: action.py:2239 action.py:2249 action.py:2342 action.py:2473
-msgid "Failed to backup device database"
+msgid "Failed to back up device database"
 msgstr "Echec à la sauvegarde de la base de données du dispositif"
 
 #: action.py:2250 action.py:2255 action.py:2260 action.py:2265 action.py:2353
@@ -2629,31 +2629,31 @@ msgstr "Sauvegarde de la base de données du dispositif"
 
 # modified
 #: config.py:897 config.py:906 config.py:918 config.py:920
-msgid "Backup the device database daily"
+msgid "Back up the device database daily"
 msgstr "Sauvegarder quotidiennement la base de données du dispositif"
 
 #: config.py:898 config.py:907 config.py:919 config.py:921
 msgid ""
-"If this is selected the plugin will backup the device database the first "
+"If this is selected the plugin will back up the device database the first "
 "time it is connected each day."
 msgstr ""
 "Si sélectionné, le plugin effectuera une sauvegarde de la base de données du "
 "dispositif quotidiennement s'il est connecté."
 
 #: config.py:902 config.py:911 config.py:923 config.py:925
-msgid "Backup the device database on each connection"
+msgid "Back up the device database on each connection"
 msgstr "Sauvegarder la base de données du dispositif à chaque connexion"
 
 #: config.py:903 config.py:912 config.py:924 config.py:926
 msgid ""
-"If this is selected the plugin will backup the device database each time the "
+"If this is selected the plugin will back up the device database each time the "
 "device is connected."
 msgstr ""
 "Si sélectionné, le plugin effectuera une sauvegarde de la base de données du "
 "dispositif à chacune de ses connexions."
 
 #: config.py:908 config.py:917 config.py:929 config.py:931
-msgid "Select the destination to backup the device database to."
+msgid "Select the destination to back up the device database to."
 msgstr ""
 "Sélectionnez la destination de la sauvegarde de la base de données du "
 "dispositif."
@@ -2665,7 +2665,7 @@ msgstr "Copies à conserver"
 # deleted from where ?
 #: config.py:920 config.py:929 config.py:941 config.py:943
 msgid ""
-"Select this to limit the number of backup kept. If not set, the backup files "
+"Select this to limit the number of backups kept. If not set, the backup files "
 "must be manually deleted."
 msgstr ""
 "Cocher ceci pour limiter le nombre de sauvegardes à conserver. Si non "

@@ -131,7 +131,7 @@ msgstr "Copiar las anotaciones del libro seleccionado"
 
 #: action.py:427 action.py:429 action.py:464 action.py:466 action.py:461
 #: action.py:463 action.py:493 action.py:495 action.py:510 action.py:512
-msgid "Backup annotation file"
+msgid "Back up annotation file"
 msgstr "Hacer copia de seguridad del archivo de anotaciones"
 
 #: action.py:433 action.py:435 action.py:470 action.py:472 action.py:467
@@ -177,7 +177,7 @@ msgstr "Comprimir la base de datos del dispositivo"
 
 #: action.py:488 action.py:490 action.py:525 action.py:527 action.py:522
 #: action.py:524 action.py:554 action.py:556 action.py:571 action.py:573
-msgid "Backup device database"
+msgid "Back up device database"
 msgstr "Hacer copia de seguridad de la base de datos del dispositivo"
 
 #: action.py:504 action.py:506 action.py:541 action.py:543 action.py:538
@@ -452,7 +452,7 @@ msgstr ""
 "\tTotal de libros={2}"
 
 #: action.py:1039 action.py:1190 action.py:1200 action.py:1261 action.py:1382
-msgid "Cannot backup the device database."
+msgid "Cannot back up the device database."
 msgstr ""
 "No se puede hacer una copia de seguridad de la base de datos del dispositivo."
 
@@ -466,7 +466,7 @@ msgid "SQLite database"
 msgstr "Base de datos SQLite"
 
 #: action.py:1069 action.py:1220 action.py:1230 action.py:1291 action.py:1412
-msgid "Cannot backup annotation files from device."
+msgid "Cannot back up annotation files from device."
 msgstr ""
 "No se puede hacer una copia de los archivos de anotaciones del dispositivo."
 
@@ -779,7 +779,7 @@ msgid "Backing up Kobo device database"
 msgstr "Haciendo copia de seguridad de la base de datos del dispositivo Kobo"
 
 #: action.py:2065 action.py:2239 action.py:2249 action.py:2342 action.py:2473
-msgid "Failed to backup device database"
+msgid "Failed to back up device database"
 msgstr ""
 "No se pudo hacer una copia de seguridad de la base de datos del dispositivo"
 
@@ -2425,33 +2425,33 @@ msgid "Device database backup"
 msgstr "Hacer copia de seguridad de la base de datos del dispositivo"
 
 #: config.py:821 config.py:897 config.py:906 config.py:918 config.py:920
-msgid "Backup the device database daily"
+msgid "Back up the device database daily"
 msgstr ""
 "Hacer copia de seguridad de la base de datos del dispositivo diariamente"
 
 #: config.py:822 config.py:898 config.py:907 config.py:919 config.py:921
 msgid ""
-"If this is selected the plugin will backup the device database the first "
+"If this is selected the plugin will back up the device database the first "
 "time it is connected each day."
 msgstr ""
 "Si selecciona esta opción el plugin hará una copia de seguridad de la base "
 "de datos del dispositivo la primera vez que se conecte cada día."
 
 #: config.py:826 config.py:902 config.py:911 config.py:923 config.py:925
-msgid "Backup the device database on each connection"
+msgid "Back up the device database on each connection"
 msgstr ""
 "Hacer copia de seguridad de la base de datos del dispositivo en cada conexión"
 
 #: config.py:827 config.py:903 config.py:912 config.py:924 config.py:926
 msgid ""
-"If this is selected the plugin will backup the device database each time the "
+"If this is selected the plugin will back up the device database each time the "
 "device is connected."
 msgstr ""
 "Si se selecciona el plugin hará una copia de seguridad del dispositivo cada "
 "vez que se conecte el dispositivo."
 
 #: config.py:832 config.py:908 config.py:917 config.py:929 config.py:931
-msgid "Select the destination to backup the device database to."
+msgid "Select the destination to back up the device database to."
 msgstr ""
 "Seleccionar el destino en el que hacer la copia de seguridad de la base de "
 "datos del dispositivo."
@@ -2462,7 +2462,7 @@ msgstr "Copias que se van a mantener"
 
 #: config.py:844 config.py:920 config.py:929 config.py:941 config.py:943
 msgid ""
-"Select this to limit the number of backup kept. If not set, the backup files "
+"Select this to limit the number of backups kept. If not set, the backup files "
 "must be manually deleted."
 msgstr ""
 "Seleccione esto para limitar el número de copias de seguridad que se "

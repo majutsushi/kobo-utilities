@@ -5,9 +5,9 @@
 - Disabled "Manage series information" and "Order series collections" features
   as they are obsolete. They are set to be removed in a future release.
 - Changed all instances of 'shelves' to 'collections' for consistency
-  with current firmware versions
+  with current firmware versions (partly by @chocolatechipcats)
 - Changed all instances of 'current bookmark' to 'reading position'
-  for clarity and consistency (partly by @chocolatechipcats)
+  for clarity and consistency
 - Fixed some errors when using old firmware versions
 - Documented that newer Tolino devices are supported as well
 - Added `scripts/run` task to update translation template

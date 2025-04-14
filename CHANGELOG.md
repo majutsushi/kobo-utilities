@@ -1,5 +1,21 @@
 # Changelog
 
+## Version 2.22.0 - 2025-04-14
+
+- Disabled "Manage series information" and "Order series collections" features
+  as they are obsolete. They are set to be removed in a future release.
+- Changed all instances of 'shelves' to 'collections' for consistency
+  with current firmware versions
+- Changed all instances of 'current bookmark' to 'reading position'
+  for clarity and consistency (partly by @chocolatechipcats)
+- Fixed some errors when using old firmware versions
+- Documented that newer Tolino devices are supported as well
+- Added `scripts/run` task to update translation template
+- Added section about contributing translations to README
+- Automatically compile translations when building plugin
+- Made text case more consistent
+- Fixed some language and translation issues
+
 ## Version 2.21.1 - 2025-03-26
 
 - Fixed a bug that prevented the plugin from working

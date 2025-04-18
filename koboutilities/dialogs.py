@@ -4694,16 +4694,6 @@ class IconWidgetItem(ReadOnlyTextIconWidgetItem):
         return self.sort_key < other.sort_key
 
 
-class SortableReadOnlyTableWidgetItem(ReadOnlyTableWidgetItem):
-    def __init__(self, text, sort_key=None):
-        super(SortableReadOnlyTableWidgetItem, self).__init__(text)
-        self.sort_key = text if not sort_key or sort_key == "" else sort_key
-
-    # Qt uses a simple < check for sorting items, override this to use the sortKey
-    def __lt__(self, other):
-        return self.sort_key < other.sort_key
-
-
 class AboutDialog(QDialog):
     def __init__(self, parent, icon, text):
         QDialog.__init__(self, parent)

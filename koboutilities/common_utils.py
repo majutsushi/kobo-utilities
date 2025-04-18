@@ -475,17 +475,6 @@ class CheckableTableWidgetItem(QTableWidgetItem):
         return self.checkState() == Qt.Checked
 
 
-class TextIconWidgetItem(QTableWidgetItem):
-    def __init__(self, text, icon, tooltip=None, is_read_only=False):
-        super(TextIconWidgetItem, self).__init__(self, text)
-        if icon:
-            self.setIcon(icon)
-        if tooltip:
-            self.setToolTip(tooltip)
-        if is_read_only:
-            self.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-
-
 class ReadOnlyTextIconWidgetItem(ReadOnlyTableWidgetItem):
     def __init__(self, text, icon):
         super(ReadOnlyTextIconWidgetItem, self).__init__(text)

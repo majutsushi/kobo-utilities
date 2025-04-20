@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 2.22.1 - 2025-04-20
+
+- Fixed the metadata update dialog not finding the correct plugboards
+
 ## Version 2.22.0 - 2025-04-14
 
 - Disabled "Manage series information" and "Order series collections" features

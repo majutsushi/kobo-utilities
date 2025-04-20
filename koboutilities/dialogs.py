@@ -2005,10 +2005,10 @@ class CoverUploadOptionsDialog(SizePersistedDialog):
         assert self.plugin_action.device is not None
         # Hide options if the driver doesn't have the extended options.
         self.driver_supports_extended_cover_options = hasattr(
-            self.plugin_action.device.device, "dithered_covers"
+            self.plugin_action.device.driver, "dithered_covers"
         )
         self.driver_supports_cover_letterbox_colors = hasattr(
-            self.plugin_action.device.device, "letterbox_fs_covers_color"
+            self.plugin_action.device.driver, "letterbox_fs_covers_color"
         )
         self.ditheredcovers_checkbox.setVisible(
             self.driver_supports_extended_cover_options

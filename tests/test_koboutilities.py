@@ -187,7 +187,7 @@ class TestKoboUtilities(unittest.TestCase):
     def setUp(self):
         self.plugin = KoboUtilitiesAction(None, None)
         self.plugin.device = action.KoboDevice(
-            device=mock.MagicMock,
+            driver=mock.MagicMock,
             is_kobotouch=True,
             profile={},
             backup_config={},

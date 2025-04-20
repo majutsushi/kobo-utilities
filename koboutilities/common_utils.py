@@ -9,7 +9,7 @@ __docformat__ = "restructuredtext en"
 import inspect
 import os
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, cast
 
 import apsw
 from calibre.constants import DEBUG, iswindows
@@ -26,6 +26,7 @@ from calibre.utils.config import config_dir
 from calibre.utils.date import UNDEFINED_DATE, format_date, now
 from qt.core import (
     QAbstractItemView,
+    QByteArray,
     QComboBox,
     QDateTime,
     QDialog,
@@ -38,6 +39,7 @@ from qt.core import (
     QListWidget,
     QPixmap,
     QProgressBar,
+    QPushButton,
     Qt,
     QTableWidgetItem,
     QTextEdit,
@@ -52,6 +54,8 @@ except ImportError:
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+    from calibre.gui2.dialogs.message_box import MessageBox
 
     from .action import KoboUtilitiesAction
 
@@ -352,9 +356,10 @@ class ImageTitleLayout(QHBoxLayout):
             ('<a href="http://www.foo.com/">{0}</a>').format(_("Help")), parent
         )
         help_label.setTextInteractionFlags(
-            Qt.LinksAccessibleByMouse | Qt.LinksAccessibleByKeyboard
+            Qt.TextInteractionFlag.LinksAccessibleByMouse
+            | Qt.TextInteractionFlag.LinksAccessibleByKeyboard
         )
-        help_label.setAlignment(Qt.AlignRight)
+        help_label.setAlignment(Qt.AlignmentFlag.AlignRight)
         help_label.linkActivated.connect(parent.help_link_activated)
         self.addWidget(help_label)
 
@@ -389,7 +394,7 @@ class SizePersistedDialog(QDialog):
     ):
         super(SizePersistedDialog, self).__init__(parent)
         self.unique_pref_name = unique_pref_name
-        self.geom = gprefs.get(unique_pref_name, None)
+        self.geom: Optional[QByteArray] = gprefs.get(unique_pref_name, None)
         self.finished.connect(self.dialog_closing)
         self.help_anchor = None
         self.setWindowIcon(get_icon("images/icon.png"))
@@ -403,7 +408,7 @@ class SizePersistedDialog(QDialog):
 
     def dialog_closing(self, result):
         del result
-        geom = bytearray(self.saveGeometry())
+        geom = self.saveGeometry()
         gprefs[self.unique_pref_name] = geom
 
     def help_link_activated(self, url):
@@ -417,26 +422,26 @@ class ReadOnlyTableWidgetItem(QTableWidgetItem):
         if text is None:
             text = ""
         super(ReadOnlyTableWidgetItem, self).__init__(text)
-        self.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+        self.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
 
 
 class NumericTableWidgetItem(QTableWidgetItem):
     def __init__(self, number, is_read_only=False):
         super(NumericTableWidgetItem, self).__init__("")
-        self.setData(Qt.DisplayRole, number)
+        self.setData(Qt.ItemDataRole.DisplayRole, number)
         if is_read_only:
-            self.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+            self.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
 
     def value(self):
-        return self.data(Qt.DisplayRole)
+        return self.data(Qt.ItemDataRole.DisplayRole)
 
 
 class RatingTableWidgetItem(QTableWidgetItem):
     def __init__(self, rating, is_read_only=False):
         super(RatingTableWidgetItem, self).__init__("")
-        self.setData(Qt.DisplayRole, rating)
+        self.setData(Qt.ItemDataRole.DisplayRole, rating)
         if is_read_only:
-            self.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+            self.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
 
 
 class DateTableWidgetItem(QTableWidgetItem):
@@ -445,11 +450,11 @@ class DateTableWidgetItem(QTableWidgetItem):
             date_read = now()
         if is_read_only:
             super(DateTableWidgetItem, self).__init__(format_date(date_read, fmt))
-            self.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-            self.setData(Qt.DisplayRole, QDateTime(date_read))
+            self.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
+            self.setData(Qt.ItemDataRole.DisplayRole, QDateTime(date_read))
         else:
             super(DateTableWidgetItem, self).__init__("")
-            self.setData(Qt.DisplayRole, QDateTime(date_read))
+            self.setData(Qt.ItemDataRole.DisplayRole, QDateTime(date_read))
 
 
 class CheckableTableWidgetItem(QTableWidgetItem):
@@ -461,18 +466,18 @@ class CheckableTableWidgetItem(QTableWidgetItem):
             | Qt.ItemFlag.ItemIsEnabled
         )
         if checked:
-            self.setCheckState(Qt.Checked)
+            self.setCheckState(Qt.CheckState.Checked)
         else:
-            self.setCheckState(Qt.Unchecked)
+            self.setCheckState(Qt.CheckState.Unchecked)
 
     def get_boolean_value(self):
         """
         Return a boolean value indicating whether checkbox is checked
         If this is a tristate checkbox, a partially checked value is returned as None
         """
-        if self.checkState() == Qt.PartiallyChecked:
+        if self.checkState() == Qt.CheckState.PartiallyChecked:
             return None
-        return self.checkState() == Qt.Checked
+        return self.checkState() == Qt.CheckState.Checked
 
 
 class ReadOnlyTextIconWidgetItem(ReadOnlyTableWidgetItem):
@@ -685,7 +690,9 @@ class KeyboardConfigDialog(SizePersistedDialog):
         layout.addWidget(self.keyboard_widget)
         self.group_name = group_name
 
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         button_box.accepted.connect(self.commit)
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
@@ -730,7 +737,7 @@ class ProgressBar(QDialog):
     ):
         if on_top:
             super(ProgressBar, self).__init__(
-                parent=parent, flags=Qt.WindowStaysOnTopHint
+                parent=parent, flags=Qt.WindowType.WindowStaysOnTopHint
             )
         else:
             super(ProgressBar, self).__init__(parent=parent)
@@ -764,7 +771,7 @@ class ProgressBar(QDialog):
         self.refresh()
 
     def left_align_label(self):
-        self.label.setAlignment(Qt.AlignLeft)
+        self.label.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
     def set_maximum(self, value):
         self.progressBar.setMaximum(value)
@@ -776,19 +783,26 @@ class ProgressBar(QDialog):
 
 
 def prompt_for_restart(parent, title, message):
-    d = info_dialog(parent, title, message, show_copy_button=False)
-    b = d.bb.addButton(_("Restart calibre now"), d.bb.AcceptRole)
-    b.setIcon(QIcon(I("lt.png")))
-    d.do_restart = False
+    dialog_box = cast(
+        "MessageBox", info_dialog(parent, title, message, show_copy_button=False)
+    )
+    bb = cast("QDialogButtonBox", dialog_box.bb)  # type: ignore[reportAttributeAccessIssue]
+    button = cast(
+        "QPushButton", bb.addButton(_("Restart calibre now"), bb.ButtonRole.AcceptRole)
+    )
+    button.setIcon(QIcon(I("lt.png")))
+
+    class Restart:
+        do_restart = False
 
     def rf():
-        d.do_restart = True
+        Restart.do_restart = True
 
-    b.clicked.connect(rf)
-    d.set_details("")
-    d.exec_()
-    b.clicked.disconnect()
-    return d.do_restart
+    button.clicked.connect(rf)
+    dialog_box.set_details("")
+    dialog_box.exec()
+    button.clicked.disconnect()
+    return Restart.do_restart
 
 
 class PrefsViewerDialog(SizePersistedDialog):
@@ -815,7 +829,7 @@ class PrefsViewerDialog(SizePersistedDialog):
         layout.addLayout(ml, 1)
 
         self.keys_list = QListWidget(self)
-        self.keys_list.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.keys_list.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.keys_list.setFixedWidth(150)
         self.keys_list.setAlternatingRowColors(True)
         ml.addWidget(self.keys_list)
@@ -823,10 +837,15 @@ class PrefsViewerDialog(SizePersistedDialog):
         self.value_text.setReadOnly(False)
         ml.addWidget(self.value_text, 1)
 
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         button_box.accepted.connect(self._apply_changes)
         button_box.rejected.connect(self.reject)
-        self.clear_button = button_box.addButton(_("Clear"), QDialogButtonBox.ResetRole)
+        self.clear_button = button_box.addButton(
+            _("Clear"), QDialogButtonBox.ButtonRole.ResetRole
+        )
+        assert self.clear_button is not None
         self.clear_button.setIcon(get_icon("trash.png"))
         self.clear_button.setToolTip(_("Clear all settings for this plugin"))
         self.clear_button.clicked.connect(self._clear_settings)
@@ -851,7 +870,9 @@ class PrefsViewerDialog(SizePersistedDialog):
         if new_row < 0:
             self.value_text.clear()
             return
-        key = str(self.keys_list.currentItem().text())
+        current_item = self.keys_list.currentItem()
+        assert current_item is not None
+        key = str(current_item.text())
         val = self.db.prefs.get_namespaced(self.namespace, key, "")
         self.value_text.setPlainText(self.db.prefs.to_raw(val))
 
@@ -871,7 +892,9 @@ class PrefsViewerDialog(SizePersistedDialog):
             return
 
         val = self.db.prefs.raw_to_object(str(self.value_text.toPlainText()))
-        key = str(self.keys_list.currentItem().text())
+        current_item = self.keys_list.currentItem()
+        assert current_item is not None
+        key = str(current_item.text())
         self.db.prefs.set_namespaced(self.namespace, key, val)
 
         restart = prompt_for_restart(

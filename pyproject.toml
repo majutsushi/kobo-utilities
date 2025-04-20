@@ -5,7 +5,12 @@ version = "0.1.0"
 description = "A Calibre plugin providing additional functionality for Kobo eReaders"
 readme = "README.md"
 requires-python = "==3.8.5"
-dependencies = ["apsw==3.43.0"]
+# Sources: https://github.com/kovidgoyal/calibre/blob/master/bypy/sources.json
+# Calibre 5.13.0 (2021-03-10): PyQt5-5.15.2
+# Calibre 6.0.0 (2022-07-11): PyQt6-6.3.1
+# Calibre 7.0.0 (2023-11-17): PyQt6-6.5.2
+# Calibre 8.0.0 (2025-03-21): PyQt6-6.8.1
+dependencies = ["apsw==3.43.0", "pyqt6>=6.7.1"]
 
 [dependency-groups]
 dev = ["vulture>=2.14"]
@@ -168,7 +173,7 @@ reportUnusedClass = "error"
 reportUnusedImport = "error"
 reportUnusedFunction = "error"
 reportUnusedVariable = "error"
-# reportUntypedBaseClass = "error"
+reportUntypedBaseClass = "error"
 reportUntypedClassDecorator = "error"
 reportUntypedFunctionDecorator = "error"
 reportUntypedNamedTuple = "error"

@@ -9,7 +9,7 @@ __docformat__ = "restructuredtext en"
 import copy
 import traceback
 from functools import partial
-from typing import TYPE_CHECKING, Any, Dict, Optional, cast
+from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple, cast
 
 from calibre.constants import DEBUG as _DEBUG
 from calibre.gui2 import choose_dir, error_dialog, open_url, question_dialog
@@ -752,7 +752,8 @@ class ProfilesTab(QWidget):
         fwurl = "https://pgaskin.net/KoboStuff/kobofirmware.html"
         fwsite = QLabel(f'<a href="{fwurl}">{fwurl}</a>')
         fwsite.setTextInteractionFlags(
-            Qt.LinksAccessibleByMouse | Qt.LinksAccessibleByKeyboard
+            Qt.TextInteractionFlag.LinksAccessibleByMouse
+            | Qt.TextInteractionFlag.LinksAccessibleByKeyboard
         )
         fwsite.linkActivated.connect(open_url)
         layout.addWidget(fwsite)
@@ -996,18 +997,20 @@ class ProfilesTab(QWidget):
             self.parent_dialog.get_devices_list(), device_uuid
         )
         self.store_on_connect_checkbox.setCheckState(
-            Qt.Checked if store_on_connect else Qt.Unchecked
+            Qt.CheckState.Checked if store_on_connect else Qt.CheckState.Unchecked
         )
         self.prompt_to_store_checkbox.setCheckState(
-            Qt.Checked if prompt_to_store else Qt.Unchecked
+            Qt.CheckState.Checked if prompt_to_store else Qt.CheckState.Unchecked
         )
         self.prompt_to_store_checkbox.setEnabled(store_on_connect)
         self.store_if_more_recent_checkbox.setCheckState(
-            Qt.Checked if store_if_more_recent else Qt.Unchecked
+            Qt.CheckState.Checked if store_if_more_recent else Qt.CheckState.Unchecked
         )
         self.store_if_more_recent_checkbox.setEnabled(store_on_connect)
         self.do_not_store_if_reopened_checkbox.setCheckState(
-            Qt.Checked if do_not_store_if_reopened else Qt.Unchecked
+            Qt.CheckState.Checked
+            if do_not_store_if_reopened
+            else Qt.CheckState.Unchecked
         )
         self.do_not_store_if_reopened_checkbox.setEnabled(store_on_connect)
 
@@ -1025,16 +1028,16 @@ class ProfilesTab(QWidget):
 
         store_prefs = {}
         store_prefs[KEY_STORE_ON_CONNECT] = (
-            self.store_on_connect_checkbox.checkState() == Qt.Checked
+            self.store_on_connect_checkbox.checkState() == Qt.CheckState.Checked
         )
         store_prefs[KEY_PROMPT_TO_STORE] = (
-            self.prompt_to_store_checkbox.checkState() == Qt.Checked
+            self.prompt_to_store_checkbox.checkState() == Qt.CheckState.Checked
         )
         store_prefs[KEY_STORE_IF_MORE_RECENT] = (
-            self.store_if_more_recent_checkbox.checkState() == Qt.Checked
+            self.store_if_more_recent_checkbox.checkState() == Qt.CheckState.Checked
         )
         store_prefs[KEY_DO_NOT_STORE_IF_REOPENED] = (
-            self.do_not_store_if_reopened_checkbox.checkState() == Qt.Checked
+            self.do_not_store_if_reopened_checkbox.checkState() == Qt.CheckState.Checked
         )
         profile_config[STORE_OPTIONS_STORE_NAME] = store_prefs
         debug("store_prefs:", store_prefs)
@@ -1199,7 +1202,7 @@ class DevicesTab(QWidget):
             self.device_options_for_each_checkbox_clicked
         )
         if self.individual_device_options:
-            self.device_options_for_each_checkbox.setCheckState(Qt.Checked)
+            self.device_options_for_each_checkbox.setCheckState(Qt.CheckState.Checked)
         layout.addWidget(self.device_options_for_each_checkbox)
 
         options_layout = QGridLayout()
@@ -1448,29 +1451,35 @@ class DevicesTab(QWidget):
         self.dest_directory_label.setEnabled(enabled)
         self.copies_to_keep_checkbox.setEnabled(enabled)
         self.copies_to_keep_checkbox_clicked(
-            enabled and self.copies_to_keep_checkbox.checkState() == Qt.Checked
+            enabled
+            and self.copies_to_keep_checkbox.checkState() == Qt.CheckState.Checked
         )
         self.zip_database_checkbox.setEnabled(enabled)
 
     def do_daily_backp_checkbox_clicked(self, checked):
         enable_backup_options = (
-            checked or self.backup_each_connection_checkbox.checkState() == Qt.Checked
+            checked
+            or self.backup_each_connection_checkbox.checkState()
+            == Qt.CheckState.Checked
         )
         self.toggle_backup_options_state(enable_backup_options)
-        if self.backup_each_connection_checkbox.checkState() == Qt.Checked:
-            self.backup_each_connection_checkbox.setCheckState(Qt.Unchecked)
+        if self.backup_each_connection_checkbox.checkState() == Qt.CheckState.Checked:
+            self.backup_each_connection_checkbox.setCheckState(Qt.CheckState.Unchecked)
 
     def backup_each_connection_checkbox_clicked(self, checked):
         enable_backup_options = (
-            checked or self.do_daily_backp_checkbox.checkState() == Qt.Checked
+            checked
+            or self.do_daily_backp_checkbox.checkState() == Qt.CheckState.Checked
         )
         self.toggle_backup_options_state(enable_backup_options)
-        if self.do_daily_backp_checkbox.checkState() == Qt.Checked:
-            self.do_daily_backp_checkbox.setCheckState(Qt.Unchecked)
+        if self.do_daily_backp_checkbox.checkState() == Qt.CheckState.Checked:
+            self.do_daily_backp_checkbox.setCheckState(Qt.CheckState.Unchecked)
 
     def device_options_for_each_checkbox_clicked(self, checked):
         self.individual_device_options = (
-            checked or self.device_options_for_each_checkbox.checkState() == Qt.Checked
+            checked
+            or self.device_options_for_each_checkbox.checkState()
+            == Qt.CheckState.Checked
         )
         self.refresh_current_device_options()
 
@@ -1506,8 +1515,11 @@ class DevicesTab(QWidget):
         backup_each_connection = get_pref(
             backup_prefs, BACKUP_OPTIONS_STORE_NAME, KEY_BACKUP_EACH_CONNECTION
         )
-        dest_directory = get_pref(
-            backup_prefs, BACKUP_OPTIONS_STORE_NAME, KEY_BACKUP_DEST_DIRECTORY
+        dest_directory = cast(
+            "str",
+            get_pref(
+                backup_prefs, BACKUP_OPTIONS_STORE_NAME, KEY_BACKUP_DEST_DIRECTORY
+            ),
         )
         copies_to_keep = get_pref(
             backup_prefs, BACKUP_OPTIONS_STORE_NAME, KEY_BACKUP_COPIES_TO_KEEP
@@ -1517,19 +1529,19 @@ class DevicesTab(QWidget):
         )
 
         self.do_daily_backp_checkbox.setCheckState(
-            Qt.Checked if do_daily_backup else Qt.Unchecked
+            Qt.CheckState.Checked if do_daily_backup else Qt.CheckState.Unchecked
         )
         self.backup_each_connection_checkbox.setCheckState(
-            Qt.Checked if backup_each_connection else Qt.Unchecked
+            Qt.CheckState.Checked if backup_each_connection else Qt.CheckState.Unchecked
         )
         self.dest_directory_edit.setText(dest_directory)
         self.zip_database_checkbox.setCheckState(
-            Qt.Checked if zip_database else Qt.Unchecked
+            Qt.CheckState.Checked if zip_database else Qt.CheckState.Unchecked
         )
         if copies_to_keep == -1:
-            self.copies_to_keep_checkbox.setCheckState(Qt.Unchecked)
+            self.copies_to_keep_checkbox.setCheckState(Qt.CheckState.Unchecked)
         else:
-            self.copies_to_keep_checkbox.setCheckState(Qt.Checked)
+            self.copies_to_keep_checkbox.setCheckState(Qt.CheckState.Checked)
             self.copies_to_keep_spin.setProperty("value", copies_to_keep)
         if do_daily_backup:
             self.do_daily_backp_checkbox_clicked(do_daily_backup)
@@ -1541,18 +1553,18 @@ class DevicesTab(QWidget):
 
         backup_prefs = {}
         backup_prefs[KEY_DO_DAILY_BACKUP] = (
-            self.do_daily_backp_checkbox.checkState() == Qt.Checked
+            self.do_daily_backp_checkbox.checkState() == Qt.CheckState.Checked
         )
         backup_prefs[KEY_BACKUP_EACH_CONNECTION] = (
-            self.backup_each_connection_checkbox.checkState() == Qt.Checked
+            self.backup_each_connection_checkbox.checkState() == Qt.CheckState.Checked
         )
         backup_prefs[KEY_BACKUP_ZIP_DATABASE] = (
-            self.zip_database_checkbox.checkState() == Qt.Checked
+            self.zip_database_checkbox.checkState() == Qt.CheckState.Checked
         )
         backup_prefs[KEY_BACKUP_DEST_DIRECTORY] = str(self.dest_directory_edit.text())
         backup_prefs[KEY_BACKUP_COPIES_TO_KEEP] = (
             int(str(self.copies_to_keep_spin.value()))
-            if self.copies_to_keep_checkbox.checkState() == Qt.Checked
+            if self.copies_to_keep_checkbox.checkState() == Qt.CheckState.Checked
             else -1
         )
         debug("backup_prefs:", backup_prefs)
@@ -1599,8 +1611,8 @@ class DevicesTableWidget(QTableWidget):
         self.plugin_action: KoboUtilitiesAction = parent.plugin_action
         self.setSortingEnabled(False)
         self.setAlternatingRowColors(True)
-        self.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.setMinimumSize(380, 0)
 
     def populate_table(self, devices, connected_device: Optional[KoboDevice]):
@@ -1616,8 +1628,12 @@ class DevicesTableWidget(QTableWidget):
         ]
         self.setColumnCount(len(header_labels))
         self.setHorizontalHeaderLabels(header_labels)
-        self.verticalHeader().setDefaultSectionSize(32)
-        self.horizontalHeader().setStretchLastSection(False)
+        vert_header = self.verticalHeader()
+        assert vert_header is not None
+        vert_header.setDefaultSectionSize(32)
+        horiz_header = self.horizontalHeader()
+        assert horiz_header is not None
+        horiz_header.setStretchLastSection(False)
         self.setIconSize(QSize(32, 32))
 
         for row, uuid in enumerate(devices.keys()):
@@ -1659,7 +1675,7 @@ class DevicesTableWidget(QTableWidget):
         name_widget = ReadOnlyTextIconWidgetItem(
             device_config["name"], get_icon(device_icon)
         )
-        name_widget.setData(Qt.UserRole, (device_config, is_connected))
+        name_widget.setData(Qt.ItemDataRole.UserRole, (device_config, is_connected))
         type_widget = ReadOnlyTableWidgetItem(device_config["type"])
         serial_no = device_config.get("serial_no", "")
         serial_no_widget = ReadOnlyTableWidgetItem(serial_no)
@@ -1675,25 +1691,32 @@ class DevicesTableWidget(QTableWidget):
         debug("start")
         devices = {}
         for row in range(self.rowCount()):
-            (device_config, _is_connected) = self.item(row, 1).data(Qt.UserRole)
-            device_config["active"] = self.item(row, 0).get_boolean_value()
+            widget = self.item(row, 1)
+            assert widget is not None
+            (device_config, _is_connected) = widget.data(Qt.ItemDataRole.UserRole)
+            widget = self.item(row, 0)
+            assert isinstance(widget, CheckableTableWidgetItem), (
+                f"widget is of type {type(widget)}"
+            )
+            device_config["active"] = widget.get_boolean_value()
             devices[device_config["uuid"]] = device_config
         return devices
 
-    def get_selected_device_info(self):
+    def get_selected_device_info(self) -> Tuple[Optional[Dict], bool]:
         if self.currentRow() >= 0:
-            (device_config, is_connected) = self.item(self.currentRow(), 1).data(
-                Qt.UserRole
-            )
+            widget = self.item(self.currentRow(), 1)
+            assert widget is not None
+            (device_config, is_connected) = widget.data(Qt.ItemDataRole.UserRole)
             return (device_config, is_connected)
-        return None, None
+        return None, False
 
     def set_current_row_device_name(self, device_name):
         if self.currentRow() >= 0:
             widget = self.item(self.currentRow(), 1)
-            (device_config, is_connected) = widget.data(Qt.UserRole)
+            assert widget is not None
+            (device_config, is_connected) = widget.data(Qt.ItemDataRole.UserRole)
             device_config["name"] = device_name
-            widget.setData(Qt.UserRole, (device_config, is_connected))
+            widget.setData(Qt.ItemDataRole.UserRole, (device_config, is_connected))
             widget.setText(device_name)
 
     def delete_selected_row(self):
@@ -1839,12 +1862,12 @@ class ConfigWidget(QWidget):
         d = KeyboardConfigDialog(
             self.plugin_action.gui, self.plugin_action.action_spec[0]
         )
-        if d.exec_() == d.Accepted:
+        if d.exec() == d.DialogCode.Accepted:
             self.plugin_action.gui.keyboard.finalize()
 
     def view_prefs(self):
         d = PrefsViewerDialog(self.plugin_action.gui, PREFS_NAMESPACE)
-        d.exec_()
+        d.exec()
 
     def help_link_activated(self, url):
         del url

@@ -14,14 +14,9 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Dict, Optional, cast
 from urllib.parse import quote_plus
 
+from calibre.devices.kobo.driver import KOBO
 from calibre.ebooks.metadata import authors_to_string
-from calibre.gui2 import (
-    choose_dir,
-    error_dialog,
-    gprefs,
-    open_url,
-    question_dialog,
-)
+from calibre.gui2 import choose_dir, error_dialog, gprefs, open_url, question_dialog, ui
 from calibre.gui2.complete2 import EditWithComplete
 from calibre.gui2.dialogs.confirm_delete import confirm
 from calibre.gui2.dialogs.template_dialog import TemplateDialog
@@ -216,7 +211,9 @@ class AuthorTableWidgetItem(ReadOnlyTableWidgetItem):
 
     # Qt uses a simple < check for sorting items, override this to use the sortKey
     def __lt__(self, other):
-        return self.sort_key < other.sort_key
+        if isinstance(other, AuthorTableWidgetItem):
+            return self.sort_key < other.sort_key
+        return super().__lt__(other)
 
 
 class QueueProgressDialog(QProgressDialog):
@@ -247,7 +244,7 @@ class QueueProgressDialog(QProgressDialog):
         else:
             self.setWindowTitle(_("Queueing books for storing reading position"))
             QTimer.singleShot(0, self.do_books)
-        self.exec_()
+        self.exec()
 
     def do_books(self):
         debug("Start")
@@ -450,7 +447,10 @@ class QueueProgressDialog(QProgressDialog):
 
 class ReaderOptionsDialog(SizePersistedDialog):
     def __init__(
-        self, parent, plugin_action: KoboUtilitiesAction, contentID: Optional[str]
+        self,
+        parent: ui.Main,
+        plugin_action: KoboUtilitiesAction,
+        contentID: Optional[str],
     ):
         SizePersistedDialog.__init__(
             self, parent, "kobo utilities plugin:reader font settings dialog"
@@ -479,9 +479,9 @@ class ReaderOptionsDialog(SizePersistedDialog):
         if self.prefs.get(cfg.KEY_READING_LOCK_MARGINS, False):
             self.lock_margins_checkbox.click()
         if self.prefs.get(cfg.KEY_UPDATE_CONFIG_FILE, False):
-            self.update_config_file_checkbox.setCheckState(Qt.Checked)
+            self.update_config_file_checkbox.setCheckState(Qt.CheckState.Checked)
         if self.prefs.get(cfg.KEY_DO_NOT_UPDATE_IF_SET, False):
-            self.do_not_update_if_set_checkbox.setCheckState(Qt.Checked)
+            self.do_not_update_if_set_checkbox.setCheckState(Qt.CheckState.Checked)
         self.get_book_settings_pushbutton.setEnabled(contentID is not None)
 
         # Cause our dialog size to be restored from prefs or created on first usage
@@ -621,7 +621,9 @@ class ReaderOptionsDialog(SizePersistedDialog):
             )
 
         # Dialog buttons
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         button_box.accepted.connect(self.ok_clicked)
         button_box.rejected.connect(self.reject)
         button_layout.addWidget(button_box)
@@ -661,10 +663,10 @@ class ReaderOptionsDialog(SizePersistedDialog):
             self.lock_margins_checkbox_is_checked()
         )
         self.prefs[cfg.KEY_UPDATE_CONFIG_FILE] = (
-            self.update_config_file_checkbox.checkState() == Qt.Checked
+            self.update_config_file_checkbox.checkState() == Qt.CheckState.Checked
         )
         self.prefs[cfg.KEY_DO_NOT_UPDATE_IF_SET] = (
-            self.do_not_update_if_set_checkbox.checkState() == Qt.Checked
+            self.do_not_update_if_set_checkbox.checkState() == Qt.CheckState.Checked
         )
 
         gprefs.set(self.unique_pref_name + ":settings", self.prefs)
@@ -697,19 +699,25 @@ class ReaderOptionsDialog(SizePersistedDialog):
             )
 
     def custom_line_spacing_is_checked(self):
-        return self.custom_line_spacing_checkbox.checkState() == Qt.Checked
+        return self.custom_line_spacing_checkbox.checkState() == Qt.CheckState.Checked
 
     def lock_margins_checkbox_is_checked(self):
-        return self.lock_margins_checkbox.checkState() == Qt.Checked
+        return self.lock_margins_checkbox.checkState() == Qt.CheckState.Checked
 
     def get_device_settings(self):
         koboConfig = ConfigParser(allow_no_value=True)
-        device = self.parent().device_manager.connected_device
-        device_path = self.parent().device_manager.connected_device._main_prefix
-        debug("device_path=", device_path)
-        koboConfig.read(
-            device.normalize_path(device_path + ".kobo/Kobo/Kobo eReader.conf")
+        device = cast("ui.Main", self.parent()).device_manager.connected_device
+        assert isinstance(device, KOBO), (
+            f"device is of an unexpected type: {type(device)}"
         )
+        device_path = device._main_prefix
+        debug("device_path=", device_path)
+        assert device_path is not None
+        normalized_path = device.normalize_path(
+            device_path + ".kobo/Kobo/Kobo eReader.conf"
+        )
+        assert normalized_path is not None
+        koboConfig.read(normalized_path)
 
         device_settings = {}
         device_settings[cfg.KEY_READING_FONT_FAMILY] = (
@@ -773,9 +781,9 @@ class ReaderOptionsDialog(SizePersistedDialog):
         if line_spacing in self.line_spacings:
             line_spacing_index = self.line_spacings.index(line_spacing)
             debug("line_spacing_index=", line_spacing_index)
-            self.custom_line_spacing_checkbox.setCheckState(Qt.Checked)
+            self.custom_line_spacing_checkbox.setCheckState(Qt.CheckState.Checked)
         else:
-            self.custom_line_spacing_checkbox.setCheckState(Qt.Unchecked)
+            self.custom_line_spacing_checkbox.setCheckState(Qt.CheckState.Unchecked)
             debug("line_spacing_index not found")
             line_spacing_index = 0
         self.custom_line_spacing_checkbox.click()
@@ -828,26 +836,30 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
 
         # Set some default values from last time dialog was used.
         title = cfg.get_plugin_pref(cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_SET_TITLE)
-        self.title_checkbox.setCheckState(Qt.Checked if title else Qt.Unchecked)
+        self.title_checkbox.setCheckState(
+            Qt.CheckState.Checked if title else Qt.CheckState.Unchecked
+        )
         self.title_checkbox_clicked(title)
 
         title_sort = cfg.get_plugin_pref(
             cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_USE_TITLE_SORT
         )
         self.title_sort_checkbox.setCheckState(
-            Qt.Checked if title_sort else Qt.Unchecked
+            Qt.CheckState.Checked if title_sort else Qt.CheckState.Unchecked
         )
 
         author = cfg.get_plugin_pref(
             cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_SET_AUTHOR
         )
-        self.author_checkbox.setCheckState(Qt.Checked if author else Qt.Unchecked)
+        self.author_checkbox.setCheckState(
+            Qt.CheckState.Checked if author else Qt.CheckState.Unchecked
+        )
 
         author_sort = cfg.get_plugin_pref(
             cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_USE_AUTHOR_SORT
         )
         self.author_sort_checkbox.setCheckState(
-            Qt.Checked if author_sort else Qt.Unchecked
+            Qt.CheckState.Checked if author_sort else Qt.CheckState.Unchecked
         )
         self.author_checkbox_clicked(author)
 
@@ -855,14 +867,16 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
             cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_SET_DESCRIPTION
         )
         self.description_checkbox.setCheckState(
-            Qt.Checked if description else Qt.Unchecked
+            Qt.CheckState.Checked if description else Qt.CheckState.Unchecked
         )
 
         description_use_template = cfg.get_plugin_pref(
             cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_DESCRIPTION_USE_TEMPLATE
         )
         self.description_use_template_checkbox.setCheckState(
-            Qt.Checked if description_use_template else Qt.Unchecked
+            Qt.CheckState.Checked
+            if description_use_template
+            else Qt.CheckState.Unchecked
         )
         self.description_checkbox_clicked(description)
         description_template = cfg.get_plugin_pref(
@@ -873,12 +887,16 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         publisher = cfg.get_plugin_pref(
             cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_SET_PUBLISHER
         )
-        self.publisher_checkbox.setCheckState(Qt.Checked if publisher else Qt.Unchecked)
+        self.publisher_checkbox.setCheckState(
+            Qt.CheckState.Checked if publisher else Qt.CheckState.Unchecked
+        )
 
         published = cfg.get_plugin_pref(
             cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_SET_PUBLISHED_DATE
         )
-        self.published_checkbox.setCheckState(Qt.Checked if published else Qt.Unchecked)
+        self.published_checkbox.setCheckState(
+            Qt.CheckState.Checked if published else Qt.CheckState.Unchecked
+        )
 
         isbn = cfg.get_plugin_pref(cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_SET_ISBN)
         supports_ratings = (
@@ -887,7 +905,9 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
             else False
         )
         self.isbn_checkbox.setCheckState(
-            Qt.Checked if isbn and supports_ratings else Qt.Unchecked
+            Qt.CheckState.Checked
+            if isbn and supports_ratings
+            else Qt.CheckState.Unchecked
         )
         self.isbn_checkbox.setEnabled(supports_ratings)
 
@@ -895,7 +915,9 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
             cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_SET_RATING
         )
         self.rating_checkbox.setCheckState(
-            Qt.Checked if rating and supports_ratings else Qt.Unchecked
+            Qt.CheckState.Checked
+            if rating and supports_ratings
+            else Qt.CheckState.Unchecked
         )
         self.rating_checkbox.setEnabled(
             have_rating_column(self.plugin_action) and supports_ratings
@@ -905,20 +927,23 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
             cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_SET_SERIES
         )
         self.series_checkbox.setCheckState(
-            Qt.Checked
+            Qt.CheckState.Checked
             if series
             and self.plugin_action.device
             and self.plugin_action.device.supports_series
-            else Qt.Unchecked
+            else Qt.CheckState.Unchecked
         )
         self.series_checkbox.setEnabled(
-            self.plugin_action.device and self.plugin_action.device.supports_series
+            self.plugin_action.device is not None
+            and self.plugin_action.device.supports_series
         )
 
         subtitle = cfg.get_plugin_pref(
             cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_SET_SUBTITLE
         )
-        self.subtitle_checkbox.setCheckState(Qt.Checked if subtitle else Qt.Unchecked)
+        self.subtitle_checkbox.setCheckState(
+            Qt.CheckState.Checked if subtitle else Qt.CheckState.Unchecked
+        )
         self.subtitle_checkbox_clicked(subtitle)
 
         subtitle_template = cfg.get_plugin_pref(
@@ -930,7 +955,7 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
             cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_SET_READING_DIRECTION
         )
         self.reading_direction_checkbox.setCheckState(
-            Qt.Checked if reading_direction else Qt.Unchecked
+            Qt.CheckState.Checked if reading_direction else Qt.CheckState.Unchecked
         )
         self.reading_direction_checkbox_clicked(reading_direction)
         reading_direction = cfg.get_plugin_pref(
@@ -942,7 +967,7 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
             cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_SYNC_DATE
         )
         self.date_added_checkbox.setCheckState(
-            Qt.Checked if date_added else Qt.Unchecked
+            Qt.CheckState.Checked if date_added else Qt.CheckState.Unchecked
         )
         date_added_column = cfg.get_plugin_pref(
             cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_SYNC_DATE_COLUMN
@@ -959,7 +984,7 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
             cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_USE_PLUGBOARD
         )
         self.use_plugboard_checkbox.setCheckState(
-            Qt.Checked if use_plugboard else Qt.Unchecked
+            Qt.CheckState.Checked if use_plugboard else Qt.CheckState.Unchecked
         )
         self.use_plugboard_checkbox_clicked(use_plugboard)
 
@@ -967,13 +992,15 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
             cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_UDPATE_KOBO_EPUBS
         )
         self.update_kepubs_checkbox.setCheckState(
-            Qt.Checked if update_kepubs else Qt.Unchecked
+            Qt.CheckState.Checked if update_kepubs else Qt.CheckState.Unchecked
         )
 
         language = cfg.get_plugin_pref(
             cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_SET_LANGUAGE
         )
-        self.language_checkbox.setCheckState(Qt.Checked if language else Qt.Unchecked)
+        self.language_checkbox.setCheckState(
+            Qt.CheckState.Checked if language else Qt.CheckState.Unchecked
+        )
 
         # Cause our dialog size to be restored from prefs or created on first usage
         self.resize_dialog()
@@ -1108,57 +1135,69 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         layout.addStretch(1)
 
         # Dialog buttons
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         button_box.accepted.connect(self.ok_clicked)
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
 
     def ok_clicked(self) -> None:
         new_prefs: dict[str, Any] = cfg.METADATA_OPTIONS_DEFAULTS
-        new_prefs[cfg.KEY_SET_TITLE] = self.title_checkbox.checkState() == Qt.Checked
-        new_prefs[cfg.KEY_USE_TITLE_SORT] = (
-            self.title_sort_checkbox.checkState() == Qt.Checked
+        new_prefs[cfg.KEY_SET_TITLE] = (
+            self.title_checkbox.checkState() == Qt.CheckState.Checked
         )
-        new_prefs[cfg.KEY_SET_AUTHOR] = self.author_checkbox.checkState() == Qt.Checked
+        new_prefs[cfg.KEY_USE_TITLE_SORT] = (
+            self.title_sort_checkbox.checkState() == Qt.CheckState.Checked
+        )
+        new_prefs[cfg.KEY_SET_AUTHOR] = (
+            self.author_checkbox.checkState() == Qt.CheckState.Checked
+        )
         new_prefs[cfg.KEY_USE_AUTHOR_SORT] = (
-            self.author_sort_checkbox.checkState() == Qt.Checked
+            self.author_sort_checkbox.checkState() == Qt.CheckState.Checked
         )
         new_prefs[cfg.KEY_SET_DESCRIPTION] = (
-            self.description_checkbox.checkState() == Qt.Checked
+            self.description_checkbox.checkState() == Qt.CheckState.Checked
         )
         new_prefs[cfg.KEY_DESCRIPTION_USE_TEMPLATE] = (
-            self.description_use_template_checkbox.checkState() == Qt.Checked
+            self.description_use_template_checkbox.checkState() == Qt.CheckState.Checked
         )
         new_prefs[cfg.KEY_DESCRIPTION_TEMPLATE] = (
             self.description_template_edit.template
         )
         new_prefs[cfg.KEY_SET_PUBLISHER] = (
-            self.publisher_checkbox.checkState() == Qt.Checked
+            self.publisher_checkbox.checkState() == Qt.CheckState.Checked
         )
         new_prefs[cfg.KEY_SET_PUBLISHED_DATE] = (
-            self.published_checkbox.checkState() == Qt.Checked
+            self.published_checkbox.checkState() == Qt.CheckState.Checked
         )
-        new_prefs[cfg.KEY_SET_ISBN] = self.isbn_checkbox.checkState() == Qt.Checked
-        new_prefs[cfg.KEY_SET_RATING] = self.rating_checkbox.checkState() == Qt.Checked
-        new_prefs[cfg.KEY_SET_SERIES] = self.series_checkbox.checkState() == Qt.Checked
+        new_prefs[cfg.KEY_SET_ISBN] = (
+            self.isbn_checkbox.checkState() == Qt.CheckState.Checked
+        )
+        new_prefs[cfg.KEY_SET_RATING] = (
+            self.rating_checkbox.checkState() == Qt.CheckState.Checked
+        )
+        new_prefs[cfg.KEY_SET_SERIES] = (
+            self.series_checkbox.checkState() == Qt.CheckState.Checked
+        )
         new_prefs[cfg.KEY_USE_PLUGBOARD] = (
-            self.use_plugboard_checkbox.checkState() == Qt.Checked
+            self.use_plugboard_checkbox.checkState() == Qt.CheckState.Checked
         )
         new_prefs[cfg.KEY_SET_LANGUAGE] = (
-            self.language_checkbox.checkState() == Qt.Checked
+            self.language_checkbox.checkState() == Qt.CheckState.Checked
         )
         new_prefs[cfg.KEY_UDPATE_KOBO_EPUBS] = (
-            self.update_kepubs_checkbox.checkState() == Qt.Checked
+            self.update_kepubs_checkbox.checkState() == Qt.CheckState.Checked
         )
         new_prefs[cfg.KEY_SET_SUBTITLE] = (
-            self.subtitle_checkbox.checkState() == Qt.Checked
+            self.subtitle_checkbox.checkState() == Qt.CheckState.Checked
         )
         new_prefs[cfg.KEY_SUBTITLE_TEMPLATE] = self.subtitle_template_edit.template
         new_prefs[cfg.KEY_SET_READING_DIRECTION] = (
-            self.reading_direction_checkbox.checkState() == Qt.Checked
+            self.reading_direction_checkbox.checkState() == Qt.CheckState.Checked
         )
         new_prefs[cfg.KEY_SYNC_DATE] = (
-            self.date_added_checkbox.checkState() == Qt.Checked
+            self.date_added_checkbox.checkState() == Qt.CheckState.Checked
         )
 
         if (
@@ -1201,7 +1240,7 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
                 return
             new_prefs[cfg.KEY_RESET_POSITION] = (
                 self.readingStatusGroupBox.reset_position_checkbox.checkState()
-                == Qt.Checked
+                == Qt.CheckState.Checked
             )
 
         self.new_prefs = new_prefs
@@ -1227,12 +1266,14 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
 
     def title_checkbox_clicked(self, checked):
         self.title_sort_checkbox.setEnabled(
-            checked and self.use_plugboard_checkbox.checkState() != Qt.Checked
+            checked
+            and self.use_plugboard_checkbox.checkState() != Qt.CheckState.Checked
         )
 
     def author_checkbox_clicked(self, checked):
         self.author_sort_checkbox.setEnabled(
-            checked and self.use_plugboard_checkbox.checkState() != Qt.Checked
+            checked
+            and self.use_plugboard_checkbox.checkState() != Qt.CheckState.Checked
         )
 
     def description_checkbox_clicked(self, checked):
@@ -1242,7 +1283,8 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
     def description_use_template_checkbox_clicked(self, checked):
         self.description_template_edit.setEnabled(
             checked
-            and self.description_use_template_checkbox.checkState() == Qt.Checked
+            and self.description_use_template_checkbox.checkState()
+            == Qt.CheckState.Checked
         )
 
     def subtitle_checkbox_clicked(self, checked):
@@ -1256,10 +1298,10 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
 
     def use_plugboard_checkbox_clicked(self, checked):
         self.title_sort_checkbox.setEnabled(
-            not checked and self.title_checkbox.checkState() == Qt.Checked
+            not checked and self.title_checkbox.checkState() == Qt.CheckState.Checked
         )
         self.author_sort_checkbox.setEnabled(
-            not checked and self.author_checkbox.checkState() == Qt.Checked
+            not checked and self.author_checkbox.checkState() == Qt.CheckState.Checked
         )
 
     def get_date_columns(self, column_names=DATE_COLUMNS):
@@ -1302,13 +1344,15 @@ class GetShelvesFromDeviceDialog(SizePersistedDialog):
         all_books = cfg.get_plugin_pref(
             cfg.GET_SHELVES_OPTIONS_STORE_NAME, cfg.KEY_ALL_BOOKS
         )
-        self.all_books_checkbox.setCheckState(Qt.Checked if all_books else Qt.Unchecked)
+        self.all_books_checkbox.setCheckState(
+            Qt.CheckState.Checked if all_books else Qt.CheckState.Unchecked
+        )
 
         replace_shelves = cfg.get_plugin_pref(
             cfg.GET_SHELVES_OPTIONS_STORE_NAME, cfg.KEY_REPLACE_SHELVES
         )
         self.replace_shelves_checkbox.setCheckState(
-            Qt.Checked if replace_shelves else Qt.Unchecked
+            Qt.CheckState.Checked if replace_shelves else Qt.CheckState.Unchecked
         )
 
         shelf_column = cfg.get_plugin_pref(
@@ -1367,7 +1411,9 @@ class GetShelvesFromDeviceDialog(SizePersistedDialog):
         layout.addStretch(1)
 
         # Dialog buttons
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         button_box.accepted.connect(self.ok_clicked)
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
@@ -1390,9 +1436,11 @@ class GetShelvesFromDeviceDialog(SizePersistedDialog):
         options[cfg.KEY_SHELVES_CUSTOM_COLUMN] = (
             self.shelf_column_combo.get_selected_column()
         )
-        options[cfg.KEY_ALL_BOOKS] = self.all_books_checkbox.checkState() == Qt.Checked
+        options[cfg.KEY_ALL_BOOKS] = (
+            self.all_books_checkbox.checkState() == Qt.CheckState.Checked
+        )
         options[cfg.KEY_REPLACE_SHELVES] = (
-            self.replace_shelves_checkbox.checkState() == Qt.Checked
+            self.replace_shelves_checkbox.checkState() == Qt.CheckState.Checked
         )
         self.options = options
 
@@ -1468,31 +1516,33 @@ class BookmarkOptionsDialog(SizePersistedDialog):
         else:
             self.restore_radiobutton.click()
         self.status_to_reading_checkbox.setCheckState(
-            Qt.Checked if set_status_to_reading else Qt.Unchecked
+            Qt.CheckState.Checked if set_status_to_reading else Qt.CheckState.Unchecked
         )
         self.date_to_now_checkbox.setCheckState(
-            Qt.Checked if set_date_to_now else Qt.Unchecked
+            Qt.CheckState.Checked if set_date_to_now else Qt.CheckState.Unchecked
         )
         self.set_rating_checkbox.setCheckState(
-            Qt.Checked
+            Qt.CheckState.Checked
             if set_rating
             and self.plugin_action.device is not None
             and self.plugin_action.device.supports_ratings
-            else Qt.Unchecked
+            else Qt.CheckState.Unchecked
         )
 
         self.clear_if_unread_checkbox.setCheckState(
-            Qt.Checked if clear_if_unread else Qt.Unchecked
+            Qt.CheckState.Checked if clear_if_unread else Qt.CheckState.Unchecked
         )
         self.store_if_more_recent_checkbox.setCheckState(
-            Qt.Checked if store_if_more_recent else Qt.Unchecked
+            Qt.CheckState.Checked if store_if_more_recent else Qt.CheckState.Unchecked
         )
         self.do_not_store_if_reopened_checkbox.setCheckState(
-            Qt.Checked if do_not_store_if_reopened else Qt.Unchecked
+            Qt.CheckState.Checked
+            if do_not_store_if_reopened
+            else Qt.CheckState.Unchecked
         )
         self.do_not_store_if_reopened_checkbox_clicked(do_not_store_if_reopened)
         self.background_checkbox.setCheckState(
-            Qt.Checked if background_job else Qt.Unchecked
+            Qt.CheckState.Checked if background_job else Qt.CheckState.Unchecked
         )
 
         # Cause our dialog size to be restored from prefs or created on first usage
@@ -1594,7 +1644,9 @@ class BookmarkOptionsDialog(SizePersistedDialog):
         layout.addStretch(1)
 
         # Dialog buttons
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         button_box.accepted.connect(self.ok_clicked)
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
@@ -1610,25 +1662,25 @@ class BookmarkOptionsDialog(SizePersistedDialog):
         new_prefs = {}
         new_prefs[cfg.KEY_STORE_BOOKMARK] = self.store_radiobutton.isChecked()
         new_prefs[cfg.KEY_READING_STATUS] = (
-            self.status_to_reading_checkbox.checkState() == Qt.Checked
+            self.status_to_reading_checkbox.checkState() == Qt.CheckState.Checked
         )
         new_prefs[cfg.KEY_DATE_TO_NOW] = (
-            self.date_to_now_checkbox.checkState() == Qt.Checked
+            self.date_to_now_checkbox.checkState() == Qt.CheckState.Checked
         )
         new_prefs[cfg.KEY_SET_RATING] = (
-            self.set_rating_checkbox.checkState() == Qt.Checked
+            self.set_rating_checkbox.checkState() == Qt.CheckState.Checked
         )
         new_prefs[cfg.KEY_CLEAR_IF_UNREAD] = (
-            self.clear_if_unread_checkbox.checkState() == Qt.Checked
+            self.clear_if_unread_checkbox.checkState() == Qt.CheckState.Checked
         )
         new_prefs[cfg.KEY_STORE_IF_MORE_RECENT] = (
-            self.store_if_more_recent_checkbox.checkState() == Qt.Checked
+            self.store_if_more_recent_checkbox.checkState() == Qt.CheckState.Checked
         )
         new_prefs[cfg.KEY_DO_NOT_STORE_IF_REOPENED] = (
-            self.do_not_store_if_reopened_checkbox.checkState() == Qt.Checked
+            self.do_not_store_if_reopened_checkbox.checkState() == Qt.CheckState.Checked
         )
         new_prefs[cfg.KEY_BACKGROUND_JOB] = (
-            self.background_checkbox.checkState() == Qt.Checked
+            self.background_checkbox.checkState() == Qt.CheckState.Checked
         )
         cfg.plugin_prefs[cfg.BOOKMARK_OPTIONS_STORE_NAME] = new_prefs
         new_prefs["profileName"] = str(profile_name)
@@ -1694,7 +1746,9 @@ class ChangeReadingStatusOptionsDialog(SizePersistedDialog):
         layout.addWidget(self.readingStatusGroupBox)
 
         # Dialog buttons
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         button_box.accepted.connect(self.ok_clicked)
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
@@ -1718,7 +1772,7 @@ class ChangeReadingStatusOptionsDialog(SizePersistedDialog):
                 return
             self.options["resetPosition"] = (
                 self.readingStatusGroupBox.reset_position_checkbox.checkState()
-                == Qt.Checked
+                == Qt.CheckState.Checked
             )
 
         # Only if the user has checked at least one option will we continue
@@ -1783,7 +1837,9 @@ class BackupAnnotationsOptionsDialog(SizePersistedDialog):
         layout.addStretch(1)
 
         # Dialog buttons
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         button_box.accepted.connect(self.ok_clicked)
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
@@ -1829,10 +1885,14 @@ class RemoveAnnotationsOptionsDialog(SizePersistedDialog):
         )
 
         self.initialize_controls()
-        self.annotation_clean_option = self.options.get(cfg.KEY_REMOVE_ANNOT_ACTION, 0)
-        self.annotation_clean_option_button_group.button(
-            self.annotation_clean_option
-        ).setChecked(True)
+        self.annotation_clean_option_idx = self.options.get(
+            cfg.KEY_REMOVE_ANNOT_ACTION, 0
+        )
+        button = self.annotation_clean_option_button_group.button(
+            self.annotation_clean_option_idx
+        )
+        assert button is not None
+        button.setChecked(True)
         # Cause our dialog size to be restored from prefs or created on first usage
         self.resize_dialog()
 
@@ -1899,18 +1959,22 @@ class RemoveAnnotationsOptionsDialog(SizePersistedDialog):
         layout.addStretch(1)
 
         # Dialog buttons
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         button_box.accepted.connect(self.ok_clicked)
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
 
     def ok_clicked(self):
-        self.options[cfg.KEY_REMOVE_ANNOT_ACTION] = self.annotation_clean_option
+        self.options[cfg.KEY_REMOVE_ANNOT_ACTION] = self.annotation_clean_option_idx
         gprefs.set(self.unique_pref_name + ":settings", self.options)
         self.accept()
 
     def _annotation_clean_option_radio_clicked(self, radioButton):
-        self.annotation_clean_option = self.annotation_clean_option_buttons[radioButton]
+        self.annotation_clean_option_idx = self.annotation_clean_option_buttons[
+            radioButton
+        ]
 
 
 class CoverUploadOptionsDialog(SizePersistedDialog):
@@ -1930,12 +1994,12 @@ class CoverUploadOptionsDialog(SizePersistedDialog):
         # Set some default values from last time dialog was used.
         blackandwhite = self.options.get(cfg.KEY_COVERS_BLACKANDWHITE, False)
         self.blackandwhite_checkbox.setCheckState(
-            Qt.Checked if blackandwhite else Qt.Unchecked
+            Qt.CheckState.Checked if blackandwhite else Qt.CheckState.Unchecked
         )
         self.blackandwhite_checkbox_clicked(blackandwhite)
         ditheredcovers = self.options.get(cfg.KEY_COVERS_DITHERED, False)
         self.ditheredcovers_checkbox.setCheckState(
-            Qt.Checked if ditheredcovers else Qt.Unchecked
+            Qt.CheckState.Checked if ditheredcovers else Qt.CheckState.Unchecked
         )
 
         assert self.plugin_action.device is not None
@@ -1956,20 +2020,24 @@ class CoverUploadOptionsDialog(SizePersistedDialog):
         )
 
         letterbox = self.options.get(cfg.KEY_COVERS_LETTERBOX, False)
-        self.letterbox_checkbox.setCheckState(Qt.Checked if letterbox else Qt.Unchecked)
+        self.letterbox_checkbox.setCheckState(
+            Qt.CheckState.Checked if letterbox else Qt.CheckState.Unchecked
+        )
         self.letterbox_checkbox_clicked(letterbox)
         keep_cover_aspect = self.options.get(cfg.KEY_COVERS_KEEP_ASPECT_RATIO, False)
         self.keep_cover_aspect_checkbox.setCheckState(
-            Qt.Checked if keep_cover_aspect else Qt.Unchecked
+            Qt.CheckState.Checked if keep_cover_aspect else Qt.CheckState.Unchecked
         )
         self.keep_cover_aspect_checkbox_clicked(keep_cover_aspect)
         letterbox_color = self.options.get(cfg.KEY_COVERS_LETTERBOX_COLOR, "#000000")
         self.letterbox_colorbutton.color = letterbox_color
         pngcovers = self.options.get(cfg.KEY_COVERS_PNG, False)
-        self.pngcovers_checkbox.setCheckState(Qt.Checked if pngcovers else Qt.Unchecked)
+        self.pngcovers_checkbox.setCheckState(
+            Qt.CheckState.Checked if pngcovers else Qt.CheckState.Unchecked
+        )
         kepub_covers = self.options.get(cfg.KEY_COVERS_UPDLOAD_KEPUB, False)
         self.kepub_covers_checkbox.setCheckState(
-            Qt.Checked if kepub_covers else Qt.Unchecked
+            Qt.CheckState.Checked if kepub_covers else Qt.CheckState.Unchecked
         )
 
         # Cause our dialog size to be restored from prefs or created on first usage
@@ -2022,33 +2090,35 @@ class CoverUploadOptionsDialog(SizePersistedDialog):
         layout.addStretch(1)
 
         # Dialog buttons
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         button_box.accepted.connect(self.ok_clicked)
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
 
     def ok_clicked(self):
         self.options[cfg.KEY_COVERS_BLACKANDWHITE] = (
-            self.blackandwhite_checkbox.checkState() == Qt.Checked
+            self.blackandwhite_checkbox.checkState() == Qt.CheckState.Checked
         )
         self.options[cfg.KEY_COVERS_DITHERED] = (
-            self.ditheredcovers_checkbox.checkState() == Qt.Checked
+            self.ditheredcovers_checkbox.checkState() == Qt.CheckState.Checked
         )
         self.options[cfg.KEY_COVERS_PNG] = (
-            self.pngcovers_checkbox.checkState() == Qt.Checked
+            self.pngcovers_checkbox.checkState() == Qt.CheckState.Checked
         )
         self.options[cfg.KEY_COVERS_KEEP_ASPECT_RATIO] = (
-            self.keep_cover_aspect_checkbox.checkState() == Qt.Checked
+            self.keep_cover_aspect_checkbox.checkState() == Qt.CheckState.Checked
         )
         self.options[cfg.KEY_COVERS_LETTERBOX] = (
-            self.letterbox_checkbox.checkState() == Qt.Checked
+            self.letterbox_checkbox.checkState() == Qt.CheckState.Checked
         )
         if self.driver_supports_cover_letterbox_colors:
             self.options[cfg.KEY_COVERS_LETTERBOX_COLOR] = (
                 self.letterbox_colorbutton.color
             )
         self.options[cfg.KEY_COVERS_UPDLOAD_KEPUB] = (
-            self.kepub_covers_checkbox.checkState() == Qt.Checked
+            self.kepub_covers_checkbox.checkState() == Qt.CheckState.Checked
         )
 
         gprefs.set(self.unique_pref_name + ":settings", self.options)
@@ -2056,23 +2126,26 @@ class CoverUploadOptionsDialog(SizePersistedDialog):
 
     def blackandwhite_checkbox_clicked(self, checked):
         self.ditheredcovers_checkbox.setEnabled(
-            checked and self.blackandwhite_checkbox.checkState() == Qt.Checked
+            checked
+            and self.blackandwhite_checkbox.checkState() == Qt.CheckState.Checked
         )
         self.pngcovers_checkbox.setEnabled(
-            checked and self.blackandwhite_checkbox.checkState() == Qt.Checked
+            checked
+            and self.blackandwhite_checkbox.checkState() == Qt.CheckState.Checked
         )
 
     def keep_cover_aspect_checkbox_clicked(self, checked):
         self.letterbox_checkbox.setEnabled(
-            checked and self.keep_cover_aspect_checkbox.checkState() == Qt.Checked
+            checked
+            and self.keep_cover_aspect_checkbox.checkState() == Qt.CheckState.Checked
         )
         self.letterbox_colorbutton.setEnabled(
-            checked and self.letterbox_checkbox.checkState() == Qt.Checked
+            checked and self.letterbox_checkbox.checkState() == Qt.CheckState.Checked
         )
 
     def letterbox_checkbox_clicked(self, checked):
         self.letterbox_colorbutton.setEnabled(
-            checked and self.letterbox_checkbox.checkState() == Qt.Checked
+            checked and self.letterbox_checkbox.checkState() == Qt.CheckState.Checked
         )
 
 
@@ -2092,11 +2165,11 @@ class RemoveCoverOptionsDialog(SizePersistedDialog):
 
         remove_fullsize_covers = self.options.get(cfg.KEY_REMOVE_FULLSIZE_COVERS, False)
         self.remove_fullsize_covers_checkbox.setCheckState(
-            Qt.Checked if remove_fullsize_covers else Qt.Unchecked
+            Qt.CheckState.Checked if remove_fullsize_covers else Qt.CheckState.Unchecked
         )
         kepub_covers = self.options.get(cfg.KEY_COVERS_UPDLOAD_KEPUB, False)
         self.kepub_covers_checkbox.setCheckState(
-            Qt.Checked if kepub_covers else Qt.Unchecked
+            Qt.CheckState.Checked if kepub_covers else Qt.CheckState.Unchecked
         )
 
         # Cause our dialog size to be restored from prefs or created on first usage
@@ -2135,17 +2208,19 @@ class RemoveCoverOptionsDialog(SizePersistedDialog):
         layout.addStretch(1)
 
         # Dialog buttons
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         button_box.accepted.connect(self.ok_clicked)
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
 
     def ok_clicked(self):
         self.options[cfg.KEY_REMOVE_FULLSIZE_COVERS] = (
-            self.remove_fullsize_covers_checkbox.checkState() == Qt.Checked
+            self.remove_fullsize_covers_checkbox.checkState() == Qt.CheckState.Checked
         )
         self.options[cfg.KEY_COVERS_UPDLOAD_KEPUB] = (
-            self.kepub_covers_checkbox.checkState() == Qt.Checked
+            self.kepub_covers_checkbox.checkState() == Qt.CheckState.Checked
         )
 
         gprefs.set(self.unique_pref_name + ":settings", self.options)
@@ -2198,7 +2273,9 @@ class BlockAnalyticsOptionsDialog(SizePersistedDialog):
         options_layout.addWidget(self.delete_trigger_radiobutton, 1, 1, 1, 1)
 
         # Dialog buttons
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         button_box.accepted.connect(self.ok_clicked)
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
@@ -2243,7 +2320,7 @@ class CleanImagesDirOptionsDialog(SizePersistedDialog):
 
         delete_extra_covers = self.options.get("delete_extra_covers", False)
         self.delete_extra_covers_checkbox.setCheckState(
-            Qt.Checked if delete_extra_covers else Qt.Unchecked
+            Qt.CheckState.Checked if delete_extra_covers else Qt.CheckState.Unchecked
         )
 
         # Cause our dialog size to be restored from prefs or created on first usage
@@ -2275,14 +2352,16 @@ class CleanImagesDirOptionsDialog(SizePersistedDialog):
         layout.addStretch(1)
 
         # Dialog buttons
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         button_box.accepted.connect(self.ok_clicked)
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
 
     def ok_clicked(self):
         self.options["delete_extra_covers"] = (
-            self.delete_extra_covers_checkbox.checkState() == Qt.Checked
+            self.delete_extra_covers_checkbox.checkState() == Qt.CheckState.Checked
         )
 
         gprefs.set(self.unique_pref_name + ":settings", self.options)
@@ -2330,7 +2409,9 @@ class LockSeriesDialog(SizePersistedDialog):
         layout.addStretch(1)
 
         # Dialog buttons
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
@@ -2370,18 +2451,22 @@ class TitleWidgetItem(QTableWidgetItem):
             self.title_sort = book.title_sort
 
     def __lt__(self, other):
-        return self.title_sort < other.title_sort
+        if isinstance(other, TitleWidgetItem):
+            return self.title_sort < other.title_sort
+        return super().__lt__(other)
 
 
 class AuthorsTableWidgetItem(ReadOnlyTableWidgetItem):
     def __init__(self, authors, author_sort=None):
         text = " & ".join(authors)
         ReadOnlyTableWidgetItem.__init__(self, text)
-        self.setForeground(Qt.darkGray)
+        self.setForeground(Qt.GlobalColor.darkGray)
         self.author_sort = author_sort
 
     def __lt__(self, other):
-        return self.author_sort < other.author_sort
+        if self.author_sort is not None and isinstance(other, AuthorsTableWidgetItem):
+            return self.author_sort < other.author_sort
+        return super().__lt__(other)
 
 
 class SeriesTableWidgetItem(ReadOnlyTableWidgetItem):
@@ -2398,7 +2483,7 @@ class SeriesTableWidgetItem(ReadOnlyTableWidgetItem):
             self.setIcon(get_icon("images/lock.png"))
             self.setToolTip(_("Value assigned by user"))
         if is_original:
-            self.setForeground(Qt.darkGray)
+            self.setForeground(Qt.GlobalColor.darkGray)
 
 
 class SeriesColumnComboBox(QComboBox):
@@ -2413,7 +2498,7 @@ class SeriesColumnComboBox(QComboBox):
         if selected_key == "Series":
             self.setCurrentIndex(0)
         else:
-            for idx, key in enumerate(self.seriesColumns.keys()):
+            for idx, key in enumerate(self.seriesColumns.keys()):  # type: ignore[reportAttributeAccessIssue]
                 if key == selected_key:
                     self.setCurrentIndex(idx)
                     return
@@ -2428,39 +2513,41 @@ class SeriesTableWidget(QTableWidget):
     def __init__(self, parent):
         QTableWidget.__init__(self, parent)
         self.create_context_menu()
-        self.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.setDragEnabled(True)
         self.setAcceptDrops(True)
-        self.setDragDropMode(QAbstractItemView.InternalMove)
+        self.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
         self.setDropIndicatorShown(True)
         self.fmt = tweaks["gui_pubdate_display_format"]
         if self.fmt is None:
             self.fmt = "MMM yyyy"
 
     def create_context_menu(self):
-        self.setContextMenuPolicy(Qt.ActionsContextMenu)
+        parent = self.parent()
+        assert isinstance(parent, ManageSeriesDeviceDialog)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.ActionsContextMenu)
         self.assign_original_index_action = QAction(
             _("Lock original series index"), self
         )
         self.assign_original_index_action.setIcon(get_icon("images/lock.png"))
         self.assign_original_index_action.triggered.connect(
-            self.parent().assign_original_index
+            parent.assign_original_index
         )
         self.addAction(self.assign_original_index_action)
         self.assign_index_action = QAction(_("Lock series index..."), self)
         self.assign_index_action.setIcon(get_icon("images/lock.png"))
-        self.assign_index_action.triggered.connect(self.parent().assign_index)
+        self.assign_index_action.triggered.connect(parent.assign_index)
         self.addAction(self.assign_index_action)
         self.clear_index_action = QAction(_("Unlock series index"), self)
         self.clear_index_action.setIcon(get_icon("images/lock_delete.png"))
         self.clear_index_action.triggered.connect(
-            partial(self.parent().clear_index, all_rows=False)
+            partial(parent.clear_index, all_rows=False)
         )
         self.addAction(self.clear_index_action)
         self.clear_all_index_action = QAction(_("Unlock all series index"), self)
         self.clear_all_index_action.setIcon(get_icon("images/lock_open.png"))
         self.clear_all_index_action.triggered.connect(
-            partial(self.parent().clear_index, all_rows=True)
+            partial(parent.clear_index, all_rows=True)
         )
         self.addAction(self.clear_all_index_action)
         sep2 = QAction(self)
@@ -2469,7 +2556,7 @@ class SeriesTableWidget(QTableWidget):
         for name in ["PubDate", "Original Series Index", "Original Series Name"]:
             sort_action = QAction("Sort by " + name, self)
             sort_action.setIcon(get_icon("images/sort.png"))
-            sort_action.triggered.connect(partial(self.parent().sort_by, name))
+            sort_action.triggered.connect(partial(parent.sort_by, name))
             self.addAction(sort_action)
         sep3 = QAction(self)
         sep3.setSeparator(True)
@@ -2482,7 +2569,7 @@ class SeriesTableWidget(QTableWidget):
         ]:
             menu_action = QAction("Search %s" % name, self)
             menu_action.setIcon(get_icon(icon))
-            menu_action.triggered.connect(partial(self.parent().search_web, name))
+            menu_action.triggered.connect(partial(parent.search_web, name))
             self.addAction(menu_action)
 
     def populate_table(self, books):
@@ -2492,8 +2579,8 @@ class SeriesTableWidget(QTableWidget):
         header_labels = ["Title", "Author(s)", "PubDate", "Series", "New Series"]
         self.setColumnCount(len(header_labels))
         self.setHorizontalHeaderLabels(header_labels)
-        self.verticalHeader().setDefaultSectionSize(24)
-        self.horizontalHeader().setStretchLastSection(True)
+        self.verticalHeader().setDefaultSectionSize(24)  # type: ignore[reportOptionalMemberAccess]
+        self.horizontalHeader().setStretchLastSection(True)  # type: ignore[reportOptionalMemberAccess]
 
         for row, book in enumerate(books):
             self.populate_table_row(row, book)
@@ -2562,13 +2649,18 @@ class SeriesTableWidget(QTableWidget):
         mods = (
             event.modifiers() if event is not None else QApplication.keyboardModifiers()
         )
-        return mods & Qt.ControlModifier or mods & Qt.ShiftModifier
+        return (
+            mods & Qt.KeyboardModifier.ControlModifier
+            or mods & Qt.KeyboardModifier.ShiftModifier
+        )
 
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event):  # type: ignore[reportIncompatibleMethodOverride]
         ep = event.pos()
+        selection_model = self.selectionModel()
+        assert selection_model is not None
         if (
-            self.indexAt(ep) not in self.selectionModel().selectedIndexes()
-            and event.button() == Qt.LeftButton
+            self.indexAt(ep) not in selection_model.selectedIndexes()
+            and event.button() == Qt.MouseButton.LeftButton
             and not self.event_has_mods()
         ):
             self.setDragEnabled(False)
@@ -2577,32 +2669,37 @@ class SeriesTableWidget(QTableWidget):
         return QTableWidget.mousePressEvent(self, event)
 
     def dropEvent(self, event):
-        rows = self.selectionModel().selectedRows()
+        assert event is not None
+        selection_model = self.selectionModel()
+        assert selection_model is not None
+        rows = selection_model.selectedRows()
         selrows = sorted(row.row() for row in rows)
-        drop_row = self.rowAt(event.pos().y())
+        drop_row = self.rowAt(event.pos().y())  # type: ignore[reportAttributeAccessIssue]
         if drop_row == -1:
             drop_row = self.rowCount() - 1
         rows_before_drop = [idx for idx in selrows if idx < drop_row]
         rows_after_drop = [idx for idx in selrows if idx >= drop_row]
 
+        parent = self.parent()
+        assert isinstance(parent, ManageSeriesDeviceDialog)
         dest_row = drop_row
         for selrow in rows_after_drop:
             dest_row += 1
             self.swap_row_widgets(selrow + 1, dest_row)
-            book = self.parent().books.pop(selrow)
-            self.parent().books.insert(dest_row, book)
+            book = parent.books.pop(selrow)
+            parent.books.insert(dest_row, book)
 
         dest_row = drop_row + 1
         for selrow in reversed(rows_before_drop):
             self.swap_row_widgets(selrow, dest_row)
-            book = self.parent().books.pop(selrow)
-            self.parent().books.insert(dest_row - 1, book)
+            book = parent.books.pop(selrow)
+            parent.books.insert(dest_row - 1, book)
             dest_row = dest_row - 1
 
-        event.setDropAction(Qt.CopyAction)
+        event.setDropAction(Qt.DropAction.CopyAction)
         # Determine the new row selection
         self.selectRow(drop_row)
-        self.parent().renumber_series()
+        parent.renumber_series()
 
     def set_series_column_headers(self, text):
         item = self.horizontalHeaderItem(3)
@@ -2616,7 +2713,7 @@ class SeriesTableWidget(QTableWidget):
 class ManageSeriesDeviceDialog(SizePersistedDialog):
     def __init__(
         self,
-        parent,
+        parent: ui.Main,
         plugin_action: KoboUtilitiesAction,
         books,
         all_series,
@@ -2626,7 +2723,7 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
             self, parent, "kobo utilities plugin:series dialog"
         )
         self.plugin_action = plugin_action
-        self.db = self.parent().library_view.model().db
+        self.db = parent.library_view.model().db
         self.books = books
         self.all_series = all_series
         self.series_columns = series_columns
@@ -2683,9 +2780,9 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         series_name_layout.addWidget(series_label)
         self.series_combo = EditWithComplete(self)
         self.series_combo.setEditable(True)
-        self.series_combo.setInsertPolicy(QComboBox.InsertAlphabetically)
+        self.series_combo.setInsertPolicy(QComboBox.InsertPolicy.InsertAlphabetically)
         self.series_combo.setSizeAdjustPolicy(
-            QComboBox.AdjustToMinimumContentsLengthWithIcon
+            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
         )
         self.series_combo.setMinimumContentsLength(25)
         self.series_combo.currentIndexChanged[int].connect(self.series_changed)
@@ -2784,13 +2881,16 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         table_button_layout.addWidget(move_right_button)
 
         # Dialog buttons
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
         keep_button = button_box.addButton(
-            _(" &Restore original series "), QDialogButtonBox.ResetRole
+            _(" &Restore original series "), QDialogButtonBox.ButtonRole.ResetRole
         )
+        assert keep_button is not None
         keep_button.clicked.connect(self.restore_original_series)
 
     def reject(self):
@@ -2932,7 +3032,9 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
     def assign_original_index(self):
         if len(self.books) == 0:
             return
-        for row in self.series_table.selectionModel().selectedRows():
+        selection_model = self.series_table.selectionModel()
+        assert selection_model is not None
+        for row in selection_model.selectedRows():
             book = self.books[row.row()]
             book.set_assigned_index(book.orig_series_index())
         self.renumber_series()
@@ -2942,15 +3044,17 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         if len(self.books) == 0:
             return
         auto_assign_value = None
-        for row in self.series_table.selectionModel().selectedRows():
+        selection_model = self.series_table.selectionModel()
+        assert selection_model is not None
+        for row in selection_model.selectedRows():
             book = self.books[row.row()]
             if auto_assign_value is not None:
                 book.set_assigned_index(auto_assign_value)
                 continue
 
             d = LockSeriesDialog(self, book.title(), book.series_index())
-            d.exec_()
-            if d.result() != d.Accepted:
+            d.exec()
+            if d.result() != d.DialogCode.Accepted:
                 break
             if d.assign_same_value():
                 auto_assign_value = d.get_value()
@@ -2968,7 +3072,9 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
             for book in self.books:
                 book.set_assigned_index(None)
         else:
-            for row in self.series_table.selectionModel().selectedRows():
+            selection_model = self.series_table.selectionModel()
+            assert selection_model is not None
+            for row in selection_model.selectedRows():
                 book = self.books[row.row()]
                 book.set_assigned_index(None)
         self.renumber_series()
@@ -2981,7 +3087,9 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
             show_copy_button=False,
         ):
             return
-        rows = self.series_table.selectionModel().selectedRows()
+        selection_model = self.series_table.selectionModel()
+        assert selection_model is not None
+        rows = selection_model.selectedRows()
         if len(rows) == 0:
             return
         selrows = sorted(row.row() for row in rows)
@@ -2997,7 +3105,9 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
 
     def move_rows_up(self):
         self.series_table.setFocus()
-        rows = self.series_table.selectionModel().selectedRows()
+        selection_model = self.series_table.selectionModel()
+        assert selection_model is not None
+        rows = selection_model.selectedRows()
         if len(rows) == 0:
             return
         first_sel_row = rows[0].row()
@@ -3021,7 +3131,9 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
 
     def move_rows_down(self):
         self.series_table.setFocus()
-        rows = self.series_table.selectionModel().selectedRows()
+        selection_model = self.series_table.selectionModel()
+        assert selection_model is not None
+        rows = selection_model.selectedRows()
         if len(rows) == 0:
             return
         last_sel_row = rows[-1].row()
@@ -3044,7 +3156,9 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         self.renumber_series()
 
     def series_indent_change(self, delta):
-        for row in self.series_table.selectionModel().selectedRows():
+        selection_model = self.series_table.selectionModel()
+        assert selection_model is not None
+        for row in selection_model.selectedRows():
             book = self.books[row.row()]
             series_indent = book.series_indent()
             if delta > 0:
@@ -3074,7 +3188,9 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
             "Google": "http://www.google.com/#sclient=psy&q=%22{author}%22+%22{title}%22",
             "Wikipedia": "http://en.wikipedia.org/w/index.php?title=Special%3ASearch&search={author}",
         }
-        for row in self.series_table.selectionModel().selectedRows():
+        selection_model = self.series_table.selectionModel()
+        assert selection_model is not None
+        for row in selection_model.selectedRows():
             book = self.books[row.row()]
             safe_title = self.convert_to_search_text(book.title())
             safe_author = self.convert_author_to_search_text(book.authors()[0])
@@ -3083,7 +3199,7 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
                 .replace("{title}", safe_title)
                 .replace("{author}", safe_author)
             )
-            open_url(QUrl.fromEncoded(url))
+            open_url(QUrl(url))
 
     def convert_to_search_text(self, text, encoding="utf-8"):
         # First we strip characters we will definitely not want to pass through.
@@ -3119,10 +3235,12 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
 
     def cell_changed(self, row, column):
         book = self.books[row]
+        item = self.series_table.item(row, column)
+        assert item is not None
         if column == 0:
-            book.set_title(str(self.series_table.item(row, column).text()).strip())
+            book.set_title(str(item.text()).strip())
         elif column == 2:
-            qtdate = self.series_table.item(row, column).data(Qt.DisplayRole)
+            qtdate = item.data(Qt.ItemDataRole.DisplayRole)
             book.set_pubdate(qt_to_dt(qtdate, as_utc=False))
 
     def item_selection_changed(self):
@@ -3130,7 +3248,9 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         if row == -1:
             return
         has_assigned_index = False
-        for row in self.series_table.selectionModel().selectedRows():
+        selection_model = self.series_table.selectionModel()
+        assert selection_model is not None
+        for row in selection_model.selectedRows():
             book = self.books[row.row()]
             if book.assigned_index():
                 has_assigned_index = True
@@ -3145,7 +3265,7 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
 class BooksNotInDeviceDatabaseTableWidget(QTableWidget):
     def __init__(self, parent):
         QTableWidget.__init__(self, parent)
-        self.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.fmt = tweaks["gui_pubdate_display_format"]
         if self.fmt is None:
             self.fmt = "MMM yyyy"
@@ -3163,8 +3283,12 @@ class BooksNotInDeviceDatabaseTableWidget(QTableWidget):
         ]
         self.setColumnCount(len(header_labels))
         self.setHorizontalHeaderLabels(header_labels)
-        self.verticalHeader().setDefaultSectionSize(24)
-        self.horizontalHeader().setStretchLastSection(True)
+        vert_header = self.verticalHeader()
+        assert vert_header is not None
+        vert_header.setDefaultSectionSize(24)
+        horiz_header = self.horizontalHeader()
+        assert horiz_header is not None
+        horiz_header.setStretchLastSection(True)
 
         for row, book in enumerate(books):
             self.populate_table_row(row, book)
@@ -3187,12 +3311,12 @@ class BooksNotInDeviceDatabaseTableWidget(QTableWidget):
     def populate_table_row(self, row, book):
         self.blockSignals(True)
         titleColumn = TitleWidgetItem(book)
-        titleColumn.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+        titleColumn.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
         self.setItem(row, 0, titleColumn)
         authorColumn = AuthorsTableWidgetItem(book.authors, book.author_sort)
         self.setItem(row, 1, authorColumn)
         pathColumn = QTableWidgetItem(book.path)
-        pathColumn.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+        pathColumn.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
         self.setItem(row, 2, pathColumn)
         self.setItem(
             row,
@@ -3223,11 +3347,11 @@ class BooksNotInDeviceDatabaseTableWidget(QTableWidget):
 
 
 class ShowBooksNotInDeviceDatabaseDialog(SizePersistedDialog):
-    def __init__(self, parent, books):
+    def __init__(self, parent: ui.Main, books):
         SizePersistedDialog.__init__(
             self, parent, "kobo utilities plugin:not in device database dialog"
         )
-        self.db = self.parent().library_view.model().db
+        self.db = parent.library_view.model().db
         self.books = books
         self.block_events = True
 
@@ -3257,7 +3381,7 @@ class ShowBooksNotInDeviceDatabaseDialog(SizePersistedDialog):
         table_layout.addWidget(self.books_table)
 
         # Dialog buttons
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok)
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
         button_box.accepted.connect(self.accept)
         layout.addWidget(button_box)
 
@@ -3365,27 +3489,32 @@ class ShowReadingPositionChangesDialog(SizePersistedDialog):
         table_layout.addWidget(self.update_goodreads_progress_checkbox, 2, 1, 1, 2)
 
         # Dialog buttons
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         button_box.accepted.connect(self._ok_clicked)
         button_box.rejected.connect(self.reject)
-        self.select_all_button = button_box.addButton(
-            _("Select all"), QDialogButtonBox.ResetRole
+        select_all_button = button_box.addButton(
+            _("Select all"), QDialogButtonBox.ButtonRole.ResetRole
         )
-        self.select_all_button.clicked.connect(self._select_all_clicked)
-        self.clear_all_button = button_box.addButton(
-            _("Clear all"), QDialogButtonBox.ResetRole
+        assert select_all_button is not None
+        select_all_button.clicked.connect(self._select_all_clicked)
+        clear_all_button = button_box.addButton(
+            _("Clear all"), QDialogButtonBox.ButtonRole.ResetRole
         )
-        self.clear_all_button.clicked.connect(self._clear_all_clicked)
+        assert clear_all_button is not None
+        clear_all_button.clicked.connect(self._clear_all_clicked)
 
         layout.addWidget(button_box)
 
     def _ok_clicked(self):
         prefs = cfg.READING_POSITION_CHANGES_DEFAULTS
         prefs[cfg.KEY_SELECT_BOOKS_IN_LIBRARY] = (
-            self.select_books_checkbox.checkState() == Qt.Checked
+            self.select_books_checkbox.checkState() == Qt.CheckState.Checked
         )
         prefs[cfg.KEY_UPDATE_GOODREADS_PROGRESS] = (
-            self.update_goodreads_progress_checkbox.checkState() == Qt.Checked
+            self.update_goodreads_progress_checkbox.checkState()
+            == Qt.CheckState.Checked
         )
 
         library_config = cfg.get_library_config(self.plugin_action.gui.current_db)
@@ -3395,29 +3524,33 @@ class ShowReadingPositionChangesDialog(SizePersistedDialog):
 
         for i in range(len(self.reading_locations)):
             self.reading_locations_table.selectRow(i)
-            enabled = self.reading_locations_table.item(i, 0).checkState() == Qt.Checked
+            item = self.reading_locations_table.item(i, 0)
+            assert item is not None
+            enabled = item.checkState() == Qt.CheckState.Checked
             debug("row=%d, enabled=%s" % (i, enabled))
             if not enabled:
-                book_id = self.reading_locations_table.item(i, 7).data(Qt.DisplayRole)
+                item = self.reading_locations_table.item(i, 7)
+                assert item is not None
+                book_id = item.data(Qt.ItemDataRole.DisplayRole)
                 debug("row=%d, book_id=%s" % (i, book_id))
                 del self.reading_locations[book_id]
         self.accept()
         return
 
     def _select_all_clicked(self):
-        self.reading_locations_table.toggle_checkmarks(Qt.Checked)
+        self.reading_locations_table.toggle_checkmarks(Qt.CheckState.Checked)
 
     def _clear_all_clicked(self):
-        self.reading_locations_table.toggle_checkmarks(Qt.Unchecked)
+        self.reading_locations_table.toggle_checkmarks(Qt.CheckState.Unchecked)
 
     def update_goodreads_progress_checkbox_clicked(self, checked):
         self.select_books_checkbox.setEnabled(not checked)
 
 
 class ShowReadingPositionChangesTableWidget(QTableWidget):
-    def __init__(self, parent, db):
+    def __init__(self, parent: ShowReadingPositionChangesDialog, db):
         QTableWidget.__init__(self, parent)
-        self.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.db = db
 
         (
@@ -3427,7 +3560,7 @@ class ShowReadingPositionChangesTableWidget(QTableWidget):
             self.last_read_column,
             self.time_spent_reading_column,
             self.rest_of_book_estimate_column,
-        ) = self.parent().plugin_action.get_column_names()
+        ) = parent.plugin_action.get_column_names()
 
     def populate_table(self, reading_positions):
         self.clear()
@@ -3445,8 +3578,12 @@ class ShowReadingPositionChangesTableWidget(QTableWidget):
         ]
         self.setColumnCount(len(header_labels))
         self.setHorizontalHeaderLabels(header_labels)
-        self.verticalHeader().setDefaultSectionSize(24)
-        self.horizontalHeader().setStretchLastSection(True)
+        vert_header = self.verticalHeader()
+        assert vert_header is not None
+        vert_header.setDefaultSectionSize(24)
+        horiz_header = self.horizontalHeader()
+        assert horiz_header is not None
+        horiz_header.setStretchLastSection(True)
 
         debug("reading_positions=", reading_positions)
         for row, (book_id, reading_position) in enumerate(reading_positions.items()):
@@ -3479,7 +3616,7 @@ class ShowReadingPositionChangesTableWidget(QTableWidget):
         self.setItem(row, 0, CheckableTableWidgetItem(True))
 
         titleColumn = QTableWidgetItem(reading_position["Title"])
-        titleColumn.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+        titleColumn.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
         self.setItem(row, 1, titleColumn)
 
         authorColumn = AuthorsTableWidgetItem(book.authors, book.author_sort)
@@ -3491,7 +3628,9 @@ class ShowReadingPositionChangesTableWidget(QTableWidget):
             else None
         )
         current_percent = RatingTableWidgetItem(current_percentRead, is_read_only=True)
-        current_percent.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        current_percent.setTextAlignment(
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        )
         self.setItem(row, 3, current_percent)
 
         new_percentRead = 0
@@ -3500,7 +3639,9 @@ class ShowReadingPositionChangesTableWidget(QTableWidget):
         elif reading_position["ReadStatus"] == 2:
             new_percentRead = 100
         new_percent = RatingTableWidgetItem(new_percentRead, is_read_only=True)
-        new_percent.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        new_percent.setTextAlignment(
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        )
         self.setItem(row, 4, new_percent)
 
         current_last_read = (
@@ -3532,7 +3673,9 @@ class ShowReadingPositionChangesTableWidget(QTableWidget):
 
     def toggle_checkmarks(self, select):
         for i in range(self.rowCount()):
-            self.item(i, 0).setCheckState(select)
+            item = self.item(i, 0)
+            assert item is not None
+            item.setCheckState(select)
 
 
 class FixDuplicateShelvesDialog(SizePersistedDialog):
@@ -3600,7 +3743,9 @@ class FixDuplicateShelvesDialog(SizePersistedDialog):
         options_layout.addWidget(self.purge_checkbox, 0, 3, 1, 1)
 
         # Dialog buttons
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         button_box.accepted.connect(self._ok_clicked)
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
@@ -3612,13 +3757,13 @@ class FixDuplicateShelvesDialog(SizePersistedDialog):
             self.keep_newest_radiobutton.isChecked()
         )
         self.options[cfg.KEY_PURGE_SHELVES] = (
-            self.purge_checkbox.checkState() == Qt.Checked
+            self.purge_checkbox.checkState() == Qt.CheckState.Checked
         )
 
         have_options = (
             self.keep_newest_radiobutton.isChecked()
             or self.keep_oldest_radiobutton.isChecked()
-            or self.purge_checkbox.checkState() == Qt.Checked
+            or self.purge_checkbox.checkState() == Qt.CheckState.Checked
         )
         # Only if the user has checked at least one option will we continue
         if have_options:
@@ -3644,7 +3789,7 @@ class FixDuplicateShelvesDialog(SizePersistedDialog):
 class DuplicateShelvesInDeviceDatabaseTableWidget(QTableWidget):
     def __init__(self, parent):
         QTableWidget.__init__(self, parent)
-        self.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
 
     def populate_table(self, shelves):
         self.clear()
@@ -3658,8 +3803,12 @@ class DuplicateShelvesInDeviceDatabaseTableWidget(QTableWidget):
         ]
         self.setColumnCount(len(header_labels))
         self.setHorizontalHeaderLabels(header_labels)
-        self.verticalHeader().setDefaultSectionSize(24)
-        self.horizontalHeader().setStretchLastSection(True)
+        vert_header = self.verticalHeader()
+        assert vert_header is not None
+        vert_header.setDefaultSectionSize(24)
+        horiz_header = self.horizontalHeader()
+        assert horiz_header is not None
+        horiz_header.setStretchLastSection(True)
 
         for row, shelf in enumerate(shelves):
             self.populate_table_row(row, shelf)
@@ -3683,7 +3832,7 @@ class DuplicateShelvesInDeviceDatabaseTableWidget(QTableWidget):
         self.blockSignals(True)
         shelf_name = shelf[0] if shelf[0] else _("(Unnamed collection)")
         titleColumn = QTableWidgetItem(shelf_name)
-        titleColumn.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+        titleColumn.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
         self.setItem(row, 0, titleColumn)
         self.setItem(
             row,
@@ -3696,7 +3845,9 @@ class DuplicateShelvesInDeviceDatabaseTableWidget(QTableWidget):
             DateTableWidgetItem(shelf[2], is_read_only=True, default_to_today=False),
         )
         shelf_count = RatingTableWidgetItem(shelf[3], is_read_only=True)
-        shelf_count.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        shelf_count.setTextAlignment(
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        )
         self.setItem(row, 3, shelf_count)
         self.blockSignals(False)
 
@@ -3715,21 +3866,21 @@ class OrderSeriesShelvesDialog(SizePersistedDialog):
         self.initialize_controls()
         self.order_shelves_in = self.options[cfg.KEY_SORT_DESCENDING]
         if self.order_shelves_in:
-            self.order_shelves_in_button_group.button(1).setChecked(True)
+            self.order_shelves_in_button_group.button(1).setChecked(True)  # type: ignore[reportOptionalMemberAccess]
         else:
-            self.order_shelves_in_button_group.button(0).setChecked(True)
+            self.order_shelves_in_button_group.button(0).setChecked(True)  # type: ignore[reportOptionalMemberAccess]
 
         if self.options.get(
             cfg.KEY_SORT_UPDATE_CONFIG,
             cfg.ORDERSERIESSHELVES_OPTIONS_DEFAULTS[cfg.KEY_SORT_UPDATE_CONFIG],
         ):
-            self.update_config_checkbox.setCheckState(Qt.Checked)
+            self.update_config_checkbox.setCheckState(Qt.CheckState.Checked)
 
         self.order_shelves_type = self.options.get(
             cfg.KEY_ORDER_SHELVES_TYPE,
             cfg.ORDERSERIESSHELVES_OPTIONS_DEFAULTS[cfg.KEY_ORDER_SHELVES_TYPE],
         )
-        self.order_shelves_type_button_group.button(self.order_shelves_type).setChecked(
+        self.order_shelves_type_button_group.button(self.order_shelves_type).setChecked(  # type: ignore[reportOptionalMemberAccess]
             True
         )
 
@@ -3737,7 +3888,7 @@ class OrderSeriesShelvesDialog(SizePersistedDialog):
             cfg.KEY_ORDER_SHELVES_BY,
             cfg.ORDERSERIESSHELVES_OPTIONS_DEFAULTS[cfg.KEY_ORDER_SHELVES_BY],
         )
-        self.order_shelves_by_button_group.button(self.order_shelves_by).setChecked(
+        self.order_shelves_by_button_group.button(self.order_shelves_by).setChecked(  # type: ignore[reportOptionalMemberAccess]
             True
         )
 
@@ -3856,18 +4007,20 @@ class OrderSeriesShelvesDialog(SizePersistedDialog):
         )
 
         # Dialog buttons
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         button_box.accepted.connect(self._ok_clicked)
         button_box.rejected.connect(self.reject)
         self.remove_selected_button = button_box.addButton(
-            _("Remove"), QDialogButtonBox.ResetRole
+            _("Remove"), QDialogButtonBox.ButtonRole.ResetRole
         )
-        self.remove_selected_button.setToolTip(
+        self.remove_selected_button.setToolTip(  # type: ignore[reportOptionalMemberAccess]
             _(
                 "Remove the selected collections from the list. This will mean the ordering for these collections will not be changed."
             )
         )
-        self.remove_selected_button.clicked.connect(self._remove_selected_clicked)
+        self.remove_selected_button.clicked.connect(self._remove_selected_clicked)  # type: ignore[reportOptionalMemberAccess]
         layout.addWidget(button_box)
 
     def _ok_clicked(self):
@@ -3911,7 +4064,7 @@ class OrderSeriesShelvesDialog(SizePersistedDialog):
 class OrderSeriesShelvesTableWidget(QTableWidget):
     def __init__(self, parent):
         QTableWidget.__init__(self, parent)
-        self.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.header_labels = [_("Collection/series name"), _("Books in collection")]
         self.shelves = {}
 
@@ -3921,8 +4074,12 @@ class OrderSeriesShelvesTableWidget(QTableWidget):
         self.setRowCount(len(shelves))
         self.setColumnCount(len(self.header_labels))
         self.setHorizontalHeaderLabels(self.header_labels)
-        self.verticalHeader().setDefaultSectionSize(24)
-        self.horizontalHeader().setStretchLastSection(True)
+        vert_header = self.verticalHeader()
+        assert vert_header is not None
+        vert_header.setDefaultSectionSize(24)
+        horiz_header = self.horizontalHeader()
+        assert horiz_header is not None
+        horiz_header.setStretchLastSection(True)
 
         self.shelves = {}
         for row, shelf in enumerate(shelves):
@@ -3942,25 +4099,27 @@ class OrderSeriesShelvesTableWidget(QTableWidget):
     def populate_table_row(self, row, shelf):
         self.blockSignals(True)
         nameColumn = QTableWidgetItem(shelf["name"])
-        nameColumn.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-        nameColumn.setData(Qt.UserRole, row)
+        nameColumn.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
+        nameColumn.setData(Qt.ItemDataRole.UserRole, row)
         self.setItem(row, 0, nameColumn)
         shelf_count = RatingTableWidgetItem(shelf["count"], is_read_only=True)
-        shelf_count.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        shelf_count.setTextAlignment(
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        )
         self.setItem(row, 1, shelf_count)
         self.blockSignals(False)
 
     def get_shelves(self):
         shelves = []
         for row in range(self.rowCount()):
-            rnum = self.item(row, 0).data(Qt.UserRole)
+            rnum = self.item(row, 0).data(Qt.ItemDataRole.UserRole)  # type: ignore[reportOptionalMemberAccess]
             shelf = self.shelves[rnum]
             shelves.append(shelf)
         return shelves
 
     def remove_selected_rows(self):
         self.setFocus()
-        rows = self.selectionModel().selectedRows()
+        rows = self.selectionModel().selectedRows()  # type: ignore[reportOptionalMemberAccess]
         if len(rows) == 0:
             return
         first_sel_row = self.currentRow()
@@ -3994,9 +4153,11 @@ class SetRelatedBooksDialog(SizePersistedDialog):
             cfg.KEY_RELATED_BOOKS_TYPE,
             cfg.SETRELATEDBOOKS_OPTIONS_DEFAULTS[cfg.KEY_RELATED_BOOKS_TYPE],
         )
-        self.related_categories_option_button_group.button(
+        button = self.related_categories_option_button_group.button(
             self.related_category
-        ).setChecked(True)
+        )
+        assert button is not None
+        button.setChecked(True)
 
         # Display the books in the table
         self.block_events = False
@@ -4065,25 +4226,29 @@ class SetRelatedBooksDialog(SizePersistedDialog):
         table_layout.addWidget(self.related_types_table)
 
         # Dialog buttons
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         button_box.accepted.connect(self._ok_clicked)
         button_box.rejected.connect(self.reject)
-        self.remove_selected_button = button_box.addButton(
-            _("Remove"), QDialogButtonBox.ResetRole
+        remove_selected_button = button_box.addButton(
+            _("Remove"), QDialogButtonBox.ButtonRole.ResetRole
         )
-        self.remove_selected_button.setToolTip(
+        assert remove_selected_button is not None
+        remove_selected_button.setToolTip(
             _(
                 "Remove the selected category from the list. This will mean related books will not be changed for that category."
             )
         )
-        self.remove_selected_button.clicked.connect(self._remove_selected_clicked)
-        self.delete_related_button = button_box.addButton(
-            _("Delete all"), QDialogButtonBox.ActionRole
+        remove_selected_button.clicked.connect(self._remove_selected_clicked)
+        delete_related_button = button_box.addButton(
+            _("Delete all"), QDialogButtonBox.ButtonRole.ActionRole
         )
-        self.delete_related_button.setToolTip(
+        assert delete_related_button is not None
+        delete_related_button.setToolTip(
             _("Delete all related books for sideloaded books.")
         )
-        self.delete_related_button.clicked.connect(self._delete_related_clicked)
+        delete_related_button.clicked.connect(self._delete_related_clicked)
         layout.addWidget(button_box)
 
     def _ok_clicked(self):
@@ -4208,7 +4373,7 @@ class ReadingStatusGroupBox(QGroupBox):
         self.reset_position_checkbox.setEnabled(checked)
 
     def readingStatusIsChecked(self):
-        return self.reading_status_checkbox.checkState() == Qt.Checked
+        return self.reading_status_checkbox.checkState() == Qt.CheckState.Checked
 
     def readingStatus(self):
         readingStatus = -1
@@ -4249,7 +4414,7 @@ class TemplateConfig(QWidget):  # {{{
     def edit_template(self):
         t = TemplateDialog(self, self.template, mi=self.mi)
         t.setWindowTitle(_("Edit template"))
-        if t.exec_():
+        if t.exec():
             self.t.setText(t.rule[1])
 
     def validate(self):
@@ -4271,7 +4436,9 @@ class TemplateConfig(QWidget):  # {{{
 
 
 class UpdateBooksToCDialog(SizePersistedDialog):
-    def __init__(self, parent, plugin_action: KoboUtilitiesAction, icon, books):
+    def __init__(
+        self, parent: ui.Main, plugin_action: KoboUtilitiesAction, icon, books
+    ):
         del icon
         super(UpdateBooksToCDialog, self).__init__(
             parent,
@@ -4279,7 +4446,6 @@ class UpdateBooksToCDialog(SizePersistedDialog):
             plugin_action=plugin_action,
         )
         self.plugin_action = plugin_action
-        self.parent = parent
 
         self.setWindowTitle(DIALOG_NAME)
 
@@ -4295,59 +4461,64 @@ class UpdateBooksToCDialog(SizePersistedDialog):
 
         options_layout = QHBoxLayout()
 
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         button_box.accepted.connect(self.update_button_clicked)
         button_box.rejected.connect(self.reject)
-        update_button = button_box.button(QDialogButtonBox.Ok)
+        update_button = button_box.button(QDialogButtonBox.StandardButton.Ok)
+        assert update_button is not None
         update_button.setText(_("Update ToC"))
         update_button.setToolTip(_("Update ToC in device database for selected books."))
 
-        self.remove_button = button_box.addButton(
-            _("Remove"), QDialogButtonBox.ActionRole
+        remove_button = button_box.addButton(
+            _("Remove"), QDialogButtonBox.ButtonRole.ActionRole
         )
-        self.remove_button.setToolTip(_("Remove selected books from the list"))
-        self.remove_button.setIcon(get_icon("list_remove.png"))
-        self.remove_button.clicked.connect(self.remove_from_list)
+        assert remove_button is not None
+        remove_button.setToolTip(_("Remove selected books from the list"))
+        remove_button.setIcon(get_icon("list_remove.png"))
+        remove_button.clicked.connect(self.remove_from_list)
 
-        self.send_books_button = button_box.addButton(
-            _("Send books"), QDialogButtonBox.ActionRole
+        send_books_button = button_box.addButton(
+            _("Send books"), QDialogButtonBox.ButtonRole.ActionRole
         )
-        self.send_books_button.setToolTip(
+        assert send_books_button is not None
+        send_books_button.setToolTip(
             _("Send books to device that have been updated in the library.")
         )
-        self.send_books_button.clicked.connect(self.send_books_clicked)
+        send_books_button.clicked.connect(self.send_books_clicked)
 
-        self.select_all_button = button_box.addButton(
-            _("Select all"), QDialogButtonBox.ResetRole
+        select_all_button = button_box.addButton(
+            _("Select all"), QDialogButtonBox.ButtonRole.ResetRole
         )
-        self.select_all_button.clicked.connect(self._select_all_clicked)
-        self.select_all_button.setToolTip(_("Select all books in the list."))
+        assert select_all_button is not None
+        select_all_button.clicked.connect(self._select_all_clicked)
+        select_all_button.setToolTip(_("Select all books in the list."))
 
-        self.select_books_to_send_button = button_box.addButton(
-            _("Select books to send"), QDialogButtonBox.ResetRole
+        select_books_to_send_button = button_box.addButton(
+            _("Select books to send"), QDialogButtonBox.ButtonRole.ResetRole
         )
-        self.select_books_to_send_button.clicked.connect(
-            self._select_books_to_send_clicked
-        )
-        self.select_books_to_send_button.setToolTip(
+        assert select_books_to_send_button is not None
+        select_books_to_send_button.clicked.connect(self._select_books_to_send_clicked)
+        select_books_to_send_button.setToolTip(
             _("Select all books that need to be sent to the device.")
         )
 
-        self.select_books_to_update_button = button_box.addButton(
-            _("Select books to update"), QDialogButtonBox.ResetRole
+        select_books_to_update_button = button_box.addButton(
+            _("Select books to update"), QDialogButtonBox.ButtonRole.ResetRole
         )
-        self.select_books_to_update_button.clicked.connect(
+        assert select_books_to_update_button is not None
+        select_books_to_update_button.clicked.connect(
             self._select_books_to_update_clicked
         )
-        self.select_books_to_update_button.setToolTip(
-            _("Select all books in the list.")
-        )
+        select_books_to_update_button.setToolTip(_("Select all books in the list."))
 
-        self.clear_all_button = button_box.addButton(
-            _("Clear all"), QDialogButtonBox.ResetRole
+        clear_all_button = button_box.addButton(
+            _("Clear all"), QDialogButtonBox.ButtonRole.ResetRole
         )
-        self.clear_all_button.clicked.connect(self._clear_all_clicked)
-        self.clear_all_button.setToolTip(_("Unselect all books in the list."))
+        assert clear_all_button is not None
+        clear_all_button.clicked.connect(self._clear_all_clicked)
+        clear_all_button.setToolTip(_("Unselect all books in the list."))
 
         options_layout.addWidget(button_box)
 
@@ -4364,8 +4535,10 @@ class UpdateBooksToCDialog(SizePersistedDialog):
         books_to_send = self.books_table.books_to_send
         ids_to_sync = [book["calibre_id"] for book in books_to_send]
         debug("ids_to_sync=", ids_to_sync)
+        parent = self.parent()
+        assert isinstance(parent, ui.Main)
         if not question_dialog(
-            self.parent,
+            self.parent(),
             _("Update books"),
             "<p>"
             + _(
@@ -4377,7 +4550,7 @@ class UpdateBooksToCDialog(SizePersistedDialog):
             show_copy_button=False,
         ):
             return
-        self.parent.sync_to_device(
+        parent.sync_to_device(
             on_card=None, delete_from_library=False, send_ids=ids_to_sync
         )
         self.reject()
@@ -4387,7 +4560,7 @@ class UpdateBooksToCDialog(SizePersistedDialog):
         ids_to_sync = [book["calibre_id"] for book in books_to_send]
         debug("ids_to_sync=", ids_to_sync)
         if not question_dialog(
-            self.parent,
+            self.parent(),
             _("Update books"),
             "<p>"
             + _(
@@ -4408,10 +4581,10 @@ class UpdateBooksToCDialog(SizePersistedDialog):
         self.books_table.select_checkmarks_update_toc()
 
     def _select_all_clicked(self):
-        self.books_table.toggle_checkmarks(Qt.Checked)
+        self.books_table.toggle_checkmarks(Qt.CheckState.Checked)
 
     def _clear_all_clicked(self):
-        self.books_table.toggle_checkmarks(Qt.Unchecked)
+        self.books_table.toggle_checkmarks(Qt.CheckState.Unchecked)
 
     @property
     def books_to_update_toc(self):
@@ -4455,7 +4628,7 @@ class ToCBookListTableWidget(QTableWidget):
 
     def __init__(self, parent):
         QTableWidget.__init__(self, parent)
-        self.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.books = {}
 
     def populate_table(self, books):
@@ -4468,8 +4641,12 @@ class ToCBookListTableWidget(QTableWidget):
         ]
         self.setColumnCount(len(header_labels))
         self.setHorizontalHeaderLabels(header_labels)
-        self.horizontalHeader().setStretchLastSection(True)
-        self.verticalHeader().hide()
+        horiz_header = self.horizontalHeader()
+        assert horiz_header is not None
+        horiz_header.setStretchLastSection(True)
+        vert_header = self.verticalHeader()
+        assert vert_header is not None
+        vert_header.hide()
 
         self.books = {}
         for row, book in enumerate(books):
@@ -4502,11 +4679,11 @@ class ToCBookListTableWidget(QTableWidget):
             icon = get_icon(book["icon"])
 
         status_cell = IconWidgetItem(None, icon, book_status)
-        status_cell.setData(Qt.UserRole, book_status)
+        status_cell.setData(Qt.ItemDataRole.UserRole, book_status)
         self.setItem(row, 0, status_cell)
 
         title_cell = ReadOnlyTableWidgetItem(book["title"])
-        title_cell.setData(Qt.UserRole, row)
+        title_cell.setData(Qt.ItemDataRole.UserRole, row)
         self.setItem(row, self.TITLE_COLUMN_NO, title_cell)
 
         self.setItem(
@@ -4519,28 +4696,36 @@ class ToCBookListTableWidget(QTableWidget):
             library_chapters_count = ReadOnlyTableWidgetItem(
                 str(len(book["library_chapters"]))
             )
-            library_chapters_count.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            library_chapters_count.setTextAlignment(
+                Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+            )
             self.setItem(
                 row, self.LIBRARY_CHAPTERS_COUNT_COLUMN_NO, library_chapters_count
             )
 
         if "library_format" in book:
             library_format = ReadOnlyTableWidgetItem(str(book["library_format"]))
-            library_format.setTextAlignment(Qt.AlignCenter | Qt.AlignVCenter)
+            library_format.setTextAlignment(
+                Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter
+            )
             self.setItem(row, self.LIBRARY_FORMAT_COLUMN_NO, library_format)
 
         if "kobo_chapters" in book and len(book["kobo_chapters"]) > 0:
             kobo_chapters_count = ReadOnlyTableWidgetItem(
                 str(len(book["kobo_chapters"]))
             )
-            kobo_chapters_count.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            kobo_chapters_count.setTextAlignment(
+                Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+            )
             self.setItem(
                 row, self.KOBO_DISC_CHAPTERS_COUNT_COLUMN_NO, kobo_chapters_count
             )
 
         if "kobo_format" in book:
             kobo_format = ReadOnlyTableWidgetItem(str(book["kobo_format"]))
-            kobo_format.setTextAlignment(Qt.AlignCenter | Qt.AlignVCenter)
+            kobo_format.setTextAlignment(
+                Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter
+            )
             self.setItem(row, self.KOBO_DISC_FORMAT_COLUMN_NO, kobo_format)
 
         kobo_format_status = 0
@@ -4552,12 +4737,14 @@ class ToCBookListTableWidget(QTableWidget):
                 icon = get_icon("sync.png")
                 kobo_format_status = 1
             kobo_format_status_cell = IconWidgetItem(None, icon, kobo_format_status)
-            kobo_format_status_cell.setData(Qt.UserRole, kobo_format_status)
+            kobo_format_status_cell.setData(
+                Qt.ItemDataRole.UserRole, kobo_format_status
+            )
             self.setItem(row, self.KOBO_DISC_STATUS_COLUMN_NO, kobo_format_status_cell)
 
         kobo_disc_status = kobo_format_status == 1 and not book["good"]
         kobo_disc_status_cell = CheckableTableWidgetItem(checked=kobo_disc_status)
-        kobo_disc_status_cell.setData(Qt.UserRole, kobo_disc_status)
+        kobo_disc_status_cell.setData(Qt.ItemDataRole.UserRole, kobo_disc_status)
         self.setItem(row, self.SEND_TO_DEVICE_COLUMN_NO, kobo_disc_status_cell)
 
         if "kobo_database_chapters" in book and len(book["kobo_database_chapters"]) > 0:
@@ -4565,7 +4752,7 @@ class ToCBookListTableWidget(QTableWidget):
                 str(len(book["kobo_database_chapters"]))
             )
             kobo_database_chapters_count.setTextAlignment(
-                Qt.AlignRight | Qt.AlignVCenter
+                Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
             )
             self.setItem(
                 row,
@@ -4587,14 +4774,16 @@ class ToCBookListTableWidget(QTableWidget):
                 icon_name = "toc.png"
         icon = get_icon(icon_name)
         kobo_database_status_cell = IconWidgetItem(None, icon, kobo_database_status)
-        kobo_database_status_cell.setData(Qt.UserRole, kobo_database_status)
+        kobo_database_status_cell.setData(
+            Qt.ItemDataRole.UserRole, kobo_database_status
+        )
         self.setItem(
             row, self.KOBO_DATABASE_STATUS_COLUMN_NO, kobo_database_status_cell
         )
 
         update_toc = kobo_database_status == 1 and book["can_update_toc"]
         update_toc_cell = CheckableTableWidgetItem(checked=update_toc)
-        update_toc_cell.setData(Qt.UserRole, update_toc)
+        update_toc_cell.setData(Qt.ItemDataRole.UserRole, update_toc)
         self.setItem(row, self.UPDATE_TOC_COLUMN_NO, update_toc_cell)
 
         if (
@@ -4615,8 +4804,12 @@ class ToCBookListTableWidget(QTableWidget):
     def books_to_update_toc(self):
         books = []
         for row in range(self.rowCount()):
-            if self.item(row, self.UPDATE_TOC_COLUMN_NO).get_boolean_value():
-                rnum = self.item(row, self.TITLE_COLUMN_NO).data(Qt.UserRole)
+            if cast(
+                "CheckableTableWidgetItem", self.item(row, self.UPDATE_TOC_COLUMN_NO)
+            ).get_boolean_value():
+                item = self.item(row, self.TITLE_COLUMN_NO)
+                assert item is not None
+                rnum = item.data(Qt.ItemDataRole.UserRole)
                 book = self.books[rnum]
                 if book["can_update_toc"]:
                     books.append(book)
@@ -4626,15 +4819,22 @@ class ToCBookListTableWidget(QTableWidget):
     def books_to_send(self):
         books = []
         for row in range(self.rowCount()):
-            if self.item(row, self.SEND_TO_DEVICE_COLUMN_NO).get_boolean_value():
-                rnum = self.item(row, self.TITLE_COLUMN_NO).data(Qt.UserRole)
+            if cast(
+                "CheckableTableWidgetItem",
+                self.item(row, self.SEND_TO_DEVICE_COLUMN_NO),
+            ).get_boolean_value():
+                item = self.item(row, self.TITLE_COLUMN_NO)
+                assert item is not None
+                rnum = item.data(Qt.ItemDataRole.UserRole)
                 book = self.books[rnum]
                 books.append(book)
         return books
 
     def remove_selected_rows(self):
         self.setFocus()
-        rows = self.selectionModel().selectedRows()
+        selection_model = self.selectionModel()
+        assert selection_model is not None
+        rows = selection_model.selectedRows()
         if len(rows) == 0:
             return
         message = "<p>Are you sure you want to remove this book from the list?"
@@ -4659,28 +4859,42 @@ class ToCBookListTableWidget(QTableWidget):
 
     def toggle_checkmarks(self, select):
         for i in range(self.rowCount()):
-            self.item(i, self.UPDATE_TOC_COLUMN_NO).setCheckState(select)
+            item = self.item(i, self.UPDATE_TOC_COLUMN_NO)
+            assert item is not None
+            item.setCheckState(select)
         for i in range(self.rowCount()):
-            self.item(i, self.SEND_TO_DEVICE_COLUMN_NO).setCheckState(select)
+            item = self.item(i, self.SEND_TO_DEVICE_COLUMN_NO)
+            assert item is not None
+            item.setCheckState(select)
 
     def select_checkmarks_send(self):
         for i in range(self.rowCount()):
-            rnum = self.item(i, 1).data(Qt.UserRole)
+            item = self.item(i, 1)
+            assert item is not None
+            rnum = item.data(Qt.ItemDataRole.UserRole)
             debug("rnum=%s, book=%s" % (rnum, self.books[rnum]))
-            self.item(i, self.SEND_TO_DEVICE_COLUMN_NO).setCheckState(
-                Qt.Unchecked if self.books[rnum]["kobo_format_status"] else Qt.Checked
+            item = self.item(i, self.SEND_TO_DEVICE_COLUMN_NO)
+            assert item is not None
+            item.setCheckState(
+                Qt.CheckState.Unchecked
+                if self.books[rnum]["kobo_format_status"]
+                else Qt.CheckState.Checked
             )
 
     def select_checkmarks_update_toc(self):
         for i in range(self.rowCount()):
-            book_no = self.item(i, 1).data(Qt.UserRole)
+            item = self.item(i, 1)
+            assert item is not None
+            book_no = item.data(Qt.ItemDataRole.UserRole)
             debug("book_no=%s, book=%s" % (book_no, self.books[book_no]))
             check_for_toc = (
                 not self.books[book_no]["kobo_database_status"]
                 and self.books[book_no]["can_update_toc"]
             )
-            self.item(i, self.UPDATE_TOC_COLUMN_NO).setCheckState(
-                Qt.Checked if check_for_toc else Qt.Unchecked
+            item = self.item(i, self.UPDATE_TOC_COLUMN_NO)
+            assert item is not None
+            item.setCheckState(
+                Qt.CheckState.Checked if check_for_toc else Qt.CheckState.Unchecked
             )
 
 
@@ -4691,7 +4905,9 @@ class IconWidgetItem(ReadOnlyTextIconWidgetItem):
 
     # Qt uses a simple < check for sorting items, override this to use the sortKey
     def __lt__(self, other):
-        return self.sort_key < other.sort_key
+        if isinstance(other, IconWidgetItem):
+            return self.sort_key < other.sort_key
+        return super().__lt__(other)
 
 
 class AboutDialog(QDialog):
@@ -4706,13 +4922,14 @@ class AboutDialog(QDialog):
         self.label = QLabel(text)
         self.label.setOpenExternalLinks(True)
         self.label.setWordWrap(True)
-        self.label.setTextFormat(Qt.MarkdownText)
+        self.label.setTextFormat(Qt.TextFormat.MarkdownText)
         self.setWindowTitle(_("About {}").format(DIALOG_NAME))
         self.setWindowIcon(icon)
         self.l.addWidget(self.logo, 0, 0)
         self.l.addWidget(self.label, 0, 1)
         self.bb = QDialogButtonBox(self)
-        b = self.bb.addButton(_(_("OK")), self.bb.AcceptRole)
+        b = self.bb.addButton(_(_("OK")), self.bb.ButtonRole.AcceptRole)
+        assert b is not None
         b.setDefault(True)
         self.l.addWidget(self.bb, 2, 0, 1, -1)
         self.bb.accepted.connect(self.accept)

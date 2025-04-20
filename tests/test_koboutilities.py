@@ -205,7 +205,7 @@ class TestKoboUtilities(unittest.TestCase):
             device_db_path="/kobo.sqlite",
             is_db_copied=False,
         )
-        self.plugin.log = default_log
+        self.plugin.log = default_log  # type: ignore[reportAttributeAccessIssue]
         self.queue = Queue()
         self.maxDiff = None
 

@@ -48,6 +48,7 @@ from calibre.utils.config import config_dir
 from calibre.utils.icu import sort_key
 from calibre.utils.logging import default_log
 from qt.core import (
+    QAction,
     QFileDialog,
     QIcon,
     QMenu,
@@ -228,6 +229,7 @@ load_translations()
 
 class KoboUtilitiesAction(InterfaceAction):
     interface_action_base_plugin: ActionKoboUtilities
+    qaction: QAction
 
     name = "KoboUtilities"
     giu_name = _("Kobo Utilities")
@@ -585,7 +587,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 is_library_action=True,
                 is_device_action=True,
             )
-            databaseMenu = self.menu.addMenu(_("Database"))
+            databaseMenu = cast("QMenu", self.menu.addMenu(_("Database")))
             self.create_menu_item_ex(
                 databaseMenu,
                 _("Block analytics events"),
@@ -733,7 +735,7 @@ class KoboUtilitiesAction(InterfaceAction):
         )
         debug("self.version=", self.version)
         debug("about_text=", about_text)
-        AboutDialog(self.gui, self.qaction.icon(), about_text).exec_()
+        AboutDialog(self.gui, self.qaction.icon(), about_text).exec()
 
     def create_menu_item_ex(
         self,
@@ -1007,8 +1009,8 @@ class KoboUtilitiesAction(InterfaceAction):
         dlg = ReaderOptionsDialog(
             self.gui, self, contentIDs[0] if len(contentIDs) == 1 else None
         )
-        dlg.exec_()
-        if dlg.result() != dlg.Accepted:
+        dlg.exec()
+        if dlg.result() != dlg.DialogCode.Accepted:
             return
         self.options = dlg.prefs
 
@@ -1118,8 +1120,8 @@ class KoboUtilitiesAction(InterfaceAction):
         progressbar.hide()
 
         dlg = UpdateMetadataOptionsDialog(self.gui, self, books[0])
-        dlg.exec_()
-        if dlg.result() != dlg.Accepted:
+        dlg.exec()
+        if dlg.result() != dlg.DialogCode.Accepted:
             return
 
         progressbar = ProgressBar(
@@ -1171,8 +1173,8 @@ class KoboUtilitiesAction(InterfaceAction):
             return
 
         dlg = BookmarkOptionsDialog(self.gui, self)
-        dlg.exec_()
-        if dlg.result() != dlg.Accepted:
+        dlg.exec()
+        if dlg.result() != dlg.DialogCode.Accepted:
             return
         self.options = dlg.options
 
@@ -1597,8 +1599,8 @@ class KoboUtilitiesAction(InterfaceAction):
             return
 
         dlg = BackupAnnotationsOptionsDialog(self.gui, self)
-        dlg.exec_()
-        if dlg.result() != dlg.Accepted:
+        dlg.exec()
+        if dlg.result() != dlg.DialogCode.Accepted:
             return
 
         dest_path = dlg.dest_path()
@@ -1643,8 +1645,8 @@ class KoboUtilitiesAction(InterfaceAction):
             return
 
         dlg = RemoveAnnotationsOptionsDialog(self.gui, self)
-        dlg.exec_()
-        if dlg.result() != dlg.Accepted:
+        dlg.exec()
+        if dlg.result() != dlg.DialogCode.Accepted:
             return
         self.options = dlg.options
 
@@ -1699,8 +1701,8 @@ class KoboUtilitiesAction(InterfaceAction):
         debug("books:", books)
 
         dlg = ChangeReadingStatusOptionsDialog(self.gui, self)
-        dlg.exec_()
-        if dlg.result() != dlg.Accepted:
+        dlg.exec()
+        if dlg.result() != dlg.DialogCode.Accepted:
             return
         self.options = dlg.options
         self.options[cfg.KEY_USE_PLUGBOARD] = False
@@ -1769,8 +1771,8 @@ class KoboUtilitiesAction(InterfaceAction):
 
         shelves = self._get_shelf_count()
         dlg = FixDuplicateShelvesDialog(self.gui, self, shelves)
-        dlg.exec_()
-        if dlg.result() != dlg.Accepted:
+        dlg.exec()
+        if dlg.result() != dlg.DialogCode.Accepted:
             debug("dialog cancelled")
             return
         self.options = dlg.options
@@ -1806,8 +1808,8 @@ class KoboUtilitiesAction(InterfaceAction):
 
         shelves = []
         dlg = OrderSeriesShelvesDialog(self.gui, self, shelves)
-        dlg.exec_()
-        if dlg.result() != dlg.Accepted:
+        dlg.exec()
+        if dlg.result() != dlg.DialogCode.Accepted:
             debug("dialog cancelled")
             return
         self.options = dlg.options
@@ -1846,8 +1848,8 @@ class KoboUtilitiesAction(InterfaceAction):
 
         shelves = []
         dlg = SetRelatedBooksDialog(self.gui, self, shelves)
-        dlg.exec_()
-        if dlg.result() != dlg.Accepted:
+        dlg.exec()
+        if dlg.result() != dlg.DialogCode.Accepted:
             debug("dialog cancelled")
             return
         self.options = dlg.options
@@ -1894,8 +1896,8 @@ class KoboUtilitiesAction(InterfaceAction):
             return
 
         dlg = GetShelvesFromDeviceDialog(self.gui, self)
-        dlg.exec_()
-        if dlg.result() != dlg.Accepted:
+        dlg.exec()
+        if dlg.result() != dlg.DialogCode.Accepted:
             debug("dialog cancelled")
             return
         self.options = dlg.options
@@ -2007,7 +2009,7 @@ class KoboUtilitiesAction(InterfaceAction):
             "Kobo Utilities - Device Database Check", check_result, parent=self.gui
         )
         d.setWindowIcon(self.qaction.icon())
-        d.exec_()
+        d.exec()
 
     def block_analytics(self) -> None:
         # Some background info:
@@ -2024,8 +2026,8 @@ class KoboUtilitiesAction(InterfaceAction):
             return
 
         dlg = BlockAnalyticsOptionsDialog(self.gui, self)
-        dlg.exec_()
-        if dlg.result() != dlg.Accepted:
+        dlg.exec()
+        if dlg.result() != dlg.DialogCode.Accepted:
             return
         self.options = dlg.options
 
@@ -2045,7 +2047,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 parent=self.gui,
             )
             d.setWindowIcon(self.qaction.icon())
-            d.exec_()
+            d.exec()
 
     def vacuum_device_database(self) -> None:
         debug("start")
@@ -2122,8 +2124,8 @@ class KoboUtilitiesAction(InterfaceAction):
         d = ManageSeriesDeviceDialog(
             self.gui, self, seriesBooks, all_series, series_columns
         )
-        d.exec_()
-        if d.result() != d.Accepted:
+        d.exec()
+        if d.result() != d.DialogCode.Accepted:
             return
 
         debug("done series management - books:", seriesBooks)
@@ -2235,8 +2237,8 @@ class KoboUtilitiesAction(InterfaceAction):
         )
 
         dlg = CoverUploadOptionsDialog(self.gui, self)
-        dlg.exec_()
-        if dlg.result() != dlg.Accepted:
+        dlg.exec()
+        if dlg.result() != dlg.DialogCode.Accepted:
             return
         self.options = dlg.options
 
@@ -2285,8 +2287,8 @@ class KoboUtilitiesAction(InterfaceAction):
             return
 
         dlg = RemoveCoverOptionsDialog(self.gui, self)
-        dlg.exec_()
-        if dlg.result() != dlg.Accepted:
+        dlg.exec()
+        if dlg.result() != dlg.DialogCode.Accepted:
             return
         self.options = dlg.options
 
@@ -2349,8 +2351,8 @@ class KoboUtilitiesAction(InterfaceAction):
         debug("self.device.path", self.device.path)
 
         dlg = CleanImagesDirOptionsDialog(self.gui, self)
-        dlg.exec_()
-        if dlg.result() != dlg.Accepted:
+        dlg.exec()
+        if dlg.result() != dlg.DialogCode.Accepted:
             return
         self.options = dlg.options
         main_prefix = self.device.device._main_prefix
@@ -2501,8 +2503,10 @@ class KoboUtilitiesAction(InterfaceAction):
         # If there is a device connected, test if we can retrieve the mount point from Calibre
         if device_connected is not None:
             try:
+                connected_device = self.gui.device_manager.connected_device
+                assert connected_device is not None
                 # _main_prefix is not reset when device is ejected so must be sure device_connected above
-                device_path = self.gui.device_manager.connected_device._main_prefix
+                device_path = connected_device._main_prefix
                 debug("Root path of device: %s" % device_path)
             except Exception:
                 debug("A device appears to be connected, but device path not defined")
@@ -2548,9 +2552,10 @@ class KoboUtilitiesAction(InterfaceAction):
             # No device actually connected or it isn't ready
             return None
         connected_device_info = current_device_information.get("info", None)
+        assert connected_device_info is not None
         debug("device_info:", connected_device_info)
         device_type = connected_device_info[0]
-        drive_info = connected_device_info[4]
+        drive_info = cast("Dict[str, Dict[str, str]]", connected_device_info[4])
         library_db = self.gui.library_view.model().db
         device_uuid = drive_info["main"]["device_store_uuid"]
         current_device_profile = cfg.get_book_profile_for_device(
@@ -2727,8 +2732,8 @@ class KoboUtilitiesAction(InterfaceAction):
                     profileName,
                     goodreads_sync_plugin is not None,
                 )
-                dlg.exec_()
-                if dlg.result() != dlg.Accepted:
+                dlg.exec()
+                if dlg.result() != dlg.DialogCode.Accepted:
                     debug("dialog cancelled")
                     return
                 self.options = dlg.prefs
@@ -3484,7 +3489,7 @@ class KoboUtilitiesAction(InterfaceAction):
             "Kobo Touch Annotation", "\n<hr/>\n".join(annotationText), parent=self.gui
         )
         d.setWindowIcon(self.qaction.icon())
-        d.exec_()
+        d.exec()
 
     def _upload_covers(self, books):
         uploaded_covers = 0
@@ -6260,8 +6265,8 @@ class KoboUtilitiesAction(InterfaceAction):
             self.qaction.icon(),
             books,
         )
-        d.exec_()
-        if d.result() != d.Accepted:
+        d.exec()
+        if d.result() != d.DialogCode.Accepted:
             return
 
         update_books = d.books_to_update_toc

@@ -267,6 +267,8 @@ class KoboUtilitiesAction(InterfaceAction):
         self.device: Optional[KoboDevice] = None
         self.options: Dict[str, Any] = {}
 
+        debug(f"Running in {'normal' if __debug__ else 'optimized'} mode")
+
     def initialization_complete(self):
         # otherwise configured hot keys won't work until the menu's
         # been displayed once.

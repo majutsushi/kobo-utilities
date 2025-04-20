@@ -4397,7 +4397,10 @@ class KoboUtilitiesAction(InterfaceAction):
 
         plugboards = self.gui.library_view.model().db.prefs.get("plugboards", {})
         debug("plugboards=", plugboards)
-        debug("self.device.__class__.__name__=", self.device.__class__.__name__)
+        debug(
+            "self.device.device.__class__.__name__=",
+            self.device.device.__class__.__name__,
+        )
 
         rating_update = (
             "UPDATE ratings "
@@ -4482,7 +4485,9 @@ class KoboUtilitiesAction(InterfaceAction):
                             book_format = os.path.splitext(contentID)[1][1:]
                             debug("format='%s'" % (book_format))
                             plugboard = find_plugboard(
-                                self.device.__class__.__name__, book_format, plugboards
+                                self.device.device.__class__.__name__,
+                                book_format,
+                                plugboards,
                             )
                             debug("plugboard=", plugboard)
 

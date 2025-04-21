@@ -709,6 +709,18 @@ class KoboUtilitiesAction(InterfaceAction):
 
             self.create_menu_item_ex(
                 self.menu,
+                _("&Help"),  # shortcut=False,
+                unique_name="Help",
+                shortcut_name=_("Help"),
+                image="help.png",
+                triggered=lambda _: self.show_help(),
+                is_library_action=True,
+                is_device_action=True,
+                is_no_device_action=True,
+            )
+
+            self.create_menu_item_ex(
+                self.menu,
                 _("&About plugin"),  # shortcut=False,
                 image="images/icon.png",
                 unique_name="About KoboUtilities",

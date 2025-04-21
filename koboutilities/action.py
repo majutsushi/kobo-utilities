@@ -107,6 +107,10 @@ PLUGIN_ICONS = [
     "images/sort.png",
     "images/ms_ff.png",
     "images/device_connected.png",
+    "images/clock.png",
+    "images/database.png",
+    "images/databases.png",
+    "images/vise.png",
 ]
 
 EPUB_FETCH_QUERY = (
@@ -399,6 +403,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 _("&Set reader font for selected books"),
                 unique_name="Set reader font for selected books",
                 shortcut_name=_("Set reader font for selected books"),
+                image="embed-fonts.png",
                 triggered=self.set_reader_fonts,
                 is_library_action=True,
                 is_device_action=True,
@@ -423,6 +428,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 _("Update &metadata in device library"),
                 unique_name="Update metadata in device library",
                 shortcut_name=_("Update metadata in device library"),
+                image="metadata.png",
                 triggered=self.update_metadata,
                 is_library_action=True,
             )
@@ -453,6 +459,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 _("&Store/restore reading positions"),
                 unique_name="Store/restore reading positions",
                 shortcut_name=_("Store/restore reading positions"),
+                image="bookmarks.png",
                 triggered=self.handle_bookmarks,
                 is_library_action=True,
             )
@@ -474,6 +481,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 _("&Upload covers for selected books"),
                 unique_name="Upload covers for selected books",
                 shortcut_name=_("Upload covers for selected books"),
+                image="default_cover.png",
                 triggered=self.upload_covers,
                 is_library_action=True,
             )
@@ -526,6 +534,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 _("Get collections from device"),
                 unique_name="Get collections from device",
                 shortcut_name=_("Get collections from device"),
+                image="catalog.png",
                 triggered=self.get_shelves_from_device,
                 is_library_action=True,
                 is_supported=device is not None and device.is_kobotouch,
@@ -545,7 +554,7 @@ class KoboUtilitiesAction(InterfaceAction):
             self.create_menu_item_ex(
                 self.menu,
                 _("Copy annotation for selected book"),
-                image="bookmarks.png",
+                image="edit_input.png",
                 unique_name="Copy annotation for selected book",
                 shortcut_name=_("Copy annotation for selected book"),
                 triggered=self.getAnnotationForSelected,
@@ -585,11 +594,13 @@ class KoboUtilitiesAction(InterfaceAction):
                 _("Refresh the list of books on the device"),
                 unique_name="Refresh the list of books on the device",
                 shortcut_name=_("Refresh the list of books on the device"),
+                image="view-refresh.png",
                 triggered=self.refresh_device_books,
                 is_library_action=True,
                 is_device_action=True,
             )
             databaseMenu = cast("QMenu", self.menu.addMenu(_("Database")))
+            databaseMenu.setIcon(get_icon("images/database.png"))
             self.create_menu_item_ex(
                 databaseMenu,
                 _("Block analytics events"),
@@ -616,6 +627,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 _("Check the device database"),
                 unique_name="Check the device database",
                 shortcut_name=_("Check the device database"),
+                image="ok.png",
                 triggered=self.check_device_database,
                 is_library_action=True,
                 is_device_action=True,
@@ -627,6 +639,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 _("Compress the device database"),
                 unique_name="Compress the device database",
                 shortcut_name=_("Compress the device database"),
+                image="images/vise.png",
                 triggered=self.vacuum_device_database,
                 is_library_action=True,
                 is_device_action=True,
@@ -638,6 +651,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 _("Back up device database"),
                 unique_name="Back up device database",
                 shortcut_name=_("Back up device database"),
+                image="images/databases.png",
                 triggered=self.backup_device_database,
                 is_library_action=True,
                 is_device_action=True,
@@ -649,6 +663,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 _("Set time on device"),
                 unique_name="Set time on device",
                 shortcut_name=_("Set time on device"),
+                image="images/clock.png",
                 tooltip=_(
                     "Creates a file on the device which will be used to set the time when the device is disconnected."
                 ),

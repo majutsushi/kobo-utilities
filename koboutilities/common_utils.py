@@ -44,6 +44,7 @@ from qt.core import (
     QTableWidgetItem,
     QTextEdit,
     QVBoxLayout,
+    QWidget,
 )
 
 try:
@@ -351,6 +352,16 @@ class ImageTitleLayout(QHBoxLayout):
         shelf_label.setFont(title_font)
         self.addWidget(shelf_label)
 
+        help_layout = QHBoxLayout()
+
+        help_pixmap = get_pixmap("help.png")
+        if help_pixmap is not None:
+            help_pixmap = help_pixmap.scaled(16, 16)
+            help_icon = QLabel()
+            help_icon.setPixmap(help_pixmap)
+            # help_icon.setAlignment(Qt.AlignmentFlag.AlignRight)
+            help_layout.addWidget(help_icon)
+
         # Add hyperlink to a help file at the right. We will replace the correct name when it is clicked.
         help_label = QLabel(
             ('<a href="http://www.foo.com/">{0}</a>').format(_("Help")), parent
@@ -359,9 +370,13 @@ class ImageTitleLayout(QHBoxLayout):
             Qt.TextInteractionFlag.LinksAccessibleByMouse
             | Qt.TextInteractionFlag.LinksAccessibleByKeyboard
         )
-        help_label.setAlignment(Qt.AlignmentFlag.AlignRight)
         help_label.linkActivated.connect(parent.help_link_activated)
-        self.addWidget(help_label)
+        help_layout.addWidget(help_label)
+
+        help_layout.setAlignment(Qt.AlignmentFlag.AlignRight)
+        help_widget = QWidget()
+        help_widget.setLayout(help_layout)
+        self.addWidget(help_widget)
 
     def update_title_icon(self, icon_name):
         pixmap = get_pixmap(icon_name)

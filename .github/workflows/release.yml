@@ -8,7 +8,7 @@ name: Create release
       - 'v*'
 
 jobs:
-  upload-assets:
+  create-release:
     runs-on: 'ubuntu-latest'
 
     steps:

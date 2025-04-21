@@ -31,7 +31,7 @@ class ActionKoboUtilities(InterfaceActionBase):
     # Calibre 7.0.0 (2023-11-17): Python 3.11.5
     # Calibre 8.0.0 (2025-03-21): Python 3.11.5
     # Maintenance note: if you update the minimum version here,
-    # make sure to also update it in scripts/run
+    # make sure to also update it in scripts/run and .github/workflows/main.yml
     minimum_calibre_version = (5, 13, 0)
 
     #: This field defines the GUI plugin class that contains all the code

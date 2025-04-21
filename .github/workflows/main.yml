@@ -52,5 +52,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libegl1 libopengl0
 
+      - name: Cache minimum Calibre package
+        uses: actions/cache@v4
+        with:
+          key: calibre-v5.13.0
+          path: calibre-v5.13.0
+
       - name: Run tests
         run: ./scripts/run test

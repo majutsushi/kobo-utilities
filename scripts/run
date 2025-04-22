@@ -22,6 +22,8 @@ import os
 import shutil
 import subprocess
 import sys
+import textwrap
+from contextlib import suppress
 from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from zipfile import ZIP_DEFLATED, ZipFile
@@ -194,10 +196,27 @@ def update_calibre() -> None:
     if not CALIBRE_MINIMUM_BIN_PATH.exists():
         download(CALIBRE_MINIMUM_URL, pkg_suffix, CALIBRE_MINIMUM_BIN_PATH)
 
+    if CALIBRE_LATEST_BIN_PATH.exists():
+        update_check = textwrap.dedent("""
+            import sys
+            from calibre.constants import numeric_version
+            from calibre.gui2.update import get_newest_version
+            sys.exit(int(numeric_version < get_newest_version()))
+        """)
+        with suppress(subprocess.CalledProcessError):
+            subprocess.check_call(
+                [CALIBRE_LATEST_BIN_PATH / "calibre-debug", "-c", update_check]
+            )
+            log.info("%s is up to date", CALIBRE_LATEST_BIN_PATH.name)
+            return
+
     # Download latest version
     r = requests.get(CALIBRE_LATEST_METADATA_URL, timeout=20)
     r.raise_for_status()
     release_json = r.json()
+    log.info(
+        "Updating %s to %s", CALIBRE_LATEST_BIN_PATH.name, release_json["tag_name"]
+    )
     for asset in release_json["assets"]:
         if asset["name"].endswith(pkg_suffix):
             log.info("Found Calibre asset %s", asset["name"])

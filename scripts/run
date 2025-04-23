@@ -11,7 +11,7 @@
 # ///
 #
 # Ignore until https://github.com/microsoft/pylance-release/discussions/6522 is fixed
-# type: ignore[reportMissingModuleSource]
+# pyright: reportMissingModuleSource=false, reportMissingImports=false
 # ruff: noqa: S603, S607
 
 from __future__ import annotations

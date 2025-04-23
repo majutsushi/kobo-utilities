@@ -4,6 +4,8 @@ name = "kobo-utilities"
 version = "0.1.0"
 description = "A Calibre plugin providing additional functionality for Kobo eReaders"
 readme = "README.md"
+license = "GPL-3.0-only"
+license-files = ["LICENSE"]
 requires-python = "==3.8.5"
 # Sources: https://github.com/kovidgoyal/calibre/blob/master/bypy/sources.json
 # Calibre 5.13.0 (2021-03-10): PyQt5-5.15.2

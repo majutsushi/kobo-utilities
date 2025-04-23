@@ -3178,7 +3178,7 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         elif name == "Original Series Name":
             self.books = sorted(self.books, key=lambda k: k.sort_key(sort_by_name=True))
         else:
-            self.books = sorted(self.books, key=lambda k: k.sort_key())  # type: ignore[reportAttributeAccessIssue]
+            self.books = sorted(self.books, key=lambda k: k.sort_key())
         self.renumber_series()
 
     def search_web(self, name):
@@ -3782,7 +3782,7 @@ class FixDuplicateShelvesDialog(SizePersistedDialog):
         if name == "PubDate":
             self.shelves = sorted(
                 self.shelves,
-                key=lambda k: k.sort_key(sort_by_pubdate=True),  # type: ignore[reportAttributeAccessIssue]
+                key=lambda k: k.sort_key(sort_by_pubdate=True),
             )
 
 

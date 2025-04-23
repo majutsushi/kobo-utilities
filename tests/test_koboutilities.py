@@ -16,7 +16,7 @@ from queue import Queue
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, cast
 from unittest import mock
 
-import apsw  # type: ignore[reportMissingImports]
+import apsw
 from calibre.devices.kobo.books import Book
 from calibre.devices.kobo.driver import KOBOTOUCH
 from calibre.ebooks.metadata import MetaInformation

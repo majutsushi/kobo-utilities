@@ -48,36 +48,24 @@ logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
 log = logging.getLogger(__name__)
 
 
+class FailedTests(Exception):
+    pass
+
+
 def main(args: argparse.Namespace) -> int:
     if args.verbose:
         log.setLevel(logging.DEBUG)
 
-    if args.command == "build":
-        build()
-    elif args.command == "test":
-        plugin_zip = build()
-        return 1 if run_tests(plugin_zip) else 0
-    elif args.command == "update-calibre":
-        update_calibre()
-    elif args.command == "install":
-        plugin_zip = build()
-        run_calibre(["calibre-debug", "--shutdown-running-calibre"])
-        run_calibre(["calibre-customize", "--add-plugin", plugin_zip])
-    elif args.command == "install-and-debug":
-        plugin_zip = build()
-        run_calibre(["calibre-debug", "--shutdown-running-calibre"])
-        run_calibre(["calibre-customize", "--add-plugin", plugin_zip])
-        run_calibre(["calibre-debug", "--gui"])
-    elif args.command == "xgettext":
-        xgettext()
-    else:
-        log.error("Unknown command: %s", args.command)
-        return 1
+    try:
+        args.func(args)
+    except Exception as e:
+        log.exception(e)
 
     return 0
 
 
-def build() -> Path:
+def build(args: argparse.Namespace) -> Path:
+    del args
     version = get_version()
     zip_name = f"{PLUGIN_NAME}-{version}.zip"
 
@@ -103,7 +91,8 @@ def build() -> Path:
     return Path.cwd() / zip_name
 
 
-def xgettext() -> None:
+def xgettext(args: argparse.Namespace) -> None:
+    del args
     version = get_version()
     catalog = Catalog(
         project="kobo-utilities",
@@ -133,16 +122,18 @@ def msgfmt() -> None:
             write_mo(f, catalog)
 
 
-def run_tests(plugin_zip: Path) -> bool:
+def test(args: argparse.Namespace) -> None:
+    plugin_zip = build(args)
     failed_tests = False
     for bin_path in [CALIBRE_MINIMUM_BIN_PATH, CALIBRE_LATEST_BIN_PATH]:
         if not bin_path.exists():
-            update_calibre()
-        failed_tests |= run_tests_(plugin_zip, bin_path)
-    return failed_tests
+            update_calibre(args)
+        failed_tests |= run_tests(plugin_zip, bin_path)
+    if failed_tests:
+        raise FailedTests("Some tests failed")
 
 
-def run_tests_(plugin_zip: Path, bin_path: Path) -> bool:
+def run_tests(plugin_zip: Path, bin_path: Path) -> bool:
     log.info("Running tests with Calibre %s", bin_path.name)
     with TemporaryDirectory(prefix="calibre.user.") as userdir:
         userdir_path = Path(userdir)
@@ -189,7 +180,8 @@ def run_tests_(plugin_zip: Path, bin_path: Path) -> bool:
     return failed_tests
 
 
-def update_calibre() -> None:
+def update_calibre(args: argparse.Namespace) -> None:
+    del args
     pkg_suffix = "-x86_64.txz"
 
     # Download minimum version
@@ -221,6 +213,17 @@ def update_calibre() -> None:
         if asset["name"].endswith(pkg_suffix):
             log.info("Found Calibre asset %s", asset["name"])
             download(asset["browser_download_url"], pkg_suffix, CALIBRE_LATEST_BIN_PATH)
+
+
+def install(args: argparse.Namespace) -> None:
+    plugin_zip = build(args)
+    run_calibre(["calibre-debug", "--shutdown-running-calibre"])
+    run_calibre(["calibre-customize", "--add-plugin", plugin_zip])
+
+
+def install_and_debug(args: argparse.Namespace) -> None:
+    install(args)
+    run_calibre(["calibre-debug", "--gui"])
 
 
 def run_calibre(cmd: list[str | Path]) -> None:
@@ -263,24 +266,29 @@ def download(url: str, pkg_suffix: str, bin_path: Path) -> None:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build and test plugin")
     parser.add_argument(
-        "command",
-        choices=[
-            "build",
-            "test",
-            "update-calibre",
-            "install",
-            "install-and-debug",
-            "xgettext",
-        ],
-        help="the command to run",
-    )
-    parser.add_argument(
         "-v",
         "--verbose",
         action="store_true",
         default=False,
         help="increase output verbosity",
     )
+
+    subparsers = parser.add_subparsers(
+        title="command", help="the command to run", dest="command"
+    )
+    build_parser = subparsers.add_parser("build")
+    build_parser.set_defaults(func=build)
+    test_parser = subparsers.add_parser("test")
+    test_parser.set_defaults(func=test)
+    update_calibre_parser = subparsers.add_parser("update-calibre")
+    update_calibre_parser.set_defaults(func=update_calibre)
+    install_parser = subparsers.add_parser("install")
+    install_parser.set_defaults(func=install)
+    install_and_debug_parser = subparsers.add_parser("install-and-debug")
+    install_and_debug_parser.set_defaults(func=install_and_debug)
+    xgettext_parser = subparsers.add_parser("xgettext")
+    xgettext_parser.set_defaults(func=xgettext)
+
     return parser.parse_args()
 
 

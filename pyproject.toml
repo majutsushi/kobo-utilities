@@ -1,7 +1,6 @@
 [project]
 name = "kobo-utilities"
-# Unused, see koboutilities/__init__.py
-version = "0.1.0"
+version = "2.22.1"
 description = "A Calibre plugin providing additional functionality for Kobo eReaders"
 readme = "README.md"
 license = "GPL-3.0-only"

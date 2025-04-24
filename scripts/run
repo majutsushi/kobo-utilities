@@ -7,6 +7,7 @@
 # dependencies = [
 #   "babel",
 #   "requests",
+#   "tomlkit"
 # ]
 # ///
 #
@@ -19,16 +20,20 @@ from __future__ import annotations
 import argparse
 import logging
 import os
+import re
 import shutil
 import subprocess
 import sys
 import textwrap
 from contextlib import suppress
+from dataclasses import dataclass
+from datetime import datetime as dt
 from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import requests
+import tomlkit
 from babel.messages.catalog import Catalog
 from babel.messages.extract import extract_from_dir
 from babel.messages.mofile import write_mo
@@ -46,6 +51,13 @@ CALIBRE_LATEST_BIN_PATH = Path.cwd() / "calibre-latest"
 
 logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
 log = logging.getLogger(__name__)
+
+
+@dataclass
+class Version:
+    major: int
+    minor: int
+    patch: int
 
 
 class FailedTests(Exception):
@@ -215,6 +227,43 @@ def update_calibre(args: argparse.Namespace) -> None:
             download(asset["browser_download_url"], pkg_suffix, CALIBRE_LATEST_BIN_PATH)
 
 
+def prepare_release(args: argparse.Namespace) -> None:
+    toml_path = Path("pyproject.toml")
+    toml = tomlkit.parse(toml_path.read_text())
+    current_version = Version(*map(int, toml["project"]["version"].split(".")))
+
+    if args.release_type == "major":
+        new_version = Version(
+            current_version.major + 1, current_version.minor, current_version.patch
+        )
+    elif args.release_type == "minor":
+        new_version = Version(
+            current_version.major, current_version.minor + 1, current_version.patch
+        )
+    else:
+        new_version = Version(
+            current_version.major, current_version.minor, current_version.patch + 1
+        )
+    update_version(new_version)
+
+    # Add changelog header for new release
+    version_string = f"{new_version.major}.{new_version.minor}.{new_version.patch}"
+    date_string = dt.today().strftime("%Y-%m-%d")  # noqa: DTZ002
+    changelog_file = Path("CHANGELOG.md")
+    changelog = changelog_file.read_text()
+    changelog = changelog.replace(
+        "# Changelog",
+        textwrap.dedent(
+            f"""
+            # Changelog
+
+            ## Version {version_string} - {date_string}
+        """[1:]
+        ),
+    )
+    changelog_file.write_text(changelog)
+
+
 def install(args: argparse.Namespace) -> None:
     plugin_zip = build(args)
     run_calibre(["calibre-debug", "--shutdown-running-calibre"])
@@ -250,6 +299,23 @@ def get_version() -> str:
     return version
 
 
+def update_version(version: Version) -> None:
+    toml_path = Path("pyproject.toml")
+    toml = tomlkit.parse(toml_path.read_text())
+    toml["project"]["version"] = f"{version.major}.{version.minor}.{version.patch}"
+    toml_path.write_text(tomlkit.dumps(toml))
+
+    init_py_path = Path("koboutilities/__init__.py")
+    init_py = init_py_path.read_text()
+    init_py = re.sub(
+        r"^__version__ = \(\d+, \d+, \d+\)$",
+        f"__version__ = ({version.major}, {version.minor}, {version.patch})",
+        init_py,
+        flags=re.MULTILINE,
+    )
+    init_py_path.write_text(init_py)
+
+
 def download(url: str, pkg_suffix: str, bin_path: Path) -> None:
     log.info("Downloading %s", url)
     shutil.rmtree(bin_path, ignore_errors=True)
@@ -280,6 +346,13 @@ def parse_args() -> argparse.Namespace:
     build_parser.set_defaults(func=build)
     test_parser = subparsers.add_parser("test")
     test_parser.set_defaults(func=test)
+    prepare_release_parser = subparsers.add_parser("prepare-release")
+    prepare_release_parser.set_defaults(func=prepare_release)
+    prepare_release_parser.add_argument(
+        "release_type",
+        choices=["major", "minor", "patch"],
+        help="the type of release",
+    )
     update_calibre_parser = subparsers.add_parser("update-calibre")
     update_calibre_parser.set_defaults(func=update_calibre)
     install_parser = subparsers.add_parser("install")

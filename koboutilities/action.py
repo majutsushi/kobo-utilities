@@ -17,7 +17,7 @@ import time
 from collections import OrderedDict, defaultdict
 from configparser import ConfigParser
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple, cast
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 import apsw
 from calibre import strftime
@@ -42,7 +42,7 @@ from calibre.gui2 import (
 from calibre.gui2.actions import InterfaceAction
 from calibre.gui2.device import device_signals
 from calibre.gui2.dialogs.message_box import ViewLog
-from calibre.gui2.library.views import DeviceBooksView
+from calibre.gui2.library.views import BooksView, DeviceBooksView
 from calibre.utils.config import config_dir
 from calibre.utils.icu import sort_key
 from calibre.utils.logging import default_log
@@ -675,7 +675,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
             # Calibre 8 integrates the functionality of the KoboTouchExtended driver
             # and disables the plugin, so there is no need to switch between drivers
-            if calibre_version >= (8, 0, 0):  # type: ignore[reportOperatorIssue]
+            if calibre_version >= (8, 0, 0):
                 create_configure_driver_item(self.menu, _("&Configure driver..."))
             else:
                 driver_menu = self.menu.addMenu(_("Driver"))
@@ -2117,7 +2117,7 @@ class KoboUtilitiesAction(InterfaceAction):
             ):
                 book = seriesBook._mi
                 book.series_index_string = seriesBook.series_index_string()
-                book.kobo_series_number = seriesBook.series_index_string()
+                book.kobo_series_number = seriesBook.series_index_string()  # pyright: ignore[reportAttributeAccessIssue]
                 book.kobo_series = seriesBook.series_name()
                 book.contentIDs = [book.contentID]
                 books.append(book)
@@ -2437,11 +2437,11 @@ class KoboUtilitiesAction(InterfaceAction):
             contentIDs.extend(contentIDs_for_book)
         return contentIDs
 
-    def _get_books_for_selected(self):
-        view = self.gui.current_view()
+    def _get_books_for_selected(self) -> List[Book]:
+        view: Union[DeviceBooksView, BooksView, None] = self.gui.current_view()  # pyright: ignore[reportGeneralTypeIssues]
         if view is None:
             return []
-        if self.isDeviceView():
+        if isinstance(view, DeviceBooksView):
             rows = view.selectionModel().selectedRows()
             books = []
             for r in rows:

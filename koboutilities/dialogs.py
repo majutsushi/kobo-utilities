@@ -3385,12 +3385,6 @@ class ShowBooksNotInDeviceDatabaseDialog(SizePersistedDialog):
         button_box.accepted.connect(self.accept)
         layout.addWidget(button_box)
 
-    def sort_by(self, name):
-        if name == "PubDate":
-            self.books = sorted(
-                self.books, key=lambda k: k.sort_key(sort_by_pubdate=True)
-            )
-
 
 class ShowReadingPositionChangesDialog(SizePersistedDialog):
     def __init__(
@@ -3777,13 +3771,6 @@ class FixDuplicateShelvesDialog(SizePersistedDialog):
             show=True,
             show_copy_button=False,
         )
-
-    def sort_by(self, name):
-        if name == "PubDate":
-            self.shelves = sorted(
-                self.shelves,
-                key=lambda k: k.sort_key(sort_by_pubdate=True),
-            )
 
 
 class DuplicateShelvesInDeviceDatabaseTableWidget(QTableWidget):

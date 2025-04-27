@@ -2727,7 +2727,7 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         self.books = books
         self.all_series = all_series
         self.series_columns = series_columns
-        self.block_events = True
+        self.blockSignals(True)
 
         self.initialize_controls()
 
@@ -2742,7 +2742,7 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         self.renumber_series(display_in_table=False)
 
         # Display the books in the table
-        self.block_events = False
+        self.blockSignals(False)
         self.series_table.populate_table(books)
         if len(str(self.series_combo.text()).strip()) > 0:
             self.series_table.setFocus()
@@ -2921,7 +2921,7 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         # Populate the series index spinbox with the initial value
         self.series_start_number.setProperty("value", initial_series_index)
         self.update_series_headers(series_column)
-        if self.block_events:
+        if self.signalsBlocked():
             return
         self.renumber_series()
 
@@ -2952,12 +2952,12 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         self.series_combo.setEditText(series_name)
 
     def series_changed(self):
-        if self.block_events:
+        if self.signalsBlocked():
             return
         self.renumber_series()
 
     def series_start_changed(self):
-        if self.block_events:
+        if self.signalsBlocked():
             return
         self.renumber_series()
 
@@ -3353,12 +3353,12 @@ class ShowBooksNotInDeviceDatabaseDialog(SizePersistedDialog):
         )
         self.db = parent.library_view.model().db
         self.books = books
-        self.block_events = True
+        self.blockSignals(True)
 
         self.initialize_controls()
 
         # Display the books in the table
-        self.block_events = False
+        self.blockSignals(False)
         self.books_table.populate_table(books)
 
         # Cause our dialog size to be restored from prefs or created on first usage
@@ -3401,7 +3401,7 @@ class ShowReadingPositionChangesDialog(SizePersistedDialog):
         )
         self.plugin_action = plugin_action
         self.reading_locations, self.options = reading_locations
-        self.block_events = True
+        self.blockSignals(True)
         self.help_anchor = "ShowReadingPositionChanges"
         self.db = db
         self.prefs = cfg.READING_POSITION_CHANGES_DEFAULTS
@@ -3424,7 +3424,7 @@ class ShowReadingPositionChangesDialog(SizePersistedDialog):
         self.initialize_controls()
 
         # Display the books in the table
-        self.block_events = False
+        self.blockSignals(False)
         self.reading_locations_table.populate_table(self.reading_locations)
 
         self.select_books_checkbox.setChecked(
@@ -3681,14 +3681,14 @@ class FixDuplicateShelvesDialog(SizePersistedDialog):
         )
         self.plugin_action = plugin_action
         self.shelves = shelves
-        self.block_events = True
+        self.blockSignals(True)
         self.help_anchor = "FixDuplicateShelves"
         self.options = {}
 
         self.initialize_controls()
 
         # Display the books in the table
-        self.block_events = False
+        self.blockSignals(False)
         self.shelves_table.populate_table(self.shelves)
 
         # Cause our dialog size to be restored from prefs or created on first usage
@@ -3920,7 +3920,7 @@ class SetRelatedBooksDialog(SizePersistedDialog):
         )
         self.plugin_action = plugin_action
         self.related_types = related_types
-        self.block_events = True
+        self.blockSignals(True)
         self.help_anchor = "SetRelatedBooks"
         self.dialog_title = _("Set related books")
 
@@ -3938,7 +3938,7 @@ class SetRelatedBooksDialog(SizePersistedDialog):
         button.setChecked(True)
 
         # Display the books in the table
-        self.block_events = False
+        self.blockSignals(False)
         self.related_types_table.populate_table(self.related_types)
 
         # Cause our dialog size to be restored from prefs or created on first usage

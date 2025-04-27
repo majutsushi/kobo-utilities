@@ -2584,7 +2584,7 @@ class KoboUtilitiesAction(InterfaceAction):
             is_db_copied = False
         debug("db_path:", db_path)
 
-        return KoboDevice(
+        kobo_device = KoboDevice(
             device,
             isinstance(device, KOBOTOUCH),
             current_device_profile,
@@ -2603,6 +2603,8 @@ class KoboUtilitiesAction(InterfaceAction):
             device_db_path,
             is_db_copied,
         )
+        debug("kobo_device:", kobo_device)
+        return kobo_device
 
     @property
     def device_fwversion(self) -> Optional[Tuple[int, int, int]]:
@@ -2659,7 +2661,9 @@ class KoboUtilitiesAction(InterfaceAction):
             use_row_factory,
         )
 
-    def _store_queue_job(self, options: Dict[str, Any], books_to_modify: List[Tuple]):
+    def _store_queue_job(
+        self, options: Dict[str, Any], books_to_modify: List[Tuple[Any]]
+    ):
         debug("Start")
         cpus = 1  # self.gui.device_manager.server.pool_size
         from .jobs import do_read_locations
@@ -6870,8 +6874,8 @@ class KoboVersionInfo:
 class KoboDevice:
     driver: KOBO
     is_kobotouch: bool
-    profile: Optional[Dict]
-    backup_config: Dict
+    profile: Optional[Dict[str, Any]]
+    backup_config: Dict[str, Any]
     device_type: str
     drive_info: Dict[str, Dict[str, str]]
     uuid: str

@@ -423,7 +423,7 @@ def get_plugin_prefs(store_name: str, fill_defaults: bool = False):
     return c
 
 
-def get_prefs(prefs_store: Optional[Dict], store_name: str):
+def get_prefs(prefs_store: Optional[Dict[str, Any]], store_name: str):
     debug("start - store_name='%s'" % (store_name,))
     store = {}
     if prefs_store is not None and store_name in prefs_store:
@@ -559,7 +559,7 @@ def get_device_name(device_uuid: str, default_name: str = _("(Unknown device)"))
     return cast("str", device["name"]) if device else default_name
 
 
-def get_device_config(device_uuid) -> Optional[Dict]:
+def get_device_config(device_uuid) -> Optional[Dict[str, Any]]:
     return plugin_prefs[STORE_DEVICES].get(device_uuid, None)
 
 
@@ -1681,7 +1681,7 @@ class DevicesTableWidget(QTableWidget):
             devices[device_config["uuid"]] = device_config
         return devices
 
-    def get_selected_device_info(self) -> Tuple[Optional[Dict], bool]:
+    def get_selected_device_info(self) -> Tuple[Optional[Dict[str, Any]], bool]:
         if self.currentRow() >= 0:
             widget = self.item(self.currentRow(), 1)
             assert widget is not None

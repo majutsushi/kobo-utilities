@@ -16,9 +16,8 @@ import threading
 import time
 from collections import OrderedDict, defaultdict
 from configparser import ConfigParser
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple, cast
-from urllib.parse import quote
 
 import apsw
 from calibre import strftime
@@ -84,7 +83,6 @@ from .dialogs import (
     FixDuplicateShelvesDialog,
     GetShelvesFromDeviceDialog,
     ManageSeriesDeviceDialog,
-    OrderSeriesShelvesDialog,
     QueueProgressDialog,
     ReaderOptionsDialog,
     RemoveAnnotationsOptionsDialog,
@@ -517,18 +515,6 @@ class KoboUtilitiesAction(InterfaceAction):
             )
             self.menu.addSeparator()
 
-            self.create_menu_item_ex(
-                self.menu,
-                _("Order series collections"),
-                unique_name="Order series collections",
-                shortcut_name=_("Order series collections"),
-                triggered=self.order_series_shelves,
-                is_library_action=True,
-                is_device_action=True,
-                # is_supported=(device is not None and device.supports_series),
-                is_supported=False,
-                not_supported_reason="Deprecated; to be removed in a future version",
-            )
             self.create_menu_item_ex(
                 self.menu,
                 _("Get collections from device"),
@@ -1820,45 +1806,6 @@ class KoboUtilitiesAction(InterfaceAction):
         info_dialog(
             self.gui,
             _("Kobo Utilities") + " - " + _("Duplicate collections fixed"),
-            result_message,
-            show=True,
-        )
-
-    def order_series_shelves(self) -> None:
-        self.device = self.get_device()
-        if self.device is None:
-            error_dialog(
-                self.gui,
-                _("Cannot order the series collections in the device library."),
-                _("No device connected."),
-                show=True,
-            )
-            return
-
-        shelves = []
-        dlg = OrderSeriesShelvesDialog(self.gui, self, shelves)
-        dlg.exec()
-        if dlg.result() != dlg.DialogCode.Accepted:
-            debug("dialog cancelled")
-            return
-        self.options = dlg.options
-        shelves = dlg.get_shelves()
-        debug("about to order shelves - options=%s" % self.options)
-        debug("shelves=", shelves)
-
-        starting_shelves, shelves_ordered = self._order_series_shelves(
-            shelves, self.options
-        )
-        result_message = (
-            _("Update summary:")
-            + "\n\t"
-            + _(
-                "Starting number of collections={0}\n\tCollections reordered={1}"
-            ).format(starting_shelves, shelves_ordered)
-        )
-        info_dialog(
-            self.gui,
-            _("Kobo Utilities") + " - " + _("Order series collections"),
             result_message,
             show=True,
         )
@@ -3814,262 +3761,6 @@ class KoboUtilitiesAction(InterfaceAction):
             )
 
         return shelves
-
-    def _get_series_shelf_count(self, order_shelf_type):
-        debug("order_shelf_type:", order_shelf_type)
-        connection = self.device_database_connection()
-        shelves = []
-
-        series_query = (
-            "SELECT s.InternalName, count(sc.ShelfName) "
-            "FROM Shelf s LEFT OUTER JOIN ShelfContent sc on s.InternalName = sc.ShelfName "
-            "WHERE s._IsDeleted = 'false' "
-            "AND EXISTS (SELECT 1 FROM content c WHERE s.InternalName = c.Series ) "
-            "GROUP BY s.InternalName"
-        )
-        authors_query = (
-            "SELECT s.InternalName, count(sc.ShelfName) "
-            "FROM Shelf s LEFT OUTER JOIN ShelfContent sc on s.InternalName = sc.ShelfName "
-            "WHERE s._IsDeleted = 'false' "
-            "AND EXISTS (SELECT 1 FROM content c WHERE s.InternalName = c.Attribution ) "
-            "GROUP BY s.InternalName"
-        )
-        other_query = (
-            "SELECT s.InternalName, count(sc.ShelfName) "
-            "FROM Shelf s LEFT OUTER JOIN ShelfContent sc on name = sc.ShelfName "
-            "WHERE s._IsDeleted = 'false' "
-            "AND NOT EXISTS (SELECT 1 FROM content c WHERE s.InternalName = c.Attribution ) "
-            "AND NOT EXISTS (SELECT 1 FROM content c WHERE s.InternalName = c.Series ) "
-            "GROUP BY s.InternalName"
-        )
-        all_query = (
-            "SELECT s.InternalName, count(sc.ShelfName) "
-            "FROM Shelf s LEFT OUTER JOIN ShelfContent sc on s.InternalName = sc.ShelfName "
-            "WHERE s._IsDeleted = 'false' "
-            "GROUP BY s.InternalName"
-        )
-
-        shelves_queries = [series_query, authors_query, other_query, all_query]
-        shelves_query = shelves_queries[order_shelf_type]
-        debug("shelves_query:", shelves_query)
-
-        cursor = connection.cursor()
-        cursor.execute(shelves_query)
-        for i, row in enumerate(cursor):
-            debug("row:", i, row[0], row[1])
-            shelf = {}
-            shelf["name"] = row[0]
-            shelf["count"] = int(row[1])
-            shelves.append(shelf)
-
-        debug("shelves:", shelves)
-        return shelves
-
-    def _order_series_shelves(self, shelves, options):
-        def urlquote(shelf_name):
-            """Quote URL-unsafe characters, For unsafe characters, need "%xx" rather than the
-            other encoding used for urls.
-            Pulled from calibre.ebooks.oeb.base.py:urlquote"""
-            ASCII_CHARS = {chr(x) for x in range(128)}
-            UNIBYTE_CHARS = {chr(x) for x in range(256)}
-            URL_SAFE = set(
-                "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                "abcdefghijklmnopqrstuvwxyz"
-                "0123456789"
-                "_.-/~"
-            )  # fmt: skip
-            URL_UNSAFE = [ASCII_CHARS - URL_SAFE, UNIBYTE_CHARS - URL_SAFE]
-            result = []
-            unsafe = 1 if isinstance(shelf_name, str) else 0
-            unsafe = URL_UNSAFE[unsafe]
-            for char in shelf_name:
-                if char not in URL_SAFE:
-                    char = ("%%%02x" % ord(char)).upper()
-                    debug("unsafe after ord char=", char)
-                result.append(char)
-            return "".join(result)
-
-        debug("shelves:", shelves, " options:", options)
-        progressbar = ProgressBar(
-            parent=self.gui, window_title=_("Order series collections")
-        )
-        progressbar.show_with_maximum(len(shelves))
-        progressbar.left_align_label()
-
-        starting_shelves = 0
-        shelves_ordered = 0
-        timeDiff = timedelta(0, 1)
-        sort_descending = not options[cfg.KEY_SORT_DESCENDING]
-        order_by = options[cfg.KEY_ORDER_SHELVES_BY]
-        update_config = options[cfg.KEY_SORT_UPDATE_CONFIG]
-        koboConfig = None
-        config_file_path = None
-        if update_config:
-            koboConfig, config_file_path = self.get_config_file()
-            debug("koboConfig={0}".format(koboConfig.sections()))
-            for section in koboConfig.sections():
-                debug(
-                    "koboConfig section={0}, options={1}".format(
-                        section, koboConfig.options(section)
-                    )
-                )
-
-        connection = self.device_database_connection(use_row_factory=True)
-        shelves_query = (
-            "SELECT sc.ShelfName, c.ContentId, c.Title, c.DateCreated, sc.DateModified, c.Series, c.SeriesNumber "
-            "FROM ShelfContent sc JOIN content c on sc.ContentId= c.ContentId "
-            "WHERE sc._IsDeleted = 'false' "
-            "AND sc.ShelfName = ? "
-            "ORDER BY sc.ShelfName, c.SeriesNumber"
-        )
-        update_query = (
-            "UPDATE ShelfContent "
-            "SET DateModified = ? "
-            "WHERE ShelfName = ? "
-            "AND ContentID = ? "
-        )
-
-        cursor = connection.cursor()
-        for shelf in shelves:
-            starting_shelves += 1
-            debug("shelf=%s, count=%d" % (shelf["name"], shelf["count"]))
-            progressbar.set_label(_("Updating collection: {0}").format(shelf["name"]))
-            progressbar.increment()
-            if shelf["count"] <= 1:
-                continue
-            shelves_ordered += 1
-            shelf_data = (shelf["name"],)
-            debug("shelf_data:", shelf_data)
-            cursor.execute(shelves_query, shelf_data)
-            shelf_dict = {}
-            for i, row in enumerate(cursor):
-                debug("row:", i, row)
-                debug(
-                    "row:",
-                    i,
-                    row["ShelfName"],
-                    row["ContentID"],
-                    row["Series"],
-                    row["SeriesNumber"],
-                )
-                series_name = row["Series"] if row["Series"] else ""
-                series_index = 0
-                try:
-                    series_index = (
-                        float(row["SeriesNumber"])
-                        if row["SeriesNumber"] is not None
-                        else 0
-                    )
-                except Exception:
-                    debug("non numeric number")
-                    numbers = re.findall(r"\d*\.?\d+", row["SeriesNumber"])
-                    if len(numbers) > 0:
-                        series_index = float(numbers[0])
-                debug("series_index=", series_index)
-                if order_by == cfg.KEY_ORDER_SHELVES_PUBLISHED:
-                    date_created = row["DateCreated"]
-                    if date_created is None:
-                        date_created = datetime.now(tz=timezone.utc)
-                        date_created = strftime(
-                            self.device_timestamp_string, date_created
-                        )
-                    sort_key = (date_created, row["Title"])
-                else:
-                    sort_key = (
-                        (series_name, series_index, row["Title"])
-                        if series_name != ""
-                        else (row["Title"], -1, "")
-                    )
-                debug("sort_key:", sort_key)
-                current_list = shelf_dict.get(sort_key)
-                current_list = shelf_dict.get(sort_key, [])
-                current_list.append(row["ContentID"])
-                shelf_dict[sort_key] = current_list
-            debug("shelf_dict:", shelf_dict)
-
-            debug("sorted shelf_dict:", sorted(shelf_dict))
-
-            lastModifiedTime = datetime.now(tz=timezone.utc)
-
-            debug(
-                "lastModifiedTime=",
-                lastModifiedTime,
-                " timeDiff:",
-                timeDiff,
-            )
-            for sort_key in sorted(shelf_dict, reverse=sort_descending):
-                for contentId in shelf_dict[sort_key]:
-                    update_data = (
-                        strftime(
-                            self.device_timestamp_string,
-                            lastModifiedTime.timetuple(),
-                        ),
-                        shelf["name"],
-                        contentId,
-                    )
-                    debug(
-                        "sort_key: ",
-                        sort_key,
-                        " update_data:",
-                        update_data,
-                    )
-                    cursor.execute(update_query, update_data)
-                    lastModifiedTime += timeDiff
-            if update_config:
-                try:
-                    shelf_key = quote(
-                        "LastLibrarySorter_shelf_filterByBookshelf("
-                        + shelf["name"]
-                        + ")"
-                    )
-                    shelf_key = quote(
-                        "LastLibrarySorter_shelf_filterByBookshelf({0})".format(
-                            shelf["name"]
-                        )
-                    )
-                except Exception:
-                    debug("cannot encode shelf name=", shelf["name"])
-                    if isinstance(shelf["name"], str):
-                        debug("is unicode")
-                        shelf_key = urlquote(shelf["name"])
-                        shelf_key = (
-                            quote("LastLibrarySorter_shelf_filterByBookshelf(")
-                            + shelf_key
-                            + quote(")")
-                        )
-                        shelf_key = quote(
-                            "LastLibrarySorter_shelf_filterByBookshelf({0})".format(
-                                shelf_key
-                            )
-                        )
-                    else:
-                        debug("not unicode")
-                        shelf_key = (
-                            "LastLibrarySorter_shelf_filterByBookshelf("
-                            + shelf["name"]
-                            + ")"
-                        )
-                        shelf_key = (
-                            "LastLibrarySorter_shelf_filterByBookshelf({0}".format(
-                                shelf["name"]
-                            )
-                        )
-                assert koboConfig is not None
-                koboConfig.set(
-                    "ApplicationPreferences", shelf_key, "sortByDateAddedToShelf()"
-                )
-                debug("koboConfig=", koboConfig)
-
-        if update_config:
-            assert config_file_path is not None
-            with open(config_file_path, "w") as config_file:
-                debug("writing config file")
-                assert koboConfig is not None
-                koboConfig.write(config_file)
-
-        progressbar.hide()
-        debug("end")
-        return starting_shelves, shelves_ordered
 
     def _get_related_books_count(self, related_category):
         debug("order_shelf_type:", related_category)

@@ -9,7 +9,7 @@ __docformat__ = "restructuredtext en"
 import copy
 import traceback
 from functools import partial
-from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, cast
 
 from calibre.constants import DEBUG as _DEBUG
 from calibre.gui2 import choose_dir, error_dialog, open_url, question_dialog
@@ -52,6 +52,8 @@ from .common_utils import (
 )
 
 if TYPE_CHECKING:
+    from calibre.db.legacy import LibraryDatabase
+
     from .action import KoboDevice, KoboUtilitiesAction
 
 # Support for CreateNewCustomColumn was added in 5.35.0
@@ -61,7 +63,6 @@ try:
     debug("CreateNewCustomColumn is supported")
     SUPPORTS_CREATE_CUSTOM_COLUMN = True
 except ImportError:
-    CreateNewCustomColumn: Any = object
     debug("CreateNewCustomColumn is not supported")
     SUPPORTS_CREATE_CUSTOM_COLUMN = False  # type: ignore[reportConstantRedefinition]
 
@@ -436,7 +437,12 @@ def get_prefs(prefs_store: Optional[Dict[str, Any]], store_name: str):
     return store
 
 
-def get_pref(store, store_name, option, defaults=None):
+def get_pref(
+    store: Dict[str, Any],
+    store_name: str,
+    option: str,
+    defaults: Optional[Dict[str, Any]] = None,
+):
     if defaults:
         default_value = defaults[option]
     else:
@@ -444,7 +450,9 @@ def get_pref(store, store_name, option, defaults=None):
     return store.get(option, default_value)
 
 
-def migrate_library_config_if_required(db, library_config):
+def migrate_library_config_if_required(
+    db: LibraryDatabase, library_config: Dict[str, Any]
+):
     debug("start")
     schema_version = library_config.get(KEY_SCHEMA_VERSION, 0)
     if schema_version == DEFAULT_SCHEMA_VERSION:
@@ -515,7 +523,7 @@ def migrate_library_config_if_required(db, library_config):
     set_library_config(db, library_config)
 
 
-def get_library_config(db):
+def get_library_config(db: LibraryDatabase) -> Dict[str, Dict[str, Any]]:
     library_config = None
 
     if library_config is None:
@@ -527,13 +535,15 @@ def get_library_config(db):
     return library_config
 
 
-def get_profile_info(db, profile_name):
+def get_profile_info(db: LibraryDatabase, profile_name: str):
     library_config = get_library_config(db)
     profiles = library_config.get(KEY_PROFILES, {})
     return profiles.get(profile_name, DEFAULT_PROFILE_VALUES)
 
 
-def get_book_profile_for_device(db, device_uuid, use_any_device=False):
+def get_book_profile_for_device(
+    db: LibraryDatabase, device_uuid: str, use_any_device: bool = False
+):
     library_config = get_library_config(db)
     profiles_map = library_config.get(KEY_PROFILES, None)
     selected_profile = None
@@ -559,17 +569,17 @@ def get_device_name(device_uuid: str, default_name: str = _("(Unknown device)"))
     return cast("str", device["name"]) if device else default_name
 
 
-def get_device_config(device_uuid) -> Optional[Dict[str, Any]]:
+def get_device_config(device_uuid: str) -> Optional[Dict[str, Any]]:
     return plugin_prefs[STORE_DEVICES].get(device_uuid, None)
 
 
-def set_library_config(db, library_config):
+def set_library_config(db: LibraryDatabase, library_config: Dict[str, Any]):
     debug("library_config:", library_config)
     db.prefs.set_namespaced(PREFS_NAMESPACE, PREFS_KEY_SETTINGS, library_config)
 
 
 class ProfilesTab(QWidget):
-    def __init__(self, parent_dialog, plugin_action: KoboUtilitiesAction):
+    def __init__(self, parent_dialog: ConfigWidget, plugin_action: KoboUtilitiesAction):
         self.parent_dialog = parent_dialog
         QWidget.__init__(self)
 
@@ -740,7 +750,7 @@ class ProfilesTab(QWidget):
         layout.addStretch(1)
 
     def create_custom_column_controls(
-        self, options_layout, custom_col_name, row_number=1
+        self, options_layout: QGridLayout, custom_col_name: str, row_number: int = 1
     ):
         current_Location_label = QLabel(
             CUSTOM_COLUMN_DEFAULTS[custom_col_name]["config_label"], self
@@ -768,7 +778,7 @@ class ProfilesTab(QWidget):
         self.persist_profile_config()
         self.refresh_current_profile_info()
 
-    def store_on_connect_checkbox_clicked(self, checked):
+    def store_on_connect_checkbox_clicked(self, checked: bool):
         self.prompt_to_store_checkbox.setEnabled(checked)
         self.store_if_more_recent_checkbox.setEnabled(checked)
         self.do_not_store_if_reopened_checkbox.setEnabled(checked)
@@ -1069,8 +1079,9 @@ class ProfilesTab(QWidget):
         column_types = ["datetime"]
         return self.get_custom_columns(column_types)
 
-    def get_custom_columns(self, column_types):
+    def get_custom_columns(self, column_types: List[str]):
         if self.parent_dialog.supports_create_custom_column:
+            assert self.parent_dialog.get_create_new_custom_column_instance is not None
             custom_columns = self.parent_dialog.get_create_new_custom_column_instance.current_columns()
         else:
             custom_columns = self.plugin_action.gui.library_view.model().custom_columns
@@ -1081,7 +1092,7 @@ class ProfilesTab(QWidget):
                 available_columns[key] = column
         return available_columns
 
-    def create_custom_column(self, lookup_name):
+    def create_custom_column(self, lookup_name: str):
         debug("lookup_name:", lookup_name)
         display_params = {
             "description": CUSTOM_COLUMN_DEFAULTS[lookup_name]["description"]
@@ -1094,6 +1105,7 @@ class ProfilesTab(QWidget):
         create_new_custom_column_instance = (
             self.parent_dialog.get_create_new_custom_column_instance
         )
+        assert create_new_custom_column_instance is not None
         result = create_new_custom_column_instance.create_column(
             new_lookup_name,
             column_heading,
@@ -1104,7 +1116,7 @@ class ProfilesTab(QWidget):
             freeze_lookup_name=False,
         )
         debug("result:", result)
-        if result[0] == CreateNewCustomColumn.Result.COLUMN_ADDED:
+        if result[0] == CreateNewCustomColumn.Result.COLUMN_ADDED:  # pyright: ignore[reportPossiblyUnboundVariable]
             self.custom_columns[lookup_name]["combo_box"].populate_combo(
                 self.custom_columns[lookup_name]["current_columns"](), result[1]
             )
@@ -1114,7 +1126,7 @@ class ProfilesTab(QWidget):
 
 
 class DevicesTab(QWidget):
-    def __init__(self, parent_dialog, plugin_action: KoboUtilitiesAction):
+    def __init__(self, parent_dialog: ConfigWidget, plugin_action: KoboUtilitiesAction):
         self.current_device_info = None
 
         self.parent_dialog = parent_dialog
@@ -1258,7 +1270,7 @@ class DevicesTab(QWidget):
 
         layout.insertStretch(-1)
 
-    def on_device_connection_changed(self, is_connected):
+    def on_device_connection_changed(self, is_connected: bool):
         if not is_connected:
             self._connected_device = None
             self.update_from_connection_status()
@@ -1392,7 +1404,9 @@ class DevicesTab(QWidget):
         # Ensure the devices combo is refreshed for the current list
         self.parent_dialog.profiles_tab.refresh_current_profile_info()
 
-    def update_from_connection_status(self, first_time=False, update_table=True):
+    def update_from_connection_status(
+        self, first_time: bool = False, update_table: bool = True
+    ):
         if first_time:
             devices = plugin_prefs[STORE_DEVICES]
         else:
@@ -1424,7 +1438,7 @@ class DevicesTab(QWidget):
             )
             self._devices_table_item_selection_changed()
 
-    def toggle_backup_options_state(self, enabled):
+    def toggle_backup_options_state(self, enabled: bool):
         self.dest_directory_edit.setEnabled(enabled)
         self.dest_pick_button.setEnabled(enabled)
         self.dest_directory_label.setEnabled(enabled)
@@ -1435,7 +1449,7 @@ class DevicesTab(QWidget):
         )
         self.zip_database_checkbox.setEnabled(enabled)
 
-    def do_daily_backp_checkbox_clicked(self, checked):
+    def do_daily_backp_checkbox_clicked(self, checked: bool):
         enable_backup_options = (
             checked
             or self.backup_each_connection_checkbox.checkState()
@@ -1445,7 +1459,7 @@ class DevicesTab(QWidget):
         if self.backup_each_connection_checkbox.checkState() == Qt.CheckState.Checked:
             self.backup_each_connection_checkbox.setCheckState(Qt.CheckState.Unchecked)
 
-    def backup_each_connection_checkbox_clicked(self, checked):
+    def backup_each_connection_checkbox_clicked(self, checked: bool):
         enable_backup_options = (
             checked
             or self.do_daily_backp_checkbox.checkState() == Qt.CheckState.Checked
@@ -1454,7 +1468,7 @@ class DevicesTab(QWidget):
         if self.do_daily_backp_checkbox.checkState() == Qt.CheckState.Checked:
             self.do_daily_backp_checkbox.setCheckState(Qt.CheckState.Unchecked)
 
-    def device_options_for_each_checkbox_clicked(self, checked):
+    def device_options_for_each_checkbox_clicked(self, checked: bool):
         self.individual_device_options = (
             checked
             or self.device_options_for_each_checkbox.checkState()
@@ -1462,7 +1476,7 @@ class DevicesTab(QWidget):
         )
         self.refresh_current_device_options()
 
-    def copies_to_keep_checkbox_clicked(self, checked):
+    def copies_to_keep_checkbox_clicked(self, checked: bool):
         self.copies_to_keep_spin.setEnabled(checked)
 
     def _get_dest_directory_name(self):
@@ -1562,11 +1576,11 @@ class DevicesTab(QWidget):
 
 
 class DeviceColumnComboBox(QComboBox):
-    def __init__(self, parent):
+    def __init__(self, parent: ProfilesTab):
         QComboBox.__init__(self, parent)
         self.device_ids = [None, TOKEN_ANY_DEVICE]
 
-    def populate_combo(self, devices, selected_device_uuid):
+    def populate_combo(self, devices: Dict[str, Any], selected_device_uuid: str):
         self.clear()
         self.addItem("")
         self.addItem(TOKEN_ANY_DEVICE)
@@ -1585,7 +1599,7 @@ class DeviceColumnComboBox(QComboBox):
 
 
 class DevicesTableWidget(QTableWidget):
-    def __init__(self, parent):
+    def __init__(self, parent: DevicesTab):
         QTableWidget.__init__(self, parent)
         self.plugin_action: KoboUtilitiesAction = parent.plugin_action
         self.setSortingEnabled(False)
@@ -1594,7 +1608,9 @@ class DevicesTableWidget(QTableWidget):
         self.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.setMinimumSize(380, 0)
 
-    def populate_table(self, devices, connected_device: Optional[KoboDevice]):
+    def populate_table(
+        self, devices: Dict[str, Any], connected_device: Optional[KoboDevice]
+    ):
         self.clear()
         self.setRowCount(len(devices))
         header_labels = [
@@ -1622,12 +1638,15 @@ class DevicesTableWidget(QTableWidget):
         self.setMinimumColumnWidth(1, 100)
         self.selectRow(0)
 
-    def setMinimumColumnWidth(self, col, minimum):
+    def setMinimumColumnWidth(self, col: int, minimum: int):
         if self.columnWidth(col) < minimum:
             self.setColumnWidth(col, minimum)
 
     def populate_table_row(
-        self, row, device_config, connected_device: Optional[KoboDevice]
+        self,
+        row: int,
+        device_config: Dict[str, Any],
+        connected_device: Optional[KoboDevice],
     ):
         debug("device_config:", device_config)
         device_type = device_config["type"]
@@ -1689,7 +1708,7 @@ class DevicesTableWidget(QTableWidget):
             return (device_config, is_connected)
         return None, False
 
-    def set_current_row_device_name(self, device_name):
+    def set_current_row_device_name(self, device_name: str):
         if self.currentRow() >= 0:
             widget = self.item(self.currentRow(), 1)
             assert widget is not None
@@ -1816,7 +1835,9 @@ class ConfigWidget(QWidget):
     def get_devices_list(self):
         return self.devices_tab.devices_table.get_data()
 
-    def delete_device_from_lists(self, library_config, device_uuid):
+    def delete_device_from_lists(
+        self, library_config: Dict[str, Dict[str, Any]], device_uuid: str
+    ):
         del device_uuid
         set_library_config(self.plugin_action.gui.current_db, library_config)
 
@@ -1848,17 +1869,17 @@ class ConfigWidget(QWidget):
         d = PrefsViewerDialog(self.plugin_action.gui, PREFS_NAMESPACE)
         d.exec()
 
-    def help_link_activated(self, url):
+    def help_link_activated(self, url: str):
         del url
         self.plugin_action.show_help(anchor="ConfigurationDialog")
 
     @property
-    def get_create_new_custom_column_instance(self):
+    def get_create_new_custom_column_instance(self) -> Optional[CreateNewCustomColumn]:
         if (
             self._get_create_new_custom_column_instance is None
             and self.supports_create_custom_column
         ):
-            self._get_create_new_custom_column_instance = CreateNewCustomColumn(
+            self._get_create_new_custom_column_instance = CreateNewCustomColumn(  # pyright: ignore[reportPossiblyUnboundVariable]
                 self.plugin_action.gui
             )
         return self._get_create_new_custom_column_instance

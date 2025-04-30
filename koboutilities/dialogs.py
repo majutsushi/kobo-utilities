@@ -6,12 +6,22 @@ __license__ = "GPL v3"
 __copyright__ = "2012-2020, David Forrester <davidfor@internode.on.net>"
 __docformat__ = "restructuredtext en"
 
+import datetime as dt
 import re
 from configparser import ConfigParser
-from datetime import datetime
 from functools import partial
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Dict, Optional, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    Union,
+    cast,
+)
 from urllib.parse import quote_plus
 
 from calibre.devices.kobo.driver import KOBO
@@ -35,11 +45,14 @@ from qt.core import (
     QDialog,
     QDialogButtonBox,
     QDoubleSpinBox,
+    QDropEvent,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
+    QIcon,
     QLabel,
     QLineEdit,
+    QMouseEvent,
     QPixmap,
     QProgressDialog,
     QPushButton,
@@ -75,6 +88,9 @@ from .common_utils import (
 )
 
 if TYPE_CHECKING:
+    from calibre.db.legacy import LibraryDatabase
+    from calibre.devices.kobo.books import Book
+
     from .action import KoboUtilitiesAction
 
 # Checked with FW2.5.2
@@ -205,12 +221,12 @@ def have_rating_column(plugin_action: KoboUtilitiesAction):
 
 
 class AuthorTableWidgetItem(ReadOnlyTableWidgetItem):
-    def __init__(self, text, sort_key):
+    def __init__(self, text: str, sort_key: str):
         ReadOnlyTableWidgetItem.__init__(self, text)
         self.sort_key = sort_key
 
     # Qt uses a simple < check for sorting items, override this to use the sortKey
-    def __lt__(self, other):
+    def __lt__(self, other: Any):
         if isinstance(other, AuthorTableWidgetItem):
             return self.sort_key < other.sort_key
         return super().__lt__(other)
@@ -218,23 +234,24 @@ class AuthorTableWidgetItem(ReadOnlyTableWidgetItem):
 
 class QueueProgressDialog(QProgressDialog):
     def __init__(
-        self, gui, books, options, queue, db, plugin_action: KoboUtilitiesAction
+        self,
+        gui: Optional[ui.Main],  # TODO Can this actually be None?
+        options: Dict[str, Any],
+        queue: Callable[..., None],  # TODO Should only have one supported signature
+        db: Optional[LibraryDatabase],
+        plugin_action: KoboUtilitiesAction,
     ):
-        QProgressDialog.__init__(self, "", "", 0, len(books), gui)
+        QProgressDialog.__init__(self, "", "", 0, 0, gui)
         debug("init")
         self.setMinimumWidth(500)
-        self.books, self.options, self.queue, self.db = (
-            books,
-            options,
-            queue,
-            db,
-        )
+        self.books = []
+        self.options, self.queue, self.db = (options, queue, db)
         self.plugin_action = plugin_action
         self.gui = gui
         self.i, self.books_to_scan = 0, []
         self.profileName = self.options.get("profileName", None)
 
-        self.options["count_selected_books"] = len(self.books) if self.books else 0
+        self.options["count_selected_books"] = 0
         if self.options["job_function"] == "clean_images_dir":
             self.setWindowTitle(_("Creating queue for checking images directory"))
             QTimer.singleShot(0, self.do_clean_images_dir_queue)
@@ -250,6 +267,7 @@ class QueueProgressDialog(QProgressDialog):
         debug("Start")
 
         library_db = self.db
+        assert library_db is not None
 
         (
             kobo_chapteridbookmarked_column,
@@ -282,7 +300,7 @@ class QueueProgressDialog(QProgressDialog):
             search_condition = "ondevice:True {0}".format(search_condition)
             debug("search_condition=", search_condition)
             onDeviceIds = set(
-                library_db.search_getting_ids(
+                library_db.search_getting_ids(  # pyright: ignore[reportAttributeAccessIssue]
                     search_condition,
                     None,
                     sort_results=False,
@@ -299,7 +317,7 @@ class QueueProgressDialog(QProgressDialog):
         for book in self.books:
             self.i += 1
             device_book_paths = self.plugin_action.get_device_paths_from_id(
-                book.calibre_id
+                cast("int", book.calibre_id)
             )
             book.contentIDs = [
                 self.plugin_action.contentid_from_path(
@@ -398,6 +416,7 @@ class QueueProgressDialog(QProgressDialog):
             return
         if self.options[cfg.KEY_REMOVE_ANNOT_ACTION] == cfg.KEY_REMOVE_ANNOT_SELECTED:
             library_db = self.db  # self.gui.current_db
+            assert library_db is not None
 
             self.setLabelText(_("Preparing the list of books ..."))
             self.setValue(1)
@@ -418,7 +437,7 @@ class QueueProgressDialog(QProgressDialog):
                     contentIDs = [book.contentID]
                 else:
                     device_book_paths = self.plugin_action.get_device_paths_from_id(
-                        book.calibre_id
+                        cast("int", book.calibre_id)
                     )
                     contentIDs = [
                         self.plugin_action.contentid_from_path(
@@ -448,7 +467,7 @@ class QueueProgressDialog(QProgressDialog):
 class ReaderOptionsDialog(SizePersistedDialog):
     def __init__(
         self,
-        parent: ui.Main,
+        parent: QWidget,
         plugin_action: KoboUtilitiesAction,
         contentID: Optional[str],
     ):
@@ -672,26 +691,26 @@ class ReaderOptionsDialog(SizePersistedDialog):
         gprefs.set(self.unique_pref_name + ":settings", self.prefs)
         self.accept()
 
-    def custom_line_spacing_checkbox_clicked(self, checked):
+    def custom_line_spacing_checkbox_clicked(self, checked: bool):
         self.line_spacing_spin.setEnabled(not checked)
         self.custom_line_spacing_edit.setEnabled(checked)
         if not self.custom_line_spacing_is_checked():
             self.line_spacing_spin_changed(None)
 
-    def lock_margins_checkbox_clicked(self, checked):
+    def lock_margins_checkbox_clicked(self, checked: bool):
         self.right_margins_spin.setEnabled(not checked)
         if checked:  # not self.custom_line_spacing_is_checked():
             self.right_margins_spin.setProperty(
                 "value", int(str(self.left_margins_spin.value()))
             )
 
-    def line_spacing_spin_changed(self, checked):
+    def line_spacing_spin_changed(self, checked: Optional[bool]):
         del checked
         self.custom_line_spacing_edit.setText(
             str(self.line_spacings[int(str(self.line_spacing_spin.value()))])
         )
 
-    def left_margins_spin_changed(self, checked):
+    def left_margins_spin_changed(self, checked: bool):
         del checked
         if self.lock_margins_checkbox_is_checked():
             self.right_margins_spin.setProperty(
@@ -753,7 +772,7 @@ class ReaderOptionsDialog(SizePersistedDialog):
 
         self.change_settings(device_settings)
 
-    def change_settings(self, reader_settings):
+    def change_settings(self, reader_settings: Dict[str, Any]):
         font_face = reader_settings.get(
             cfg.KEY_READING_FONT_FAMILY,
             cfg.READING_OPTIONS_DEFAULTS[cfg.KEY_READING_FONT_FAMILY],
@@ -823,7 +842,7 @@ class ReaderOptionsDialog(SizePersistedDialog):
 
 
 class UpdateMetadataOptionsDialog(SizePersistedDialog):
-    def __init__(self, parent, plugin_action: KoboUtilitiesAction, book):
+    def __init__(self, parent: ui.Main, plugin_action: KoboUtilitiesAction, book: Book):
         SizePersistedDialog.__init__(
             self, parent, "kobo utilities plugin:update metadata settings dialog"
         )
@@ -1129,7 +1148,9 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         )
         options_layout.addWidget(self.update_kepubs_checkbox, widget_line, 2, 1, 2)
 
-        self.readingStatusGroupBox = ReadingStatusGroupBox(self.parent())
+        self.readingStatusGroupBox = ReadingStatusGroupBox(
+            cast("ui.Main", self.parent())
+        )
         layout.addWidget(self.readingStatusGroupBox)
 
         layout.addStretch(1)
@@ -1264,39 +1285,39 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
             show_copy_button=False,
         )
 
-    def title_checkbox_clicked(self, checked):
+    def title_checkbox_clicked(self, checked: bool):
         self.title_sort_checkbox.setEnabled(
             checked
             and self.use_plugboard_checkbox.checkState() != Qt.CheckState.Checked
         )
 
-    def author_checkbox_clicked(self, checked):
+    def author_checkbox_clicked(self, checked: bool):
         self.author_sort_checkbox.setEnabled(
             checked
             and self.use_plugboard_checkbox.checkState() != Qt.CheckState.Checked
         )
 
-    def description_checkbox_clicked(self, checked):
+    def description_checkbox_clicked(self, checked: bool):
         self.description_use_template_checkbox.setEnabled(checked)
         self.description_use_template_checkbox_clicked(checked)
 
-    def description_use_template_checkbox_clicked(self, checked):
+    def description_use_template_checkbox_clicked(self, checked: bool):
         self.description_template_edit.setEnabled(
             checked
             and self.description_use_template_checkbox.checkState()
             == Qt.CheckState.Checked
         )
 
-    def subtitle_checkbox_clicked(self, checked):
+    def subtitle_checkbox_clicked(self, checked: bool):
         self.subtitle_template_edit.setEnabled(checked)
 
-    def date_added_checkbox_clicked(self, checked):
+    def date_added_checkbox_clicked(self, checked: bool):
         self.date_added_column_combo.setEnabled(checked)
 
-    def reading_direction_checkbox_clicked(self, checked):
+    def reading_direction_checkbox_clicked(self, checked: bool):
         self.reading_direction_combo.setEnabled(checked)
 
-    def use_plugboard_checkbox_clicked(self, checked):
+    def use_plugboard_checkbox_clicked(self, checked: bool):
         self.title_sort_checkbox.setEnabled(
             not checked and self.title_checkbox.checkState() == Qt.CheckState.Checked
         )
@@ -1304,7 +1325,7 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
             not checked and self.author_checkbox.checkState() == Qt.CheckState.Checked
         )
 
-    def get_date_columns(self, column_names=DATE_COLUMNS):
+    def get_date_columns(self, column_names: List[str] = DATE_COLUMNS):
         available_columns = {}
         for column_name in column_names:
             calibre_column_name = (
@@ -1318,7 +1339,7 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         column_types = ["datetime"]
         return self.get_custom_columns(column_types)
 
-    def get_custom_columns(self, column_types):
+    def get_custom_columns(self, column_types: List[str]):
         custom_columns = self.plugin_action.gui.library_view.model().custom_columns
         available_columns = {}
         for key, column in custom_columns.items():
@@ -1329,7 +1350,7 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
 
 
 class GetShelvesFromDeviceDialog(SizePersistedDialog):
-    def __init__(self, parent, plugin_action: KoboUtilitiesAction):
+    def __init__(self, parent: QWidget, plugin_action: KoboUtilitiesAction):
         SizePersistedDialog.__init__(
             self,
             parent,
@@ -1422,7 +1443,7 @@ class GetShelvesFromDeviceDialog(SizePersistedDialog):
         column_types = ["text"]
         return self.get_custom_columns(column_types)
 
-    def get_custom_columns(self, column_types):
+    def get_custom_columns(self, column_types: List[str]):
         custom_columns = self.plugin_action.gui.library_view.model().custom_columns
         available_columns = {}
         for key, column in custom_columns.items():
@@ -1461,7 +1482,7 @@ class GetShelvesFromDeviceDialog(SizePersistedDialog):
 
 
 class BookmarkOptionsDialog(SizePersistedDialog):
-    def __init__(self, parent, plugin_action: KoboUtilitiesAction):
+    def __init__(self, parent: QWidget, plugin_action: KoboUtilitiesAction):
         SizePersistedDialog.__init__(
             self, parent, "kobo utilities plugin:bookmark options dialog"
         )
@@ -1689,10 +1710,10 @@ class BookmarkOptionsDialog(SizePersistedDialog):
         self.options = new_prefs
         self.accept()
 
-    def do_not_store_if_reopened_checkbox_clicked(self, checked):
+    def do_not_store_if_reopened_checkbox_clicked(self, checked: bool):
         self.clear_if_unread_checkbox.setEnabled(not checked)
 
-    def restore_radiobutton_clicked(self, checked):
+    def restore_radiobutton_clicked(self, checked: bool):
         self.status_to_reading_checkbox.setEnabled(checked)
         self.date_to_now_checkbox.setEnabled(checked)
         self.set_rating_checkbox.setEnabled(
@@ -1706,7 +1727,7 @@ class BookmarkOptionsDialog(SizePersistedDialog):
         self.do_not_store_if_reopened_checkbox.setEnabled(not checked)
         self.background_checkbox.setEnabled(not checked)
 
-    def store_radiobutton_clicked(self, checked):
+    def store_radiobutton_clicked(self, checked: bool):
         self.status_to_reading_checkbox.setEnabled(not checked)
         self.date_to_now_checkbox.setEnabled(not checked)
         self.set_rating_checkbox.setEnabled(not checked)
@@ -1717,7 +1738,7 @@ class BookmarkOptionsDialog(SizePersistedDialog):
 
 
 class ChangeReadingStatusOptionsDialog(SizePersistedDialog):
-    def __init__(self, parent, plugin_action: KoboUtilitiesAction):
+    def __init__(self, parent: ui.Main, plugin_action: KoboUtilitiesAction):
         SizePersistedDialog.__init__(
             self, parent, "kobo utilities plugin:change reading status settings dialog"
         )
@@ -1742,7 +1763,9 @@ class ChangeReadingStatusOptionsDialog(SizePersistedDialog):
         )
         layout.addLayout(title_layout)
 
-        self.readingStatusGroupBox = ReadingStatusGroupBox(self.parent())
+        self.readingStatusGroupBox = ReadingStatusGroupBox(
+            cast("ui.Main", self.parent())
+        )
         layout.addWidget(self.readingStatusGroupBox)
 
         # Dialog buttons
@@ -1790,7 +1813,7 @@ class ChangeReadingStatusOptionsDialog(SizePersistedDialog):
 
 
 class BackupAnnotationsOptionsDialog(SizePersistedDialog):
-    def __init__(self, parent, plugin_action: KoboUtilitiesAction):
+    def __init__(self, parent: QWidget, plugin_action: KoboUtilitiesAction):
         SizePersistedDialog.__init__(
             self,
             parent,
@@ -1871,7 +1894,7 @@ class BackupAnnotationsOptionsDialog(SizePersistedDialog):
 
 
 class RemoveAnnotationsOptionsDialog(SizePersistedDialog):
-    def __init__(self, parent, plugin_action: KoboUtilitiesAction):
+    def __init__(self, parent: QWidget, plugin_action: KoboUtilitiesAction):
         SizePersistedDialog.__init__(
             self,
             parent,
@@ -1971,14 +1994,14 @@ class RemoveAnnotationsOptionsDialog(SizePersistedDialog):
         gprefs.set(self.unique_pref_name + ":settings", self.options)
         self.accept()
 
-    def _annotation_clean_option_radio_clicked(self, radioButton):
+    def _annotation_clean_option_radio_clicked(self, radioButton: QRadioButton):
         self.annotation_clean_option_idx = self.annotation_clean_option_buttons[
             radioButton
         ]
 
 
 class CoverUploadOptionsDialog(SizePersistedDialog):
-    def __init__(self, parent, plugin_action: KoboUtilitiesAction):
+    def __init__(self, parent: QWidget, plugin_action: KoboUtilitiesAction):
         SizePersistedDialog.__init__(
             self, parent, "kobo utilities plugin:cover upload settings dialog"
         )
@@ -2124,7 +2147,7 @@ class CoverUploadOptionsDialog(SizePersistedDialog):
         gprefs.set(self.unique_pref_name + ":settings", self.options)
         self.accept()
 
-    def blackandwhite_checkbox_clicked(self, checked):
+    def blackandwhite_checkbox_clicked(self, checked: bool):
         self.ditheredcovers_checkbox.setEnabled(
             checked
             and self.blackandwhite_checkbox.checkState() == Qt.CheckState.Checked
@@ -2134,7 +2157,7 @@ class CoverUploadOptionsDialog(SizePersistedDialog):
             and self.blackandwhite_checkbox.checkState() == Qt.CheckState.Checked
         )
 
-    def keep_cover_aspect_checkbox_clicked(self, checked):
+    def keep_cover_aspect_checkbox_clicked(self, checked: bool):
         self.letterbox_checkbox.setEnabled(
             checked
             and self.keep_cover_aspect_checkbox.checkState() == Qt.CheckState.Checked
@@ -2143,14 +2166,14 @@ class CoverUploadOptionsDialog(SizePersistedDialog):
             checked and self.letterbox_checkbox.checkState() == Qt.CheckState.Checked
         )
 
-    def letterbox_checkbox_clicked(self, checked):
+    def letterbox_checkbox_clicked(self, checked: bool):
         self.letterbox_colorbutton.setEnabled(
             checked and self.letterbox_checkbox.checkState() == Qt.CheckState.Checked
         )
 
 
 class RemoveCoverOptionsDialog(SizePersistedDialog):
-    def __init__(self, parent, plugin_action: KoboUtilitiesAction):
+    def __init__(self, parent: QWidget, plugin_action: KoboUtilitiesAction):
         SizePersistedDialog.__init__(
             self, parent, "kobo utilities plugin:remove cover settings dialog"
         )
@@ -2228,7 +2251,7 @@ class RemoveCoverOptionsDialog(SizePersistedDialog):
 
 
 class BlockAnalyticsOptionsDialog(SizePersistedDialog):
-    def __init__(self, parent, plugin_action: KoboUtilitiesAction):
+    def __init__(self, parent: QWidget, plugin_action: KoboUtilitiesAction):
         SizePersistedDialog.__init__(
             self, parent, "kobo utilities plugin:block analytics settings dialog"
         )
@@ -2305,7 +2328,7 @@ class BlockAnalyticsOptionsDialog(SizePersistedDialog):
 
 
 class CleanImagesDirOptionsDialog(SizePersistedDialog):
-    def __init__(self, parent, plugin_action: KoboUtilitiesAction):
+    def __init__(self, parent: QWidget, plugin_action: KoboUtilitiesAction):
         SizePersistedDialog.__init__(
             self, parent, "kobo utilities plugin:clean images dir settings dialog"
         )
@@ -2369,7 +2392,7 @@ class CleanImagesDirOptionsDialog(SizePersistedDialog):
 
 
 class LockSeriesDialog(SizePersistedDialog):
-    def __init__(self, parent, title, initial_value):
+    def __init__(self, parent: QWidget, title: str, initial_value: float):
         SizePersistedDialog.__init__(
             self, parent, "Manage Series plugin:lock series dialog"
         )
@@ -2378,7 +2401,7 @@ class LockSeriesDialog(SizePersistedDialog):
         # Cause our dialog size to be restored from prefs or created on first usage
         self.resize_dialog()
 
-    def initialize_controls(self, title, initial_value):
+    def initialize_controls(self, title: str, initial_value: float):
         self.setWindowTitle(_("Lock series index"))
         layout = QVBoxLayout(self)
         self.setLayout(layout)
@@ -2424,7 +2447,7 @@ class LockSeriesDialog(SizePersistedDialog):
 
 
 class TitleWidgetItem(QTableWidgetItem):
-    def __init__(self, book):
+    def __init__(self, book: Union[Book, SeriesBook]):
         if isinstance(book, SeriesBook):
             super(TitleWidgetItem, self).__init__(book.title())
             self.title_sort = book.title()
@@ -2450,28 +2473,36 @@ class TitleWidgetItem(QTableWidgetItem):
             super(TitleWidgetItem, self).__init__(book.title)
             self.title_sort = book.title_sort
 
-    def __lt__(self, other):
+    def __lt__(self, other: Any):
         if isinstance(other, TitleWidgetItem):
             return self.title_sort < other.title_sort
         return super().__lt__(other)
 
 
 class AuthorsTableWidgetItem(ReadOnlyTableWidgetItem):
-    def __init__(self, authors, author_sort=None):
+    def __init__(self, authors: List[str], author_sort: Optional[str] = None):
         text = " & ".join(authors)
         ReadOnlyTableWidgetItem.__init__(self, text)
         self.setForeground(Qt.GlobalColor.darkGray)
         self.author_sort = author_sort
 
-    def __lt__(self, other):
-        if self.author_sort is not None and isinstance(other, AuthorsTableWidgetItem):
+    def __lt__(self, other: Any):
+        if (
+            self.author_sort is not None
+            and isinstance(other, AuthorsTableWidgetItem)
+            and other.author_sort is not None
+        ):
             return self.author_sort < other.author_sort
         return super().__lt__(other)
 
 
 class SeriesTableWidgetItem(ReadOnlyTableWidgetItem):
     def __init__(
-        self, series_name, series_index, is_original=False, assigned_index=None
+        self,
+        series_name: Optional[str],
+        series_index: str,
+        is_original: bool = False,
+        assigned_index: Optional[float] = None,
     ):
         if series_name:
             text = "%s [%s]" % (series_name, series_index)
@@ -2487,14 +2518,14 @@ class SeriesTableWidgetItem(ReadOnlyTableWidgetItem):
 
 
 class SeriesColumnComboBox(QComboBox):
-    def __init__(self, parent, series_columns):
+    def __init__(self, parent: QWidget, series_columns: Dict[str, Any]):
         QComboBox.__init__(self, parent)
         self.series_columns = series_columns
         for key, column in series_columns.items():
             self.addItem("%s (%s)" % (key, column["name"]))
         self.insertItem(0, "Series")
 
-    def select_text(self, selected_key):
+    def select_text(self, selected_key: str):
         if selected_key == "Series":
             self.setCurrentIndex(0)
         else:
@@ -2503,14 +2534,14 @@ class SeriesColumnComboBox(QComboBox):
                     self.setCurrentIndex(idx)
                     return
 
-    def selected_value(self):
+    def selected_value(self) -> str:
         if self.currentIndex() == 0:
             return "Series"
         return list(self.series_columns.keys())[self.currentIndex() - 1]
 
 
 class SeriesTableWidget(QTableWidget):
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget):
         QTableWidget.__init__(self, parent)
         self.create_context_menu()
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
@@ -2572,7 +2603,7 @@ class SeriesTableWidget(QTableWidget):
             menu_action.triggered.connect(partial(parent.search_web, name))
             self.addAction(menu_action)
 
-    def populate_table(self, books):
+    def populate_table(self, books: List[SeriesBook]):
         self.clear()
         self.setAlternatingRowColors(True)
         self.setRowCount(len(books))
@@ -2598,11 +2629,11 @@ class SeriesTableWidget(QTableWidget):
         delegate = DateDelegate(self, tweak_name="gui_pubdate_display_format")
         self.setItemDelegateForColumn(2, delegate)
 
-    def setMinimumColumnWidth(self, col, minimum):
+    def setMinimumColumnWidth(self, col: int, minimum: int):
         if self.columnWidth(col) < minimum:
             self.setColumnWidth(col, minimum)
 
-    def populate_table_row(self, row, book):
+    def populate_table_row(self, row: int, book: SeriesBook):
         self.blockSignals(True)
         self.setItem(row, 0, TitleWidgetItem(book))
         self.setItem(row, 1, AuthorsTableWidgetItem(book.authors()))
@@ -2633,7 +2664,7 @@ class SeriesTableWidget(QTableWidget):
         )
         self.blockSignals(False)
 
-    def swap_row_widgets(self, src_row, dest_row):
+    def swap_row_widgets(self, src_row: int, dest_row: int):
         self.blockSignals(True)
         self.insertRow(dest_row)
         for col in range(self.columnCount()):
@@ -2641,11 +2672,11 @@ class SeriesTableWidget(QTableWidget):
         self.removeRow(src_row)
         self.blockSignals(False)
 
-    def select_and_scroll_to_row(self, row):
+    def select_and_scroll_to_row(self, row: int):
         self.selectRow(row)
         self.scrollToItem(self.currentItem())
 
-    def event_has_mods(self, event=None):
+    def event_has_mods(self, event: Optional[QMouseEvent] = None):
         mods = (
             event.modifiers() if event is not None else QApplication.keyboardModifiers()
         )
@@ -2654,21 +2685,22 @@ class SeriesTableWidget(QTableWidget):
             or mods & Qt.KeyboardModifier.ShiftModifier
         )
 
-    def mousePressEvent(self, event):  # type: ignore[reportIncompatibleMethodOverride]
-        ep = event.pos()
+    def mousePressEvent(self, e: Optional[QMouseEvent]):
+        assert e is not None
+        ep = e.pos()
         selection_model = self.selectionModel()
         assert selection_model is not None
         if (
             self.indexAt(ep) not in selection_model.selectedIndexes()
-            and event.button() == Qt.MouseButton.LeftButton
+            and e.button() == Qt.MouseButton.LeftButton
             and not self.event_has_mods()
         ):
             self.setDragEnabled(False)
         else:
             self.setDragEnabled(True)
-        return QTableWidget.mousePressEvent(self, event)
+        return QTableWidget.mousePressEvent(self, e)
 
-    def dropEvent(self, event):
+    def dropEvent(self, event: Optional[QDropEvent]):
         assert event is not None
         selection_model = self.selectionModel()
         assert selection_model is not None
@@ -2701,7 +2733,7 @@ class SeriesTableWidget(QTableWidget):
         self.selectRow(drop_row)
         parent.renumber_series()
 
-    def set_series_column_headers(self, text):
+    def set_series_column_headers(self, text: str):
         item = self.horizontalHeaderItem(3)
         if item is not None:
             item.setText("Original " + text)
@@ -2715,9 +2747,9 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         self,
         parent: ui.Main,
         plugin_action: KoboUtilitiesAction,
-        books,
-        all_series,
-        series_columns,
+        books: List[SeriesBook],
+        all_series: List[Tuple[int, str]],
+        series_columns: Dict[str, Dict[str, Any]],
     ):
         SizePersistedDialog.__init__(
             self, parent, "kobo utilities plugin:series dialog"
@@ -2925,14 +2957,16 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
             return
         self.renumber_series()
 
-    def update_series_headers(self, series_column):
+    def update_series_headers(self, series_column: str) -> None:
         if series_column == "Series":
             self.series_table.set_series_column_headers(series_column)
         else:
             header_text = self.series_columns[series_column]["name"]
             self.series_table.set_series_column_headers(header_text)
 
-    def initialize_series_name_combo(self, series_column, series_name):
+    def initialize_series_name_combo(
+        self, series_column: str, series_name: Optional[str]
+    ) -> None:
         self.series_combo.clear()
         if series_name is None:
             series_name = ""
@@ -2971,7 +3005,7 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         # Now renumber the whole series so that anything in between gets changed
         self.renumber_series()
 
-    def clean_title(self, remove_series):
+    def clean_title(self, remove_series: bool):
         # Go through the books and clean the Kobo series from the title
         for book in self.books:
             if remove_series:
@@ -2985,10 +3019,10 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         # Now renumber the whole series so that anything in between gets changed
         self.renumber_series()
 
-    def clean_title_checkbox_clicked(self, checked):
+    def clean_title_checkbox_clicked(self, checked: bool):
         self.clean_title(checked)
 
-    def renumber_series(self, display_in_table=True):
+    def renumber_series(self, display_in_table: bool = True):
         if len(self.books) == 0:
             return
         series_name = str(self.series_combo.currentText()).strip()
@@ -2997,8 +3031,9 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         for row, book in enumerate(self.books):
             book.set_series_name(series_name)
             series_indent = book.series_indent()
-            if book.assigned_index() is not None:
-                series_index = book.assigned_index()
+            assigned_index = book.assigned_index()
+            if assigned_index is not None:
+                series_index = assigned_index
             else:
                 if series_indent >= last_series_indent:
                     if series_indent == 0:
@@ -3065,7 +3100,7 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         self.renumber_series()
         self.item_selection_changed()
 
-    def clear_index(self, all_rows=False):
+    def clear_index(self, all_rows: bool = False):
         if len(self.books) == 0:
             return
         if all_rows:
@@ -3155,7 +3190,7 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         self.series_table.scrollToItem(self.series_table.item(scroll_to_row, 0))
         self.renumber_series()
 
-    def series_indent_change(self, delta):
+    def series_indent_change(self, delta: int):
         selection_model = self.series_table.selectionModel()
         assert selection_model is not None
         for row in selection_model.selectedRows():
@@ -3170,7 +3205,7 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
             book.set_assigned_index(None)
         self.renumber_series()
 
-    def sort_by(self, name):
+    def sort_by(self, name: str):
         if name == "PubDate":
             self.books = sorted(
                 self.books, key=lambda k: k.sort_key(sort_by_pubdate=True)
@@ -3181,7 +3216,7 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
             self.books = sorted(self.books, key=lambda k: k.sort_key())
         self.renumber_series()
 
-    def search_web(self, name):
+    def search_web(self, name: str):
         URLS = {
             "FantasticFiction": "http://www.fantasticfiction.co.uk/search/?searchfor=author&keywords={author}",
             "Goodreads": "http://www.goodreads.com/search/search?q={author}&search_type=books",
@@ -3201,7 +3236,7 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
             )
             open_url(QUrl(url))
 
-    def convert_to_search_text(self, text, encoding="utf-8"):
+    def convert_to_search_text(self, text: str, encoding: str = "utf-8"):
         # First we strip characters we will definitely not want to pass through.
         # Periods from author initials etc do not need to be supplied
         text = text.replace(".", "")
@@ -3210,7 +3245,7 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         # If we ended up with double spaces as plus signs (++) replace them
         return text.replace("++", "+")
 
-    def convert_author_to_search_text(self, author, encoding="utf-8"):
+    def convert_author_to_search_text(self, author: str, encoding: str = "utf-8"):
         # We want to convert the author name to FN LN format if it is stored LN, FN
         # We do this because some websites (Kobo) have crappy search engines that
         # will not match Adams+Douglas but will match Douglas+Adams
@@ -3233,7 +3268,7 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
                 fn_ln_author = " ".join(parts).strip()
         return self.convert_to_search_text(fn_ln_author, encoding)
 
-    def cell_changed(self, row, column):
+    def cell_changed(self, row: int, column: int):
         book = self.books[row]
         item = self.series_table.item(row, column)
         assert item is not None
@@ -3263,14 +3298,14 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
 
 
 class BooksNotInDeviceDatabaseTableWidget(QTableWidget):
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget):
         QTableWidget.__init__(self, parent)
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.fmt = tweaks["gui_pubdate_display_format"]
         if self.fmt is None:
             self.fmt = "MMM yyyy"
 
-    def populate_table(self, books):
+    def populate_table(self, books: List[Book]):
         self.clear()
         self.setAlternatingRowColors(True)
         self.setRowCount(len(books))
@@ -3304,11 +3339,11 @@ class BooksNotInDeviceDatabaseTableWidget(QTableWidget):
         delegate = DateDelegate(self, tweak_name="gui_pubdate_display_format")
         self.setItemDelegateForColumn(3, delegate)
 
-    def setMinimumColumnWidth(self, col, minimum):
+    def setMinimumColumnWidth(self, col: int, minimum: int):
         if self.columnWidth(col) < minimum:
             self.setColumnWidth(col, minimum)
 
-    def populate_table_row(self, row, book):
+    def populate_table_row(self, row: int, book: Book):
         self.blockSignals(True)
         titleColumn = TitleWidgetItem(book)
         titleColumn.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
@@ -3322,14 +3357,17 @@ class BooksNotInDeviceDatabaseTableWidget(QTableWidget):
             row,
             3,
             DateTableWidgetItem(
-                book.pubdate, is_read_only=True, default_to_today=False, fmt=self.fmt
+                cast("dt.datetime", book.pubdate),
+                is_read_only=True,
+                default_to_today=False,
+                fmt=self.fmt,
             ),
         )
         self.setItem(
             row,
             4,
             DateTableWidgetItem(
-                datetime(
+                dt.datetime(
                     book.datetime[0],
                     book.datetime[1],
                     book.datetime[2],
@@ -3347,7 +3385,7 @@ class BooksNotInDeviceDatabaseTableWidget(QTableWidget):
 
 
 class ShowBooksNotInDeviceDatabaseDialog(SizePersistedDialog):
-    def __init__(self, parent: ui.Main, books):
+    def __init__(self, parent: ui.Main, books: List[Book]):
         SizePersistedDialog.__init__(
             self, parent, "kobo utilities plugin:not in device database dialog"
         )
@@ -3389,12 +3427,12 @@ class ShowBooksNotInDeviceDatabaseDialog(SizePersistedDialog):
 class ShowReadingPositionChangesDialog(SizePersistedDialog):
     def __init__(
         self,
-        parent,
+        parent: QWidget,
         plugin_action: KoboUtilitiesAction,
-        reading_locations,
-        db,
-        profileName,
-        goodreads_sync_installed=False,
+        reading_locations: Tuple[Dict[int, Dict[str, Any]], Dict[str, Any]],
+        db: LibraryDatabase,
+        profileName: str,
+        goodreads_sync_installed: bool = False,
     ):
         SizePersistedDialog.__init__(
             self, parent, "kobo utilities plugin:show reading position changes dialog"
@@ -3537,12 +3575,12 @@ class ShowReadingPositionChangesDialog(SizePersistedDialog):
     def _clear_all_clicked(self):
         self.reading_locations_table.toggle_checkmarks(Qt.CheckState.Unchecked)
 
-    def update_goodreads_progress_checkbox_clicked(self, checked):
+    def update_goodreads_progress_checkbox_clicked(self, checked: bool):
         self.select_books_checkbox.setEnabled(not checked)
 
 
 class ShowReadingPositionChangesTableWidget(QTableWidget):
-    def __init__(self, parent: ShowReadingPositionChangesDialog, db):
+    def __init__(self, parent: ShowReadingPositionChangesDialog, db: LibraryDatabase):
         QTableWidget.__init__(self, parent)
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.db = db
@@ -3556,7 +3594,7 @@ class ShowReadingPositionChangesTableWidget(QTableWidget):
             self.rest_of_book_estimate_column,
         ) = parent.plugin_action.get_column_names()
 
-    def populate_table(self, reading_positions):
+    def populate_table(self, reading_positions: Dict[int, Dict[str, Any]]):
         self.clear()
         self.setAlternatingRowColors(True)
         self.setRowCount(len(reading_positions))
@@ -3598,11 +3636,13 @@ class ShowReadingPositionChangesTableWidget(QTableWidget):
         self.setItemDelegateForColumn(5, delegate)
         self.setItemDelegateForColumn(6, delegate)
 
-    def setMinimumColumnWidth(self, col, minimum):
+    def setMinimumColumnWidth(self, col: int, minimum: int):
         if self.columnWidth(col) < minimum:
             self.setColumnWidth(col, minimum)
 
-    def populate_table_row(self, row, book_id, reading_position):
+    def populate_table_row(
+        self, row: int, book_id: int, reading_position: Dict[str, Any]
+    ):
         self.blockSignals(True)
 
         book = self.db.get_metadata(book_id, index_is_id=True, get_cover=False)
@@ -3616,11 +3656,11 @@ class ShowReadingPositionChangesTableWidget(QTableWidget):
         authorColumn = AuthorsTableWidgetItem(book.authors, book.author_sort)
         self.setItem(row, 2, authorColumn)
 
-        current_percentRead = (
-            book.get_user_metadata(self.kobo_percentRead_column, True)["#value#"]
-            if self.kobo_percentRead_column
-            else None
-        )
+        current_percentRead = None
+        if self.kobo_percentRead_column:
+            metadata = book.get_user_metadata(self.kobo_percentRead_column, True)
+            assert metadata is not None
+            current_percentRead = metadata["#value#"]
         current_percent = RatingTableWidgetItem(current_percentRead, is_read_only=True)
         current_percent.setTextAlignment(
             Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
@@ -3638,11 +3678,11 @@ class ShowReadingPositionChangesTableWidget(QTableWidget):
         )
         self.setItem(row, 4, new_percent)
 
-        current_last_read = (
-            book.get_user_metadata(self.last_read_column, True)["#value#"]
-            if self.last_read_column
-            else None
-        )
+        current_last_read = None
+        if self.last_read_column:
+            metadata = book.get_user_metadata(self.last_read_column, True)
+            assert metadata is not None
+            current_last_read = metadata["#value#"]
         if current_last_read:
             self.setItem(
                 row,
@@ -3665,7 +3705,7 @@ class ShowReadingPositionChangesTableWidget(QTableWidget):
         self.setItem(row, 7, book_idColumn)
         self.blockSignals(False)
 
-    def toggle_checkmarks(self, select):
+    def toggle_checkmarks(self, select: Qt.CheckState):
         for i in range(self.rowCount()):
             item = self.item(i, 0)
             assert item is not None
@@ -3673,7 +3713,12 @@ class ShowReadingPositionChangesTableWidget(QTableWidget):
 
 
 class FixDuplicateShelvesDialog(SizePersistedDialog):
-    def __init__(self, parent, plugin_action: KoboUtilitiesAction, shelves):
+    def __init__(
+        self,
+        parent: ui.Main,
+        plugin_action: KoboUtilitiesAction,
+        shelves: List[List[Any]],
+    ):
         SizePersistedDialog.__init__(
             self,
             parent,
@@ -3774,11 +3819,11 @@ class FixDuplicateShelvesDialog(SizePersistedDialog):
 
 
 class DuplicateShelvesInDeviceDatabaseTableWidget(QTableWidget):
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget):
         QTableWidget.__init__(self, parent)
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
 
-    def populate_table(self, shelves):
+    def populate_table(self, shelves: List[List[Any]]):
         self.clear()
         self.setAlternatingRowColors(True)
         self.setRowCount(len(shelves))
@@ -3811,11 +3856,11 @@ class DuplicateShelvesInDeviceDatabaseTableWidget(QTableWidget):
         self.setItemDelegateForColumn(1, delegate)
         self.setItemDelegateForColumn(2, delegate)
 
-    def setMinimumColumnWidth(self, col, minimum):
+    def setMinimumColumnWidth(self, col: int, minimum: int):
         if self.columnWidth(col) < minimum:
             self.setColumnWidth(col, minimum)
 
-    def populate_table_row(self, row, shelf):
+    def populate_table_row(self, row: int, shelf: List[Any]):
         self.blockSignals(True)
         shelf_name = shelf[0] if shelf[0] else _("(Unnamed collection)")
         titleColumn = QTableWidgetItem(shelf_name)
@@ -3840,13 +3885,13 @@ class DuplicateShelvesInDeviceDatabaseTableWidget(QTableWidget):
 
 
 class OrderSeriesShelvesTableWidget(QTableWidget):
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget):
         QTableWidget.__init__(self, parent)
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.header_labels = [_("Collection/series name"), _("Books in collection")]
         self.shelves = {}
 
-    def populate_table(self, shelves):
+    def populate_table(self, shelves: List[Dict[str, Any]]):
         self.clear()
         self.setAlternatingRowColors(True)
         self.setRowCount(len(shelves))
@@ -3870,11 +3915,11 @@ class OrderSeriesShelvesTableWidget(QTableWidget):
         self.setSortingEnabled(True)
         self.selectRow(0)
 
-    def setMinimumColumnWidth(self, col, minimum):
+    def setMinimumColumnWidth(self, col: int, minimum: int):
         if self.columnWidth(col) < minimum:
             self.setColumnWidth(col, minimum)
 
-    def populate_table_row(self, row, shelf):
+    def populate_table_row(self, row: int, shelf: Dict[str, Any]):
         self.blockSignals(True)
         nameColumn = QTableWidgetItem(shelf["name"])
         nameColumn.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
@@ -3887,7 +3932,7 @@ class OrderSeriesShelvesTableWidget(QTableWidget):
         self.setItem(row, 1, shelf_count)
         self.blockSignals(False)
 
-    def get_shelves(self):
+    def get_shelves(self) -> List[Dict[str, Any]]:
         shelves = []
         for row in range(self.rowCount()):
             rnum = self.item(row, 0).data(Qt.ItemDataRole.UserRole)  # type: ignore[reportOptionalMemberAccess]
@@ -3908,13 +3953,18 @@ class OrderSeriesShelvesTableWidget(QTableWidget):
         elif self.rowCount() > 0:
             self.select_and_scroll_to_row(first_sel_row - 1)
 
-    def select_and_scroll_to_row(self, row):
+    def select_and_scroll_to_row(self, row: int):
         self.selectRow(row)
         self.scrollToItem(self.currentItem())
 
 
 class SetRelatedBooksDialog(SizePersistedDialog):
-    def __init__(self, parent, plugin_action: KoboUtilitiesAction, related_types):
+    def __init__(
+        self,
+        parent: ui.Main,
+        plugin_action: KoboUtilitiesAction,
+        related_types: List[Dict[str, Any]],
+    ):
         SizePersistedDialog.__init__(
             self, parent, "kobo utilities plugin:set related books dialog"
         )
@@ -4037,7 +4087,7 @@ class SetRelatedBooksDialog(SizePersistedDialog):
         self.accept()
         return
 
-    def _related_categories_option_radio_clicked(self, idx):
+    def _related_categories_option_radio_clicked(self, idx: int):
         self.related_category = idx
 
     def fetch_button_clicked(self):
@@ -4070,12 +4120,12 @@ class SetRelatedBooksDialog(SizePersistedDialog):
 
 
 class FontChoiceComboBox(QComboBox):
-    def __init__(self, parent, font_list=KOBO_FONTS):
+    def __init__(self, parent: QWidget, font_list: Dict[str, str]):
         QComboBox.__init__(self, parent)
         for name, font in sorted(font_list.items()):
             self.addItem(name, font)
 
-    def select_text(self, selected_text):
+    def select_text(self, selected_text: str):
         idx = self.findData(selected_text)
         if idx != -1:
             self.setCurrentIndex(idx)
@@ -4084,11 +4134,11 @@ class FontChoiceComboBox(QComboBox):
 
 
 class JustificationChoiceComboBox(QComboBox):
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget):
         QComboBox.__init__(self, parent)
         self.addItems(["Off", "Left", "Justify"])
 
-    def select_text(self, selected_text):
+    def select_text(self, selected_text: str):
         idx = self.findText(selected_text)
         if idx != -1:
             self.setCurrentIndex(idx)
@@ -4097,12 +4147,16 @@ class JustificationChoiceComboBox(QComboBox):
 
 
 class ReadingDirectionChoiceComboBox(QComboBox):
-    def __init__(self, parent, reading_direction_list=READING_DIRECTIONS):
+    def __init__(
+        self,
+        parent: QWidget,
+        reading_direction_list: Dict[str, str] = READING_DIRECTIONS,
+    ):
         QComboBox.__init__(self, parent)
         for name, font in sorted(reading_direction_list.items()):
             self.addItem(name, font)
 
-    def select_text(self, selected_text):
+    def select_text(self, selected_text: str):
         idx = self.findData(selected_text)
         if idx != -1:
             self.setCurrentIndex(idx)
@@ -4111,7 +4165,7 @@ class ReadingDirectionChoiceComboBox(QComboBox):
 
 
 class ReadingStatusGroupBox(QGroupBox):
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget):
         QGroupBox.__init__(self, parent)
 
         self.setTitle(_("Reading status"))
@@ -4144,7 +4198,7 @@ class ReadingStatusGroupBox(QGroupBox):
             )
         )
 
-    def reading_status_checkbox_clicked(self, checked):
+    def reading_status_checkbox_clicked(self, checked: bool):
         self.unread_radiobutton.setEnabled(checked)
         self.reading_radiobutton.setEnabled(checked)
         self.finished_radiobutton.setEnabled(checked)
@@ -4166,7 +4220,7 @@ class ReadingStatusGroupBox(QGroupBox):
 
 
 class TemplateConfig(QWidget):  # {{{
-    def __init__(self, val=None, mi=None):
+    def __init__(self, val: Optional[str] = None, mi: Optional[Book] = None):
         QWidget.__init__(self)
         self.mi = mi
         debug("mi=", self.mi)
@@ -4186,7 +4240,7 @@ class TemplateConfig(QWidget):  # {{{
         return str(self.t.text()).strip()
 
     @template.setter
-    def template(self, template):
+    def template(self, template: str):
         self.t.setText(template)
 
     def edit_template(self):
@@ -4215,7 +4269,11 @@ class TemplateConfig(QWidget):  # {{{
 
 class UpdateBooksToCDialog(SizePersistedDialog):
     def __init__(
-        self, parent: ui.Main, plugin_action: KoboUtilitiesAction, icon, books
+        self,
+        parent: ui.Main,
+        plugin_action: KoboUtilitiesAction,
+        icon: QIcon,
+        books: List[Dict[str, Any]],
     ):
         del icon
         super(UpdateBooksToCDialog, self).__init__(
@@ -4404,12 +4462,12 @@ class ToCBookListTableWidget(QTableWidget):
         }
     )
 
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget):
         QTableWidget.__init__(self, parent)
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.books = {}
 
-    def populate_table(self, books):
+    def populate_table(self, books: List[Dict[str, Any]]):
         self.clear()
         self.setAlternatingRowColors(True)
         self.setRowCount(len(books))
@@ -4441,11 +4499,11 @@ class ToCBookListTableWidget(QTableWidget):
         self.sortItems(1)
         self.sortItems(0)
 
-    def setMinimumColumnWidth(self, col, minimum):
+    def setMinimumColumnWidth(self, col: int, minimum: int):
         if self.columnWidth(col) < minimum:
             self.setColumnWidth(col, minimum)
 
-    def populate_table_row(self, row, book):
+    def populate_table_row(self, row: int, book: Dict[str, Any]):
         book_status = 0
         if book["good"]:
             icon = get_icon("ok.png")
@@ -4579,7 +4637,7 @@ class ToCBookListTableWidget(QTableWidget):
         self.setItem(row, self.STATUS_COMMENT_COLUMN_NO, comment_cell)
 
     @property
-    def books_to_update_toc(self):
+    def books_to_update_toc(self) -> List[Dict[str, Any]]:
         books = []
         for row in range(self.rowCount()):
             if cast(
@@ -4631,11 +4689,11 @@ class ToCBookListTableWidget(QTableWidget):
         elif self.rowCount() > 0:
             self.select_and_scroll_to_row(first_sel_row - 1)
 
-    def select_and_scroll_to_row(self, row):
+    def select_and_scroll_to_row(self, row: int):
         self.selectRow(row)
         self.scrollToItem(self.currentItem())
 
-    def toggle_checkmarks(self, select):
+    def toggle_checkmarks(self, select: Qt.CheckState):
         for i in range(self.rowCount()):
             item = self.item(i, self.UPDATE_TOC_COLUMN_NO)
             assert item is not None
@@ -4677,19 +4735,19 @@ class ToCBookListTableWidget(QTableWidget):
 
 
 class IconWidgetItem(ReadOnlyTextIconWidgetItem):
-    def __init__(self, text, icon, sort_key):
+    def __init__(self, text: Optional[str], icon: QIcon, sort_key: int):
         super(IconWidgetItem, self).__init__(text, icon)
         self.sort_key = sort_key
 
     # Qt uses a simple < check for sorting items, override this to use the sortKey
-    def __lt__(self, other):
+    def __lt__(self, other: Any):
         if isinstance(other, IconWidgetItem):
             return self.sort_key < other.sort_key
         return super().__lt__(other)
 
 
 class AboutDialog(QDialog):
-    def __init__(self, parent, icon, text):
+    def __init__(self, parent: ui.Main, icon: QIcon, text: str):
         QDialog.__init__(self, parent)
         self.resize(500, 300)
         self.l = QGridLayout()

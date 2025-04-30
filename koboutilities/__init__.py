@@ -7,7 +7,12 @@ __docformat__ = "restructuredtext en"
 __version__ = (2, 23, 0)
 
 # The class that all Interface Action plugin wrappers must inherit from
+from typing import TYPE_CHECKING
+
 from calibre.customize import InterfaceActionBase
+
+if TYPE_CHECKING:
+    from .config import ConfigWidget
 
 
 class ActionKoboUtilities(InterfaceActionBase):
@@ -71,7 +76,7 @@ class ActionKoboUtilities(InterfaceActionBase):
             return ConfigWidget(self.actual_plugin_)
         return None
 
-    def save_settings(self, config_widget):
+    def save_settings(self, config_widget: ConfigWidget):
         """
         Save the settings specified by the user with config_widget.
 

@@ -13,7 +13,7 @@ from enum import Enum
 from pathlib import Path
 from pprint import pprint
 from queue import Queue
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Tuple, cast
 from unittest import mock
 
 import apsw
@@ -45,10 +45,10 @@ class ReadStatus(Enum):
 class TestBook:
     title: str
     authors: List[str]
-    rating: int
+    rating: Optional[int]
     chapter_id: Optional[str]
     read_status: ReadStatus
-    percent_read: int
+    percent_read: Optional[int]
     last_read: Optional[dt]
     time_spent_reading: Optional[int]
     rest_of_book_estimate: Optional[int]
@@ -187,7 +187,7 @@ class TestKoboUtilities(unittest.TestCase):
     def setUp(self):
         self.plugin = KoboUtilitiesAction(None, None)
         self.plugin.device = action.KoboDevice(
-            driver=mock.MagicMock,
+            driver=mock.MagicMock(),
             is_kobotouch=True,
             profile={},
             backup_config={},
@@ -209,7 +209,7 @@ class TestKoboUtilities(unittest.TestCase):
         self.queue = Queue()
         self.maxDiff = None
 
-    def test_store_bookmarks(self, fwversion, timestamp):
+    def test_store_bookmarks(self, fwversion: Tuple[int, int, int], timestamp: str):
         del fwversion
         del timestamp
         book1 = TestBook(
@@ -327,7 +327,9 @@ class TestKoboUtilities(unittest.TestCase):
         self.assertEqual(stored_locations[book2.calibre_id]["TimeSpentReading"], 450)
         self.assertEqual(stored_locations[book2.calibre_id]["RestOfBookEstimate"], 250)
 
-    def test_restore_current_bookmark(self, fwversion, timestamp):
+    def test_restore_current_bookmark(
+        self, fwversion: Tuple[int, int, int], timestamp: str
+    ):
         del fwversion
         del timestamp
         book1 = TestBook(
@@ -450,7 +452,7 @@ class TestKoboUtilities(unittest.TestCase):
         self.assertDictEqual(device_books_before, db_books_after)
 
 
-def row_factory(cursor, row):
+def row_factory(cursor: apsw.Cursor, row: apsw.SQLiteValues):
     return {k[0]: row[i] for i, k in enumerate(cursor.getdescription())}
 
 

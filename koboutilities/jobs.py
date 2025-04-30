@@ -1,6 +1,8 @@
 # vim:fileencoding=UTF-8:ts=4:sw=4:sta:et:sts=4:ai
 from __future__ import annotations
 
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, cast
+
 __license__ = "GPL v3"
 __copyright__ = "2012-2017, David Forrester <davidfor@internode.on.net>"
 __docformat__ = "restructuredtext en"
@@ -26,10 +28,12 @@ from .common_utils import (
 )
 
 
-def do_device_database_backup(backup_options):
+def do_device_database_backup(backup_options: Dict[str, Any]):
     debug("start")
 
-    def backup_file(backup_zip, file_to_add, basename=None):
+    def backup_file(
+        backup_zip: ZipFile, file_to_add: str, basename: Optional[str] = None
+    ):
         debug("file_to_add=%s" % file_to_add)
         basename = basename if basename else os.path.basename(file_to_add)
         try:
@@ -216,7 +220,25 @@ def do_device_database_backup(backup_options):
     return
 
 
-def do_read_locations(books_to_scan, options, cpus, notification=lambda x, _y: x):
+def do_read_locations(
+    books_to_scan: List[
+        Tuple[
+            int,
+            List[str],
+            str,
+            List[str],
+            Optional[str],
+            Optional[int],
+            Optional[int],
+            Optional[datetime],
+            Optional[int],
+            Optional[int],
+        ]
+    ],
+    options: Dict[str, Any],
+    cpus: int,
+    notification: Callable[[float, str], Any] = lambda _x, y: y,
+) -> Tuple[Dict[int, Dict[str, Any]], Dict[str, Any]]:
     """
     Master job to do read the current reading locations from the device DB
     """
@@ -252,7 +274,7 @@ def do_read_locations(books_to_scan, options, cpus, notification=lambda x, _y: x
             debug("Job not finished")
             continue
         # A job really finished. Get the information.
-        new_locations = job.result
+        new_locations = cast("Dict[int, Dict[str, Any]]", job.result)
         count += 1
         notification(float(count) / total, "Storing locations")
         number_locations = len(new_locations) if new_locations else 0
@@ -268,14 +290,46 @@ def do_read_locations(books_to_scan, options, cpus, notification=lambda x, _y: x
     return new_locations, options
 
 
-def do_read_locations_all(books, options):
+def do_read_locations_all(
+    books: List[
+        Tuple[
+            int,
+            List[str],
+            str,
+            List[str],
+            Optional[str],
+            Optional[int],
+            Optional[int],
+            Optional[datetime],
+            Optional[int],
+            Optional[int],
+        ]
+    ],
+    options: Dict[str, Any],
+) -> Dict[int, Dict[str, Any]]:
     """
     Child job, to read location for all the books
     """
     return _read_locations(books, options)
 
 
-def _read_locations(books, options):
+def _read_locations(
+    books: List[
+        Tuple[
+            int,
+            List[str],
+            str,
+            List[str],
+            Optional[str],
+            Optional[int],
+            Optional[int],
+            Optional[datetime],
+            Optional[int],
+            Optional[int],
+        ]
+    ],
+    options: Dict[str, Any],
+) -> Dict[int, Dict[str, Any]]:
     debug("start")
     count_books = 0
     new_locations = {}
@@ -311,7 +365,6 @@ def _read_locations(books, options):
         current_time_spent_reading,
         current_rest_of_book_estimate,
     ) in books:
-        device_status = None
         debug("----------- top of loop -----------")
         debug("Current book: %s - %s" % (title, authors))
         debug("contentIds='%s'" % (contentIDs))
@@ -578,7 +631,7 @@ def _read_locations(books, options):
     return new_locations
 
 
-def value_changed(old_value, new_value):
+def value_changed(old_value: Optional[Any], new_value: Optional[Any]) -> bool:
     return (
         (old_value is not None and new_value is None)
         or (old_value is None and new_value is not None)
@@ -586,7 +639,11 @@ def value_changed(old_value, new_value):
     )
 
 
-def do_clean_images_dir(options, cpus, notification=lambda x, _y: x):
+def do_clean_images_dir(
+    options: Dict[str, Any],
+    cpus: int,
+    notification: Callable[[float, str], Any] = lambda _x, y: y,
+):
     del cpus
     main_image_path = options["main_image_path"]
     sd_image_path = options["sd_image_path"]
@@ -646,7 +703,7 @@ def do_clean_images_dir(options, cpus, notification=lambda x, _y: x):
     return extra_image_files
 
 
-def _get_file_imageIds(image_path):
+def _get_file_imageIds(image_path: Optional[str]) -> Dict[str, str]:
     imageids_files = {}
     if image_path:
         for path, _dirs, files in os.walk(image_path):
@@ -666,12 +723,12 @@ def _get_file_imageIds(image_path):
 
 
 def _remove_extra_files(
-    extra_imageids_files,
-    imageids_files,
-    delete_extra_covers,
-    image_path,
-    images_tree=False,
-):
+    extra_imageids_files: Set[str],
+    imageids_files: Dict[str, str],
+    delete_extra_covers: bool,
+    image_path: str,
+    images_tree: bool = False,
+) -> List[str]:
     extra_image_files = []
     from glob import glob
 
@@ -699,7 +756,9 @@ def _remove_extra_files(
     return extra_image_files
 
 
-def _get_imageId_set(database_path: str, device_database_path: str, is_db_copied: bool):
+def _get_imageId_set(
+    database_path: str, device_database_path: str, is_db_copied: bool
+) -> Set[str]:
     connection = DeviceDatabaseConnection(
         database_path, device_database_path, is_db_copied, use_row_factory=True
     )
@@ -714,7 +773,12 @@ def _get_imageId_set(database_path: str, device_database_path: str, is_db_copied
     return {row["ImageId"] for row in cursor}
 
 
-def do_remove_annotations(options, books, cpus, notification=lambda x, _y: x):
+def do_remove_annotations(
+    options: Dict[str, Any],
+    books: List[Tuple[int, List[str], List[str], str, str]],
+    cpus: int,
+    notification: Callable[[float, str], Any] = lambda _x, y: y,
+):
     del cpus
     annotations_dir = options["annotations_dir"]
     annotations_ext = options["annotations_ext"]
@@ -798,7 +862,9 @@ def do_remove_annotations(options, books, cpus, notification=lambda x, _y: x):
     return remove_annotations_result
 
 
-def _get_annotation_files(annotations_path, annotations_ext):
+def _get_annotation_files(
+    annotations_path: str, annotations_ext: str
+) -> Dict[str, str]:
     annotation_files = {}
     if annotations_path:
         for path, dirs, files in os.walk(annotations_path):
@@ -814,8 +880,11 @@ def _get_annotation_files(annotations_path, annotations_ext):
 
 
 def _get_annotation_files_for_books(
-    books, annotations_path, annotations_ext, device_path
-):
+    books: List[Tuple[int, List[str], List[str], str, str]],
+    annotations_path: str,
+    annotations_ext: str,
+    device_path: str,
+) -> Dict[str, str]:
     annotation_files = {}
     debug("annotations_path=", annotations_path)
     debug("device_path=", device_path)
@@ -839,11 +908,11 @@ def _get_annotation_files_for_books(
 
 
 def _check_annotation_files(
-    annotation_files,
-    annotations_dir,
-    device_path,
-    annotation_test_func,
-):
+    annotation_files: Dict[str, str],
+    annotations_dir: str,
+    device_path: str,
+    annotation_test_func: Callable[[str, str, str, str], bool],
+) -> Dict[str, str]:
     annotation_files_to_remove = {}
     for filename in annotation_files:
         debug("filename='%s', path='%s'" % (filename, annotation_files[filename]))
@@ -856,8 +925,11 @@ def _check_annotation_files(
 
 
 def _book_file_does_not_exists(
-    annotation_filename, annotation_path, annotations_dir, device_path
-):
+    annotation_filename: str,
+    annotation_path: str,
+    annotations_dir: str,
+    device_path: str,
+) -> bool:
     book_file = os.path.splitext(annotation_filename)[0]
     book_path = annotation_path.replace(annotations_dir, device_path)
     book_file = os.path.join(book_path, book_file)
@@ -865,16 +937,22 @@ def _book_file_does_not_exists(
 
 
 def _annotation_file_is_empty(
-    annotation_filename, annotation_path, annotations_dir, device_path
-):
+    annotation_filename: str,
+    annotation_path: str,
+    annotations_dir: str,
+    device_path: str,
+) -> bool:
     return not _annotation_file_is_not_empty(
         annotation_filename, annotation_path, annotations_dir, device_path
     )
 
 
 def _annotation_file_is_not_empty(
-    annotation_filename, annotation_path, annotations_dir, device_path
-):
+    annotation_filename: str,
+    annotation_path: str,
+    annotations_dir: str,
+    device_path: str,
+) -> bool:
     del annotations_dir, device_path
     debug("annotation_filename=", annotation_filename)
     annotation_filepath = os.path.join(annotation_path, annotation_filename)

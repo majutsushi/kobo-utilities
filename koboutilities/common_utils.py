@@ -9,16 +9,11 @@ __docformat__ = "restructuredtext en"
 import inspect
 import os
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Type, Union, cast
 
 import apsw
 from calibre.constants import DEBUG, iswindows
-from calibre.gui2 import (
-    Application,
-    error_dialog,
-    gprefs,
-    info_dialog,
-)
+from calibre.gui2 import Application, error_dialog, gprefs, info_dialog, ui
 from calibre.gui2.actions import menu_action_unique_name
 from calibre.gui2.keyboard import ShortcutConfig
 from calibre.utils.config import config_dir
@@ -53,10 +48,13 @@ except ImportError:
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from types import TracebackType
 
     from calibre.gui2.dialogs.message_box import MessageBox
+    from qt import QAction, QMenu
 
     from .action import KoboUtilitiesAction
+    from .config import ConfigWidget
 
 MIMETYPE_KOBO = "application/x-kobo-epub+zip"
 
@@ -71,7 +69,7 @@ plugin_name = None
 plugin_icon_resources = {}
 
 
-def debug(*args):
+def debug(*args: Any):
     if DEBUG:
         frame = inspect.currentframe()
         assert frame is not None
@@ -87,7 +85,7 @@ def debug(*args):
         )
 
 
-def set_plugin_icon_resources(name, resources):
+def set_plugin_icon_resources(name: str, resources: Dict[str, bytes]):
     """
     Set our global store of plugin name and icon resources for sharing between
     the InterfaceAction class which reads them and the ConfigWidget
@@ -98,7 +96,7 @@ def set_plugin_icon_resources(name, resources):
     plugin_icon_resources = resources
 
 
-def get_icon(icon_name):
+def get_icon(icon_name: Optional[str]):
     """
     Retrieve a QIcon for the named image from the zip file if it exists,
     or if not then from Calibre's image cache.
@@ -112,7 +110,7 @@ def get_icon(icon_name):
     return QIcon()
 
 
-def get_pixmap(icon_name):
+def get_pixmap(icon_name: str):
     """
     Retrieve a QPixmap for the named image
     Any icons belonging to the plugin must be prefixed with 'images/'
@@ -146,7 +144,7 @@ def get_pixmap(icon_name):
     return None
 
 
-def get_local_images_dir(subfolder=None):
+def get_local_images_dir(subfolder: Optional[str] = None):
     """
     Returns a path to the user's local resources/images folder
     If a subfolder name parameter is specified, appends this to the path
@@ -160,17 +158,16 @@ def get_local_images_dir(subfolder=None):
 
 
 def create_menu_action_unique(
-    ia,
-    parent_menu,
-    menu_text,
-    image=None,
-    tooltip=None,
-    shortcut=None,
-    triggered=None,
-    is_checked=None,
-    shortcut_name=None,
-    unique_name=None,
-    favourites_menu_unique_name=None,
+    ia: KoboUtilitiesAction,
+    parent_menu: QMenu,
+    menu_text: str,
+    triggered: Union[Callable[[], None], Callable[[QAction], None]],
+    image: Optional[str] = None,
+    tooltip: Optional[str] = None,
+    shortcut: Union[str, List[str], None, Literal[False]] = None,
+    is_checked: Optional[bool] = None,
+    shortcut_name: Optional[str] = None,
+    unique_name: Optional[str] = None,
 ):
     """
     Create a menu action with the specified criteria and action, using the new
@@ -186,7 +183,7 @@ def create_menu_action_unique(
         if full_unique_name in kb.shortcuts:
             shortcut = False
         else:
-            if shortcut is not None and shortcut is not False:
+            if shortcut is not None and isinstance(shortcut, str):
                 shortcut = None if len(shortcut) == 0 else _(shortcut)
 
     if shortcut_name is None:
@@ -214,16 +211,10 @@ def create_menu_action_unique(
         ac.setCheckable(True)
         if is_checked:
             ac.setChecked(True)
-    # For use by the Favourites Menu plugin. If this menu action has text
-    # that is not constant through the life of this plugin, then we need
-    # to attribute it with something that will be constant that the
-    # Favourites Menu plugin can use to identify it.
-    if favourites_menu_unique_name:
-        ac.favourites_menu_unique_name = favourites_menu_unique_name
     return ac
 
 
-def row_factory(cursor, row):
+def row_factory(cursor: apsw.Cursor, row: apsw.SQLiteValues):
     return {k[0]: row[i] for i, k in enumerate(cursor.getdescription())}
 
 
@@ -259,7 +250,12 @@ class DeviceDatabaseConnection(apsw.Connection):
             self.__lock.acquire()
         return super().__enter__()
 
-    def __exit__(self, exc_type, exc_value, tb) -> bool | None:
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_value: Optional[BaseException],
+        tb: Optional[TracebackType],
+    ) -> Optional[bool]:
         try:
             suppress_exception = super().__exit__(exc_type, exc_value, tb)
             if self.__is_db_copied and (
@@ -338,7 +334,12 @@ class ImageTitleLayout(QHBoxLayout):
     A reusable layout widget displaying an image followed by a title
     """
 
-    def __init__(self, parent, icon_name, title):
+    def __init__(
+        self,
+        parent: Union[SizePersistedDialog, ConfigWidget],
+        icon_name: str,
+        title: str,
+    ):
         super(ImageTitleLayout, self).__init__()
         self.title_image_label = QLabel(parent)
         self.update_title_icon(icon_name)
@@ -376,7 +377,7 @@ class ImageTitleLayout(QHBoxLayout):
         help_widget.setLayout(help_layout)
         self.addWidget(help_widget)
 
-    def update_title_icon(self, icon_name):
+    def update_title_icon(self, icon_name: str):
         pixmap = get_pixmap(icon_name)
         if pixmap is None:
             error_dialog(
@@ -401,8 +402,8 @@ class SizePersistedDialog(QDialog):
 
     def __init__(
         self,
-        parent,
-        unique_pref_name,
+        parent: QWidget,
+        unique_pref_name: str,
         plugin_action: Optional[KoboUtilitiesAction] = None,
     ):
         super(SizePersistedDialog, self).__init__(parent)
@@ -419,19 +420,19 @@ class SizePersistedDialog(QDialog):
         else:
             self.restoreGeometry(self.geom)
 
-    def dialog_closing(self, result):
+    def dialog_closing(self, result: Any):
         del result
         geom = self.saveGeometry()
         gprefs[self.unique_pref_name] = geom
 
-    def help_link_activated(self, url):
+    def help_link_activated(self, url: str):
         del url
         if self.plugin_action is not None:
             self.plugin_action.show_help(anchor=self.help_anchor)
 
 
 class ReadOnlyTableWidgetItem(QTableWidgetItem):
-    def __init__(self, text):
+    def __init__(self, text: Optional[str]):
         if text is None:
             text = ""
         super(ReadOnlyTableWidgetItem, self).__init__(text)
@@ -439,7 +440,7 @@ class ReadOnlyTableWidgetItem(QTableWidgetItem):
 
 
 class RatingTableWidgetItem(QTableWidgetItem):
-    def __init__(self, rating, is_read_only=False):
+    def __init__(self, rating: Optional[int], is_read_only: bool = False):
         super(RatingTableWidgetItem, self).__init__("")
         self.setData(Qt.ItemDataRole.DisplayRole, rating)
         if is_read_only:
@@ -447,7 +448,13 @@ class RatingTableWidgetItem(QTableWidgetItem):
 
 
 class DateTableWidgetItem(QTableWidgetItem):
-    def __init__(self, date_read, is_read_only=False, default_to_today=False, fmt=None):
+    def __init__(
+        self,
+        date_read: Optional[datetime],
+        is_read_only: bool = False,
+        default_to_today: bool = False,
+        fmt: Optional[str] = None,
+    ):
         if date_read is None or (date_read == UNDEFINED_DATE and default_to_today):
             date_read = now()
         if is_read_only:
@@ -460,7 +467,7 @@ class DateTableWidgetItem(QTableWidgetItem):
 
 
 class CheckableTableWidgetItem(QTableWidgetItem):
-    def __init__(self, checked=False):
+    def __init__(self, checked: bool = False):
         super(CheckableTableWidgetItem, self).__init__("")
         self.setFlags(
             Qt.ItemFlag.ItemIsSelectable
@@ -483,18 +490,25 @@ class CheckableTableWidgetItem(QTableWidgetItem):
 
 
 class ReadOnlyTextIconWidgetItem(ReadOnlyTableWidgetItem):
-    def __init__(self, text, icon):
+    def __init__(self, text: Optional[str], icon: QIcon):
         super(ReadOnlyTextIconWidgetItem, self).__init__(text)
         if icon:
             self.setIcon(icon)
 
 
 class ProfileComboBox(QComboBox):
-    def __init__(self, parent, profiles, selected_text=None):
+    def __init__(
+        self,
+        parent: QWidget,
+        profiles: Dict[str, Dict[str, Any]],
+        selected_text: Optional[str] = None,
+    ):
         super(ProfileComboBox, self).__init__(parent)
         self.populate_combo(profiles, selected_text)
 
-    def populate_combo(self, profiles, selected_text=None):
+    def populate_combo(
+        self, profiles: Dict[str, Dict[str, Any]], selected_text: Optional[str] = None
+    ):
         self.blockSignals(True)
         self.clear()
         for list_name in sorted(profiles.keys()):
@@ -502,7 +516,7 @@ class ProfileComboBox(QComboBox):
         self.select_view(selected_text)
         self.blockSignals(False)
 
-    def select_view(self, selected_text):
+    def select_view(self, selected_text: Optional[str]):
         self.blockSignals(True)
         if selected_text:
             idx = self.findText(selected_text)
@@ -513,12 +527,12 @@ class ProfileComboBox(QComboBox):
 
 
 class SimpleComboBox(QComboBox):
-    def __init__(self, parent, values, selected_value):
+    def __init__(self, parent: QWidget, values: List[str], selected_value: str):
         super(SimpleComboBox, self).__init__(parent)
         self.values = values
         self.populate_combo(selected_value)
 
-    def populate_combo(self, selected_value):
+    def populate_combo(self, selected_value: str):
         self.clear()
         selected_idx = idx = -1
         for value in sorted(self.values):
@@ -540,11 +554,11 @@ class CustomColumnComboBox(QComboBox):
 
     def __init__(
         self,
-        parent,
-        custom_columns=None,
-        selected_column="",
-        initial_items=None,
-        create_column_callback=None,
+        parent: QWidget,
+        custom_columns: Optional[Dict[str, Dict[str, Any]]] = None,
+        selected_column: str = "",
+        initial_items: Optional[List[str]] = None,
+        create_column_callback: Optional[Callable[[], bool]] = None,
     ):
         if custom_columns is None:
             custom_columns = {}
@@ -559,7 +573,11 @@ class CustomColumnComboBox(QComboBox):
         self.populate_combo(custom_columns, selected_column, initial_items)
 
     def populate_combo(
-        self, custom_columns, selected_column, initial_items=None, show_lookup_name=True
+        self,
+        custom_columns: Dict[str, Dict[str, Any]],
+        selected_column: str,
+        initial_items: Optional[Union[Dict[str, str], List[str]]] = None,
+        show_lookup_name: bool = True,
     ):
         if initial_items is None:
             initial_items = [""]
@@ -601,7 +619,7 @@ class CustomColumnComboBox(QComboBox):
     def get_selected_column(self):
         return self.column_names[self.currentIndex()]
 
-    def current_text_changed(self, new_text):
+    def current_text_changed(self, new_text: str):
         debug("new_text='%s'" % new_text)
         debug(
             "new_text == self.CREATE_NEW_COLUMN_ITEM='%s'"
@@ -628,7 +646,7 @@ class KeyboardConfigDialog(SizePersistedDialog):
     This dialog is used to allow editing of keyboard shortcuts.
     """
 
-    def __init__(self, gui, group_name):
+    def __init__(self, gui: ui.Main, group_name: str):
         super(KeyboardConfigDialog, self).__init__(gui, "Keyboard shortcut dialog")
         self.gui = gui
         self.setWindowTitle("Keyboard shortcuts")
@@ -662,11 +680,11 @@ class KeyboardConfigDialog(SizePersistedDialog):
 class ProgressBar(QDialog):
     def __init__(
         self,
-        parent=None,
-        max_items=100,
-        window_title="Progress Bar",
-        label="Label goes here",
-        on_top=False,
+        parent: Optional[QWidget] = None,
+        max_items: int = 100,
+        window_title: str = "Progress Bar",
+        label: str = "Label goes here",
+        on_top: bool = False,
     ):
         if on_top:
             super(ProgressBar, self).__init__(
@@ -687,7 +705,7 @@ class ProgressBar(QDialog):
         self.progressBar.setValue(0)
         self.l.addWidget(self.progressBar)
 
-    def show_with_maximum(self, maximum_count):
+    def show_with_maximum(self, maximum_count: int):
         self.set_maximum(maximum_count)
         self.set_value(0)
         self.show()
@@ -699,23 +717,23 @@ class ProgressBar(QDialog):
     def refresh(self):
         self.application.processEvents()
 
-    def set_label(self, value):
+    def set_label(self, value: str):
         self.label.setText(value)
         self.refresh()
 
     def left_align_label(self):
         self.label.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
-    def set_maximum(self, value):
+    def set_maximum(self, value: int):
         self.progressBar.setMaximum(value)
         self.refresh()
 
-    def set_value(self, value):
+    def set_value(self, value: int):
         self.progressBar.setValue(value)
         self.refresh()
 
 
-def prompt_for_restart(parent, title, message):
+def prompt_for_restart(parent: QWidget, title: str, message: str):
     dialog_box = cast(
         "MessageBox", info_dialog(parent, title, message, show_copy_button=False)
     )
@@ -739,7 +757,7 @@ def prompt_for_restart(parent, title, message):
 
 
 class PrefsViewerDialog(SizePersistedDialog):
-    def __init__(self, gui, namespace):
+    def __init__(self, gui: ui.Main, namespace: str):
         super(PrefsViewerDialog, self).__init__(gui, _("Prefs viewer dialog"))
         self.setWindowTitle(_("Preferences for: {}").format(namespace))
 
@@ -799,7 +817,7 @@ class PrefsViewerDialog(SizePersistedDialog):
         self.keys_list.setMinimumWidth(self.keys_list.sizeHintForColumn(0))
         self.keys_list.currentRowChanged[int].connect(self._current_row_changed)
 
-    def _current_row_changed(self, new_row):
+    def _current_row_changed(self, new_row: int):
         if new_row < 0:
             self.value_text.clear()
             return

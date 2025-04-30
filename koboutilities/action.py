@@ -9,6 +9,7 @@ __docformat__ = "restructuredtext en"
 
 import calendar
 import dataclasses
+import datetime as dt
 import os
 import re
 import shutil
@@ -16,8 +17,19 @@ import threading
 import time
 from collections import OrderedDict, defaultdict
 from configparser import ConfigParser
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Literal,
+    Optional,
+    Tuple,
+    Union,
+    cast,
+)
 
 import apsw
 from calibre import strftime
@@ -40,7 +52,7 @@ from calibre.gui2 import (
     ui,
 )
 from calibre.gui2.actions import InterfaceAction
-from calibre.gui2.device import device_signals
+from calibre.gui2.device import DeviceJob, device_signals
 from calibre.gui2.dialogs.message_box import ViewLog
 from calibre.gui2.library.views import BooksView, DeviceBooksView
 from calibre.utils.config import config_dir
@@ -93,6 +105,11 @@ from .dialogs import (
     UpdateBooksToCDialog,
     UpdateMetadataOptionsDialog,
 )
+
+if TYPE_CHECKING:
+    from calibre.db.legacy import LibraryDatabase
+    from calibre.ebooks.oeb.polish.toc import TOC
+    from calibre.gui2.library.models import DeviceBooksModel
 
 PLUGIN_ICONS = [
     "images/icon.png",
@@ -286,7 +303,7 @@ class KoboUtilitiesAction(InterfaceAction):
     def about_to_show_menu(self):
         self.rebuild_menus()
 
-    def library_changed(self, db):
+    def library_changed(self, db: LibraryDatabase):
         del db
         # We need to reset our menus after switching libraries
         self.device = self.get_device()
@@ -302,31 +319,29 @@ class KoboUtilitiesAction(InterfaceAction):
             debug("About to do auto store")
             QTimer.singleShot(1000, self.auto_store_current_bookmark)
 
-    def set_toolbar_button_tooltip(self, text=None):
-        debug("start: text='%s'" % text)
-        if not text:
-            text = ActionKoboUtilities.description
+    def set_toolbar_button_tooltip(self):
+        text = ActionKoboUtilities.description
+        text += "\n"
+        if self.device is not None:
+            debug(
+                "device connected. self.device.fwversion=",
+                self.device.driver.fwversion,
+            )
             text += "\n"
-            if self.device is not None:
-                debug(
-                    "device connected. self.device.fwversion=",
-                    self.device.driver.fwversion,
-                )
-                text += "\n"
-                text += _("Connected device: ")
-                text += self.device.name
-                text += "\n"
-                text += _("Firmware version: ")
-                text += ".".join([str(i) for i in self.device.driver.fwversion])
+            text += _("Connected device: ")
+            text += self.device.name
             text += "\n"
-            text += _("Driver: ")
-            text += self.device_driver_name
+            text += _("Firmware version: ")
+            text += ".".join([str(i) for i in self.device.driver.fwversion])
+        text += "\n"
+        text += _("Driver: ")
+        text += self.device_driver_name
 
         debug("setting to text='%s'" % text)
         a = self.qaction
         a.setToolTip(text)
 
-    def _on_device_connection_changed(self, is_connected):
+    def _on_device_connection_changed(self, is_connected: bool):
         debug(
             "self.plugin_device_connection_changed.__class__: ",
             self.plugin_device_connection_changed.__class__,
@@ -658,7 +673,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
             self.menu.addSeparator()
 
-            def create_configure_driver_item(menu, menu_text):
+            def create_configure_driver_item(menu: QMenu, menu_text: str):
                 self.create_menu_item_ex(
                     menu,
                     menu_text,
@@ -673,10 +688,11 @@ class KoboUtilitiesAction(InterfaceAction):
 
             # Calibre 8 integrates the functionality of the KoboTouchExtended driver
             # and disables the plugin, so there is no need to switch between drivers
-            if calibre_version >= (8, 0, 0):
+            if calibre_version >= (8, 0, 0):  # pyright: ignore[reportOperatorIssue]
                 create_configure_driver_item(self.menu, _("&Configure driver..."))
             else:
                 driver_menu = self.menu.addMenu(_("Driver"))
+                assert driver_menu is not None
                 create_configure_driver_item(
                     driver_menu,
                     _("&Configure current driver") + " - " + self.device_driver_name,
@@ -752,19 +768,19 @@ class KoboUtilitiesAction(InterfaceAction):
 
     def create_menu_item_ex(
         self,
-        parent_menu,
-        menu_text,
-        image=None,
-        shortcut=None,
-        triggered=None,
-        is_checked=None,
-        shortcut_name=None,
-        unique_name=None,
+        parent_menu: QMenu,
+        menu_text: str,
+        triggered: Union[Callable[[], None], Callable[[QAction], None]],
+        image: Optional[str] = None,
+        shortcut: Union[str, List[str], None, Literal[False]] = None,
+        is_checked: Optional[bool] = None,
+        shortcut_name: Optional[str] = None,
+        unique_name: Optional[str] = None,
         tooltip: Optional[str] = None,
-        is_library_action=False,
-        is_device_action=False,
-        is_no_device_action=False,
-        is_supported=True,
+        is_library_action: bool = False,
+        is_device_action: bool = False,
+        is_no_device_action: bool = False,
+        is_supported: bool = True,
         not_supported_reason: str = _("Not supported for this device"),
     ):
         if self.device is None and not is_no_device_action:
@@ -787,10 +803,10 @@ class KoboUtilitiesAction(InterfaceAction):
             self,
             parent_menu,
             menu_text,
+            triggered,
             image,
             tooltip,
             shortcut,
-            triggered,
             is_checked,
             shortcut_name,
             unique_name,
@@ -851,7 +867,7 @@ class KoboUtilitiesAction(InterfaceAction):
         view = self.gui.current_view()
         return isinstance(view, DeviceBooksView)
 
-    def _get_contentIDs_for_selected(self):
+    def _get_contentIDs_for_selected(self) -> List[str]:
         view = self.gui.current_view()
         if view is None:
             return []
@@ -860,7 +876,7 @@ class KoboUtilitiesAction(InterfaceAction):
             books = [view.model().db[view.model().map[r.row()]] for r in rows]
             contentIDs = [book.contentID for book in books]
         else:
-            book_ids = view.get_selected_ids()
+            book_ids: List[int] = view.get_selected_ids()
             contentIDs = self.get_contentIDs_for_books(book_ids)
             debug("contentIDs=", contentIDs)
 
@@ -978,7 +994,9 @@ class KoboUtilitiesAction(InterfaceAction):
         )
         self.check_if_restart_needed(restart_message=restart_message)
 
-    def check_if_restart_needed(self, restart_message=None, restart_needed=False):
+    def check_if_restart_needed(
+        self, restart_message: Optional[str] = None, restart_needed: bool = False
+    ):
         if self.gui.must_restart_before_config or restart_needed:
             if restart_message is None:
                 restart_message = _(
@@ -1123,7 +1141,9 @@ class KoboUtilitiesAction(InterfaceAction):
         books = self._convert_calibre_ids_to_books(current_view.model().db, selectedIDs)
         for book in books:
             progressbar.increment()
-            device_book_paths = self.get_device_paths_from_id(book.calibre_id)
+            device_book_paths = self.get_device_paths_from_id(
+                cast("int", book.calibre_id)
+            )
             debug("device_book_paths:", device_book_paths)
             book.paths = device_book_paths
             book.contentIDs = [
@@ -1247,7 +1267,7 @@ class KoboUtilitiesAction(InterfaceAction):
         self.options["supports_ratings"] = self.device.supports_ratings
         self.options["epub_location_like_kepub"] = self.device.epub_location_like_kepub
         self.options["fetch_queries"] = self._get_fetch_query_for_firmware_version(
-            self.device_fwversion
+            cast("Tuple[int, int, int]", self.device_fwversion)
         )
         self.options["allOnDevice"] = True
 
@@ -1273,7 +1293,7 @@ class KoboUtilitiesAction(InterfaceAction):
             )
         )
         debug("onDeviceIds:", len(onDeviceIds))
-        onDevice_book_paths = self.get_device_paths_from_ids(onDeviceIds)
+        onDevice_book_paths = self.get_books_from_ids(onDeviceIds)
         debug("onDevice_book_paths:", len(onDevice_book_paths))
 
         books = self._convert_calibre_ids_to_books(library_db, onDeviceIds)
@@ -1283,7 +1303,9 @@ class KoboUtilitiesAction(InterfaceAction):
 
         for book in books:
             progressbar.increment()
-            device_book_paths = [x.path for x in onDevice_book_paths[book.calibre_id]]
+            device_book_paths = [
+                x.path for x in onDevice_book_paths[cast("int", book.calibre_id)]
+            ]
             book.contentIDs = [
                 self.contentid_from_path(path, self.CONTENTTYPE)
                 for path in device_book_paths
@@ -1444,7 +1466,7 @@ class KoboUtilitiesAction(InterfaceAction):
         self.options["supports_ratings"] = self.device.supports_ratings
         self.options["epub_location_like_kepub"] = self.device.epub_location_like_kepub
         self.options["fetch_queries"] = self._get_fetch_query_for_firmware_version(
-            self.device_fwversion
+            cast("Tuple[int, int, int]", self.device_fwversion)
         )
         self.options["allOnDevice"] = False
         self.options[cfg.KEY_PROMPT_TO_STORE] = True
@@ -1453,7 +1475,6 @@ class KoboUtilitiesAction(InterfaceAction):
         if self.options[cfg.KEY_BACKGROUND_JOB]:
             QueueProgressDialog(
                 self.gui,
-                [],
                 self.options,
                 self._store_queue_job,
                 current_view.model().db,
@@ -1469,7 +1490,9 @@ class KoboUtilitiesAction(InterfaceAction):
                 current_view.model().db, selectedIDs
             )
             for book in books:
-                device_book_paths = self.get_device_paths_from_id(book.calibre_id)
+                device_book_paths = self.get_device_paths_from_id(
+                    cast("int", book.calibre_id)
+                )
                 book.paths = device_book_paths
                 book.contentIDs = [
                     self.contentid_from_path(path, self.CONTENTTYPE)
@@ -1521,7 +1544,9 @@ class KoboUtilitiesAction(InterfaceAction):
         debug("selectedIDs:", selectedIDs)
         books = self._convert_calibre_ids_to_books(current_view.model().db, selectedIDs)
         for book in books:
-            device_book_paths = self.get_device_paths_from_id(book.calibre_id)
+            device_book_paths = self.get_device_paths_from_id(
+                cast("int", book.calibre_id)
+            )
             debug("device_book_paths:", device_book_paths)
             book.paths = device_book_paths
             book.contentIDs = [
@@ -1547,7 +1572,7 @@ class KoboUtilitiesAction(InterfaceAction):
         )
 
     def _get_fetch_query_for_firmware_version(
-        self, current_firmware_version
+        self, current_firmware_version: Tuple[int, int, int]
     ) -> Optional[Dict[str, str]]:
         fetch_queries = None
         for fw_version in sorted(FETCH_QUERIES.keys()):
@@ -1620,7 +1645,9 @@ class KoboUtilitiesAction(InterfaceAction):
         debug("selectedIDs:", selectedIDs)
         books = self._convert_calibre_ids_to_books(current_view.model().db, selectedIDs)
         for book in books:
-            device_book_paths = self.get_device_paths_from_id(book.calibre_id)
+            device_book_paths = self.get_device_paths_from_id(
+                cast("int", book.calibre_id)
+            )
             debug("device_book_paths:", device_book_paths)
             book.paths = device_book_paths
             book.contentIDs = [
@@ -1675,7 +1702,6 @@ class KoboUtilitiesAction(InterfaceAction):
         debug("self.options=", self.options)
         QueueProgressDialog(
             self.gui,
-            [],
             self.options,
             self._remove_annotations_job,
             current_view.model().db,
@@ -1932,7 +1958,9 @@ class KoboUtilitiesAction(InterfaceAction):
             _("Number of books to get collections for: {0}").format(len(books))
         )
         for book in books:
-            device_book_paths = self.get_device_paths_from_id(book.calibre_id)
+            device_book_paths = self.get_device_paths_from_id(
+                cast("int", book.calibre_id)
+            )
             debug("device_book_paths:", device_book_paths)
             book.paths = device_book_paths
             book.contentIDs = [
@@ -2116,7 +2144,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 book = seriesBook._mi
                 book.series_index_string = seriesBook.series_index_string()
                 book.kobo_series_number = seriesBook.series_index_string()  # pyright: ignore[reportAttributeAccessIssue]
-                book.kobo_series = seriesBook.series_name()
+                book.kobo_series = seriesBook.series_name()  # pyright: ignore[reportAttributeAccessIssue]
                 book.contentIDs = [book.contentID]
                 books.append(book)
                 self.options["title"] = (
@@ -2175,8 +2203,10 @@ class KoboUtilitiesAction(InterfaceAction):
             show=True,
         )
 
-    def get_series_columns(self):
-        custom_columns = self.gui.library_view.model().custom_columns
+    def get_series_columns(self) -> Dict[str, Dict[str, Any]]:
+        custom_columns = cast(
+            "Dict[str, Dict[str, Any]]", self.gui.library_view.model().custom_columns
+        )
         series_columns = OrderedDict()
         for key, column in list(custom_columns.items()):
             typ = column["datatype"]
@@ -2363,7 +2393,7 @@ class KoboUtilitiesAction(InterfaceAction):
         self.options["job_function"] = "clean_images_dir"
         debug("self.options=", self.options)
         QueueProgressDialog(
-            self.gui, [], self.options, self._clean_images_dir_job, None, self
+            self.gui, self.options, self._clean_images_dir_job, None, self
         )
 
     def getAnnotationForSelected(self) -> None:
@@ -2385,21 +2415,21 @@ class KoboUtilitiesAction(InterfaceAction):
 
         self._getAnnotationForSelected()
 
-    def _get_selected_ids(self):
+    def _get_selected_ids(self) -> List[int]:
         current_view = self.gui.current_view()
         if current_view is None:
             return []
-        rows = current_view.selectionModel().selectedRows()
+        rows: List[QModelIndex] = current_view.selectionModel().selectedRows()
         if not rows or len(rows) == 0:
             return []
         debug("self.gui.current_view().model()", current_view.model())
         return list(map(current_view.model().id, rows))
 
-    def contentid_from_path(self, path, ContentType):
+    def contentid_from_path(self, path: str, content_type: int):
         assert self.device is not None
         main_prefix = self.device.driver._main_prefix
         assert isinstance(main_prefix, str), f"_main_prefix is type {type(main_prefix)}"
-        if ContentType == 6:
+        if content_type == 6:
             extension = os.path.splitext(path)[1]
             if extension == ".kobo":
                 ContentID = os.path.splitext(path)[0]
@@ -2427,7 +2457,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 )
         return ContentID.replace("\\", "/")
 
-    def get_contentIDs_for_books(self, book_ids):
+    def get_contentIDs_for_books(self, book_ids: List[int]):
         contentIDs = []
         for book_id in book_ids:
             contentIDs_for_book = self.get_contentIDs_from_id(book_id)
@@ -2451,14 +2481,18 @@ class KoboUtilitiesAction(InterfaceAction):
 
         return books
 
-    def _convert_calibre_ids_to_books(self, db, ids, get_cover=False) -> List[Book]:
+    def _convert_calibre_ids_to_books(
+        self, db: LibraryDatabase, ids: Iterable[int], get_cover: bool = False
+    ) -> List[Book]:
         books = []
         for book_id in ids:
             book = self._convert_calibre_id_to_book(db, book_id, get_cover=get_cover)
             books.append(book)
         return books
 
-    def _convert_calibre_id_to_book(self, db, book_id, get_cover=False) -> Book:
+    def _convert_calibre_id_to_book(
+        self, db: LibraryDatabase, book_id: int, get_cover: bool = False
+    ) -> Book:
         mi = db.get_metadata(book_id, index_is_id=True, get_cover=get_cover)
         book = Book("", "lpath", title=mi.title, other=mi)
         book.calibre_id = mi.id
@@ -2610,36 +2644,32 @@ class KoboUtilitiesAction(InterfaceAction):
             return cast("Tuple[int, int, int]", self.device.driver.fwversion)
         return None
 
-    def get_device_path_from_id(self, book_id):
-        paths = []
-        for x in ("memory", "card_a"):
-            x = getattr(self.gui, x + "_view").model()
-            paths += x.paths_for_db_ids({book_id}, as_map=True)[book_id]
-        return paths[0].path if paths else None
+    def get_device_path_from_id(self, book_id: int) -> Optional[str]:
+        paths = self.get_device_paths_from_id(book_id)
+        return paths[0] if paths else None
 
-    def get_device_paths_from_id(self, book_id):
-        paths = []
-        for x in ("memory", "card_a"):
-            x = getattr(self.gui, x + "_view").model()
-            paths += x.paths_for_db_ids([book_id], as_map=True)[book_id]
-        debug("paths=", paths)
-        return [r.path for r in paths]
+    def get_device_paths_from_id(self, book_id: int) -> List[str]:
+        books = self.get_books_from_ids({book_id})
+        return [book.path for book in books[book_id]]
 
-    def get_device_paths_from_ids(self, book_ids):
-        paths = defaultdict(list)
-        for x in ("memory", "card_a"):
-            x = getattr(self.gui, x + "_view").model()
-            x = x.paths_for_db_ids(book_ids, as_map=True)
-            for book_id in x:
-                paths[book_id].extend(x[book_id])
-        return paths
+    def get_books_from_ids(self, book_ids: Iterable[int]) -> Dict[int, List[Book]]:
+        books = defaultdict(list)
+        for view in (self.gui.memory_view, self.gui.card_a_view):
+            model: DeviceBooksModel = view.model()
+            view_books = cast(
+                "Dict[int, List[Book]]", model.paths_for_db_ids(book_ids, as_map=True)
+            )
+            for book_id in view_books:
+                books[book_id].extend(view_books[book_id])
+        debug("books=", books)
+        return books
 
-    def get_device_path_from_contentID(self, contentID, mimetype):
+    def get_device_path_from_contentID(self, contentID: str, mimetype: str):
         assert self.device is not None
         card = "carda" if contentID.startswith("file:///mnt/sd/") else "main"
         return self.device.driver.path_from_contentid(contentID, "6", mimetype, card)
 
-    def get_contentIDs_from_id(self, book_id):
+    def get_contentIDs_from_id(self, book_id: int):
         debug("book_id=", book_id)
         paths = []
         for x in ("memory", "card_a"):
@@ -2649,7 +2679,7 @@ class KoboUtilitiesAction(InterfaceAction):
         return [r.contentID for r in paths]
 
     def device_database_connection(
-        self, use_row_factory=False
+        self, use_row_factory: bool = False
     ) -> DeviceDatabaseConnection:
         assert self.device is not None
         return DeviceDatabaseConnection(
@@ -2676,7 +2706,7 @@ class KoboUtilitiesAction(InterfaceAction):
         )
         self.gui.status_bar.show_message(self.giu_name + " - " + desc, 3000)
 
-    def _read_completed(self, job):
+    def _read_completed(self, job: DeviceJob):
         if job.failed:
             self.gui.job_exception(
                 job, dialog_title=_("Failed to get reading positions")
@@ -2736,7 +2766,7 @@ class KoboUtilitiesAction(InterfaceAction):
                         "progress", sorted(goodreads_sync_plugin.users.keys())[0]
                     )
 
-    def _device_database_backup(self, backup_options):
+    def _device_database_backup(self, backup_options: Dict[str, Any]):
         debug("Start")
 
         from .jobs import do_device_database_backup
@@ -2751,14 +2781,14 @@ class KoboUtilitiesAction(InterfaceAction):
         )
         self.gui.status_bar.show_message(_("Kobo Utilities") + " - " + desc, 3000)
 
-    def _device_database_backup_completed(self, job):
+    def _device_database_backup_completed(self, job: DeviceJob):
         if job.failed:
             self.gui.job_exception(
                 job, dialog_title=_("Failed to back up device database")
             )
             return
 
-    def _clean_images_dir_job(self, options):
+    def _clean_images_dir_job(self, options: Dict[str, Any]):
         debug("Start")
         from .jobs import do_clean_images_dir
 
@@ -2778,7 +2808,7 @@ class KoboUtilitiesAction(InterfaceAction):
         )
         self.gui.status_bar.show_message(_("Cleaning images directory") + "...")
 
-    def _clean_images_dir_completed(self, job) -> None:
+    def _clean_images_dir_completed(self, job: DeviceJob) -> None:
         if job.failed:
             self.gui.job_exception(
                 job, dialog_title=_("Failed to check cover directory on device")
@@ -2824,7 +2854,7 @@ class KoboUtilitiesAction(InterfaceAction):
             det_msg=details,
         )
 
-    def _remove_annotations_job(self, options, books):
+    def _remove_annotations_job(self, options: Dict[str, Any], books: List[Tuple[Any]]):
         debug("Start")
         from .jobs import do_remove_annotations
 
@@ -2844,7 +2874,7 @@ class KoboUtilitiesAction(InterfaceAction):
         )
         self.gui.status_bar.show_message(_("Removing annotations files") + "...")
 
-    def _remove_annotations_completed(self, job) -> None:
+    def _remove_annotations_completed(self, job: DeviceJob) -> None:
         if job.failed:
             self.gui.job_exception(
                 job, dialog_title=_("Failed to check cover directory on device")
@@ -2869,7 +2899,7 @@ class KoboUtilitiesAction(InterfaceAction):
             det_msg=details,
         )
 
-    def validate_profile(self, profile_name=None):
+    def validate_profile(self, profile_name: str):
         columns_config = None
         if profile_name:
             profile = cfg.get_profile_info(self.gui.current_db, profile_name)
@@ -2887,14 +2917,14 @@ class KoboUtilitiesAction(InterfaceAction):
             include_composites=False
         )
 
-        def check_column_name(column_name):
+        def check_column_name(column_name: Optional[str]):
             return (
                 None
                 if column_name is None or len(column_name.strip()) == 0
                 else column_name
             )
 
-        def check_column_exists(column_name):
+        def check_column_exists(column_name: Optional[str]):
             return column_name is not None and column_name in custom_cols
 
         debug("columns_config:", columns_config)
@@ -2976,7 +3006,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
         return None
 
-    def get_column_names(self, profile_name=None):
+    def get_column_names(self, profile_name: Optional[str] = None):
         if profile_name:
             profile = cfg.get_profile_info(self.gui.current_db, profile_name)
             columns_config = profile[cfg.CUSTOM_COLUMNS_STORE_NAME]
@@ -3056,7 +3086,7 @@ class KoboUtilitiesAction(InterfaceAction):
         ) = self.get_column_names()
         return rating_column
 
-    def _update_database_columns(self, reading_locations):
+    def _update_database_columns(self, reading_locations: Dict[int, Dict[str, Any]]):
         assert self.device is not None
         debug("reading_locations=", reading_locations)
         debug("start number of reading_locations= %d" % (len(reading_locations)))
@@ -3068,8 +3098,8 @@ class KoboUtilitiesAction(InterfaceAction):
 
         library_db = self.gui.current_db
 
-        def value_changed(old_value, new_value):
-            return (
+        def value_changed(old_value: Optional[object], new_value: Optional[object]):
+            return bool(
                 (old_value is not None and new_value is None)
                 or (old_value is None and new_value is not None)
                 or old_value != new_value
@@ -3134,53 +3164,41 @@ class KoboUtilitiesAction(InterfaceAction):
             last_read = None
             time_spent_reading = None
             rest_of_book_estimate = None
-            if reading_location is not None:
-                debug("reading_location=", reading_location)
-                if (
-                    reading_location["MimeType"] == MIMETYPE_KOBO
-                    or self.device.epub_location_like_kepub
-                ):
-                    kobo_chapteridbookmarked = reading_location["ChapterIDBookmarked"]
-                    kobo_adobe_location = None
-                else:
-                    kobo_chapteridbookmarked = (
-                        reading_location["ChapterIDBookmarked"][
-                            len(reading_location["ContentID"]) + 1 :
-                        ]
-                        if reading_location["ChapterIDBookmarked"]
-                        else None
-                    )
-                    kobo_adobe_location = reading_location["adobe_location"]
-
-                if reading_location["ReadStatus"] == 1:
-                    kobo_percentRead = reading_location["___PercentRead"]
-                elif reading_location["ReadStatus"] == 2:
-                    kobo_percentRead = 100
-
-                if reading_location["Rating"]:
-                    kobo_rating = reading_location["Rating"] * 2
-                else:
-                    kobo_rating = 0
-
-                if reading_location["DateLastRead"]:
-                    last_read = convert_kobo_date(reading_location["DateLastRead"])
-
-                if reading_location["TimeSpentReading"]:
-                    time_spent_reading = reading_location["TimeSpentReading"]
-
-                if reading_location["RestOfBookEstimate"]:
-                    rest_of_book_estimate = reading_location["RestOfBookEstimate"]
-
-            elif self.options[cfg.KEY_CLEAR_IF_UNREAD]:
-                kobo_chapteridbookmarked = None
+            debug("reading_location=", reading_location)
+            if (
+                reading_location["MimeType"] == MIMETYPE_KOBO
+                or self.device.epub_location_like_kepub
+            ):
+                kobo_chapteridbookmarked = reading_location["ChapterIDBookmarked"]
                 kobo_adobe_location = None
-                kobo_percentRead = None
-                last_read = None
-                kobo_rating = 0
-                time_spent_reading = None
-                rest_of_book_estimate = None
             else:
-                continue
+                kobo_chapteridbookmarked = (
+                    reading_location["ChapterIDBookmarked"][
+                        len(reading_location["ContentID"]) + 1 :
+                    ]
+                    if reading_location["ChapterIDBookmarked"]
+                    else None
+                )
+                kobo_adobe_location = reading_location["adobe_location"]
+
+            if reading_location["ReadStatus"] == 1:
+                kobo_percentRead = reading_location["___PercentRead"]
+            elif reading_location["ReadStatus"] == 2:
+                kobo_percentRead = 100
+
+            if reading_location["Rating"]:
+                kobo_rating = reading_location["Rating"] * 2
+            else:
+                kobo_rating = 0
+
+            if reading_location["DateLastRead"]:
+                last_read = convert_kobo_date(reading_location["DateLastRead"])
+
+            if reading_location["TimeSpentReading"]:
+                time_spent_reading = reading_location["TimeSpentReading"]
+
+            if reading_location["RestOfBookEstimate"]:
+                rest_of_book_estimate = reading_location["RestOfBookEstimate"]
 
             book_updated = False
             if last_read_column_name is not None:
@@ -3376,17 +3394,17 @@ class KoboUtilitiesAction(InterfaceAction):
         assert self.device is not None
 
         # Generate a path_map from selected ids
-        def get_ids_from_selected_rows():
+        def get_ids_from_selected_rows() -> List[int]:
             rows = self.gui.library_view.selectionModel().selectedRows()
             if not rows or len(rows) < 1:
                 rows = range(self.gui.library_view.model().rowCount(QModelIndex()))
             return list(map(self.gui.library_view.model().id, rows))
 
-        def get_formats(_id) -> List[str]:
+        def get_formats(_id: int) -> List[str]:
             formats = db.formats(_id, index_is_id=True)
             return [fmt.lower() for fmt in formats.split(",")]
 
-        def generate_annotation_paths(ids):
+        def generate_annotation_paths(ids: List[int]):
             # Generate path templates
             # Individual storage mount points scanned/resolved in driver.get_annotations()
             path_map = {}
@@ -3469,15 +3487,17 @@ class KoboUtilitiesAction(InterfaceAction):
         d.setWindowIcon(self.qaction.icon())
         d.exec()
 
-    def _upload_covers(self, books):
+    def _upload_covers(self, books: List[Book]):
         uploaded_covers = 0
         total_books = 0
         not_on_device_books = len(books)
         device = self.device
         assert device is not None
 
-        kobo_kepub_dir = device.driver.normalize_path(".kobo/kepub/")
-        sd_kepub_dir = device.driver.normalize_path("koboExtStorage/kepub/")
+        kobo_kepub_dir = cast("str", device.driver.normalize_path(".kobo/kepub/"))
+        sd_kepub_dir = cast(
+            "str", device.driver.normalize_path("koboExtStorage/kepub/")
+        )
         debug("kobo_kepub_dir=", kobo_kepub_dir)
         # Extra cover upload options were added in calibre 3.45.
         driver_supports_extended_cover_options = hasattr(self.device, "dithered_covers")
@@ -3487,7 +3507,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
         for book in books:
             total_books += 1
-            paths = self.get_device_paths_from_id(book.calibre_id)
+            paths = self.get_device_paths_from_id(cast("int", book.calibre_id))
             not_on_device_books -= 1 if len(paths) > 0 else 0
             for path in paths:
                 debug("path=", path)
@@ -3553,7 +3573,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
         return total_books, uploaded_covers, not_on_device_books
 
-    def _remove_covers(self, books):
+    def _remove_covers(self, books: List[Book]):
         connection = self.device_database_connection()
         total_books = 0
         removed_covers = 0
@@ -3584,7 +3604,7 @@ class KoboUtilitiesAction(InterfaceAction):
             contentIDs = (
                 [book.contentID]
                 if book.contentID is not None
-                else self.get_contentIDs_from_id(book.calibre_id)
+                else self.get_contentIDs_from_id(cast("int", book.calibre_id))
             )
             debug("contentIDs=", contentIDs)
             for contentID in contentIDs:
@@ -3643,7 +3663,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
         return removed_covers, not_on_device_books, total_books
 
-    def _open_cover_image_directory(self, books):
+    def _open_cover_image_directory(self, books: List[Book]):
         connection = self.device_database_connection(use_row_factory=True)
         total_books = 0
         removed_covers = 0
@@ -3670,7 +3690,7 @@ class KoboUtilitiesAction(InterfaceAction):
             contentIDs = (
                 [book.contentID]
                 if book.contentID is not None
-                else self.get_contentIDs_from_id(book.calibre_id)
+                else self.get_contentIDs_from_id(cast("int", book.calibre_id))
             )
             debug("contentIDs=", contentIDs)
             for contentID in contentIDs:
@@ -3711,7 +3731,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
         return removed_covers, not_on_device_books, total_books
 
-    def _check_book_in_database(self, books):
+    def _check_book_in_database(self, books: List[Book]) -> List[Book]:
         connection = self.device_database_connection()
         not_on_device_books = []
 
@@ -3725,7 +3745,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
         for book in books:
             if not book.contentID:
-                book.contentID = self.contentid_from_path(book.path, self.CONTENTTYPE)
+                book.contentID = self.contentid_from_path(book.path, self.CONTENTTYPE)  # pyright: ignore[reportAttributeAccessIssue]
 
             query_values = (book.contentID,)
             cursor.execute(imageId_query, query_values)
@@ -3737,7 +3757,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
         return not_on_device_books
 
-    def _get_shelf_count(self):
+    def _get_shelf_count(self) -> List[List[Any]]:
         connection = self.device_database_connection()
         shelves = []
 
@@ -3764,7 +3784,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
         return shelves
 
-    def _get_related_books_count(self, related_category):
+    def _get_related_books_count(self, related_category: int) -> List[Dict[str, Any]]:
         debug("order_shelf_type:", related_category)
         connection = self.device_database_connection()
         related_books = []
@@ -3802,7 +3822,9 @@ class KoboUtilitiesAction(InterfaceAction):
         debug("related_books:", related_books)
         return related_books
 
-    def _set_related_books(self, related_books, options):
+    def _set_related_books(
+        self, related_books: List[Dict[str, Any]], options: Dict[str, Any]
+    ):
         debug("related_books:", related_books, " options:", options)
 
         categories_count = 0
@@ -3877,7 +3899,7 @@ class KoboUtilitiesAction(InterfaceAction):
         debug("end")
         return categories_count, books_count
 
-    def _delete_related_books(self, options) -> None:
+    def _delete_related_books(self, options: Dict[str, Any]) -> None:
         debug("options:", options)
 
         progressbar = ProgressBar(
@@ -3902,7 +3924,9 @@ class KoboUtilitiesAction(InterfaceAction):
         progressbar.hide()
         debug("end")
 
-    def _remove_duplicate_shelves(self, shelves, options):
+    def _remove_duplicate_shelves(
+        self, shelves: List[List[Any]], options: Dict[str, Any]
+    ):
         debug("total shelves=%d: options=%s" % (len(shelves), options))
         starting_shelves = 0
         shelves_removed = 0
@@ -4098,7 +4122,7 @@ class KoboUtilitiesAction(InterfaceAction):
         debug("test_query=%s" % test_query)
         return test_query
 
-    def _update_metadata(self, books, progressbar: ProgressBar):
+    def _update_metadata(self, books: List[Book], progressbar: ProgressBar):
         assert self.device is not None
         from calibre.ebooks.metadata import authors_to_string
         from calibre.utils.localization import canonicalize_lang, lang_as_iso639_1
@@ -4163,7 +4187,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 progressbar.set_label(_("Updating metadata for {}").format(book.title))
                 progressbar.increment()
 
-                for contentID in book.contentIDs:
+                for contentID in cast("List[str]", book.contentIDs):
                     debug("searching for contentId='%s'" % (contentID))
                     if not contentID:
                         contentID = self.contentid_from_path(
@@ -4342,15 +4366,18 @@ class KoboUtilitiesAction(InterfaceAction):
                                 if rating_column == "rating":
                                     rating = newmi.rating
                                 else:
-                                    rating = newmi.get_user_metadata(
+                                    metadata = newmi.get_user_metadata(
                                         rating_column, True
-                                    )["#value#"]
+                                    )
+                                    assert metadata is not None
+                                    rating = metadata["#value#"]
                                 debug(
                                     "rating=",
                                     rating,
                                     "result[Rating]=",
                                     result["Rating"],
                                 )
+                                assert isinstance(rating, int)
                                 rating = (
                                     None if not rating or rating == 0 else rating / 2
                                 )
@@ -4471,9 +4498,11 @@ class KoboUtilitiesAction(InterfaceAction):
                                 subtitle_template
                                 and self.options[cfg.KEY_SUBTITLE_TEMPLATE][0] == "#"
                             ):
-                                new_subtitle = newmi.get_user_metadata(
+                                metadata = newmi.get_user_metadata(
                                     self.options[cfg.KEY_SUBTITLE_TEMPLATE], True
-                                )["#value#"]
+                                )
+                                assert metadata is not None
+                                new_subtitle = metadata["#value#"]
                             else:
                                 pb = [
                                     (
@@ -4483,6 +4512,7 @@ class KoboUtilitiesAction(InterfaceAction):
                                 ]
                                 book.template_to_attribute(book, pb)
                                 debug("after - mi.subtitle=", book.subtitle)
+                                assert book.subtitle is not None
                                 new_subtitle = (
                                     book.subtitle if len(book.subtitle) > 0 else None
                                 )
@@ -4548,9 +4578,11 @@ class KoboUtilitiesAction(InterfaceAction):
                             elif self.options[cfg.KEY_SYNC_DATE_COLUMN] == "pubdate":
                                 new_timestamp = newmi.pubdate
                             elif self.options[cfg.KEY_SYNC_DATE_COLUMN][0] == "#":
-                                new_timestamp = newmi.get_user_metadata(
+                                metadata = newmi.get_user_metadata(
                                     self.options[cfg.KEY_SYNC_DATE_COLUMN], True
-                                )["#value#"]
+                                )
+                                assert metadata is not None
+                                new_timestamp = metadata["#value#"]
                             elif (
                                 self.options[cfg.KEY_SYNC_DATE_COLUMN]
                                 == cfg.TOKEN_FILE_TIMESTAMP
@@ -4561,8 +4593,9 @@ class KoboUtilitiesAction(InterfaceAction):
                                     contentID, result["MimeType"]
                                 )
                                 debug("device_book_path=", device_book_path)
-                                new_timestamp = datetime.fromtimestamp(
-                                    os.path.getmtime(device_book_path), tz=timezone.utc
+                                new_timestamp = dt.datetime.fromtimestamp(
+                                    os.path.getmtime(device_book_path),
+                                    tz=dt.timezone.utc,
                                 )
                                 debug("new_timestamp=", new_timestamp)
 
@@ -4649,7 +4682,9 @@ class KoboUtilitiesAction(InterfaceAction):
 
         return (updated_books, unchanged_books, not_on_device_books, count_books)
 
-    def _render_synopsis(self, mi, book, template=None):
+    def _render_synopsis(
+        self, mi: Metadata, book: Book, template: Optional[str] = None
+    ):
         from xml.sax.saxutils import escape
 
         from calibre.customize.ui import output_profiles
@@ -4710,7 +4745,7 @@ class KoboUtilitiesAction(InterfaceAction):
             except Exception:
                 author = ""
             author = escape(author)
-            publisher = mi.publisher if mi.publisher else ""
+            publisher = cast("str", mi.publisher) if mi.publisher else ""
             publisher = escape(publisher)
             title_str = mi.title if mi.title else _("Unknown")
             title_str = escape(title_str)
@@ -4720,7 +4755,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 if is_date_undefined(mi.pubdate):
                     pubdate = ""
                 else:
-                    pubdate = strftime("%Y", mi.pubdate.timetuple())
+                    pubdate = strftime("%Y", cast("dt.date", mi.pubdate).timetuple())
             except Exception:
                 pubdate = ""
 
@@ -4777,16 +4812,14 @@ class KoboUtilitiesAction(InterfaceAction):
 
         return rendered_comments
 
-    def _store_current_bookmark(self, books, options=None):
+    def _store_current_bookmark(self, books: List[Book]):
         assert self.device is not None
-        if options:
-            self.options = options
 
         reading_locations_updated = 0
         books_without_reading_locations = 0
         count_books = 0
 
-        def value_changed(old_value, new_value):
+        def value_changed(old_value: Optional[object], new_value: Optional[object]):
             return (
                 (old_value is not None and new_value is None)
                 or (old_value is None and new_value is not None)
@@ -4852,13 +4885,14 @@ class KoboUtilitiesAction(InterfaceAction):
             progressbar.increment()
             book_updated = False
 
-            if len(book.contentIDs) == 0:
+            if len(cast("List[str]", book.contentIDs)) == 0:
                 books_without_reading_locations += 1
                 continue
 
-            for contentID in book.contentIDs:
+            for contentID in cast("List[str]", book.contentIDs):
                 debug("contentId='%s'" % (contentID))
                 fetch_values = (contentID,)
+                assert self.device_fwversion is not None
                 fetch_queries = self._get_fetch_query_for_firmware_version(
                     self.device_fwversion
                 )
@@ -4902,9 +4936,11 @@ class KoboUtilitiesAction(InterfaceAction):
                             debug("last_read=", last_read)
 
                         if last_read_column_name is not None and store_if_more_recent:
-                            current_last_read = book.get_user_metadata(
+                            metadata = book.get_user_metadata(
                                 last_read_column_name, True
-                            )["#value#"]
+                            )
+                            assert metadata is not None
+                            current_last_read = metadata["#value#"]
                             debug(
                                 "book.get_user_metadata(last_read_column_name, True)['#value#']=",
                                 current_last_read,
@@ -4924,9 +4960,11 @@ class KoboUtilitiesAction(InterfaceAction):
                             kobo_percentRead_column_name is not None
                             and do_not_store_if_reopened
                         ):
-                            current_percentRead = book.get_user_metadata(
+                            metadata = book.get_user_metadata(
                                 kobo_percentRead_column_name, True
-                            )["#value#"]
+                            )
+                            assert metadata is not None
+                            current_percentRead = metadata["#value#"]
                             debug(
                                 "do_not_store_if_reopened - current_percentRead=",
                                 current_percentRead,
@@ -4972,9 +5010,9 @@ class KoboUtilitiesAction(InterfaceAction):
                 debug("rest_of_book_estimate='%s'" % (rest_of_book_estimate))
 
                 if last_read_column_name is not None:
-                    current_last_read = book.get_user_metadata(
-                        last_read_column_name, True
-                    )["#value#"]
+                    metadata = book.get_user_metadata(last_read_column_name, True)
+                    assert metadata is not None
+                    current_last_read = metadata["#value#"]
                     debug(
                         "book.get_user_metadata(last_read_column_name, True)['#value#']=",
                         current_last_read,
@@ -5007,22 +5045,16 @@ class KoboUtilitiesAction(InterfaceAction):
                         new_value = None
                         debug("setting bookmark column to None")
                     debug("chapterIdBookmark - on kobo=", new_value)
-                    debug(
-                        "chapterIdBookmark - in library=",
-                        book.get_user_metadata(
-                            kobo_chapteridbookmarked_column_name, True
-                        )["#value#"],
+                    metadata = book.get_user_metadata(
+                        kobo_chapteridbookmarked_column_name, True
                     )
+                    assert metadata is not None
+                    old_value = metadata["#value#"]
+                    debug("chapterIdBookmark - in library=", old_value)
                     debug(
                         "chapterIdBookmark - on kobo==in library=",
-                        new_value
-                        == book.get_user_metadata(
-                            kobo_chapteridbookmarked_column_name, True
-                        )["#value#"],
+                        new_value == old_value,
                     )
-                    old_value = book.get_user_metadata(
-                        kobo_chapteridbookmarked_column_name, True
-                    )["#value#"]
 
                     if value_changed(old_value, new_value):
                         id_map_chapteridbookmarked[book.calibre_id] = new_value
@@ -5032,9 +5064,11 @@ class KoboUtilitiesAction(InterfaceAction):
 
                 if kobo_percentRead_column_name is not None:
                     debug("setting kobo_percentRead=", kobo_percentRead)
-                    current_percentRead = book.get_user_metadata(
+                    metadata = book.get_user_metadata(
                         kobo_percentRead_column_name, True
-                    )["#value#"]
+                    )
+                    assert metadata is not None
+                    current_percentRead = metadata["#value#"]
                     debug("percent read - in book=", current_percentRead)
 
                     if value_changed(current_percentRead, kobo_percentRead):
@@ -5053,9 +5087,9 @@ class KoboUtilitiesAction(InterfaceAction):
                                 book.calibre_id, kobo_rating, commit=False
                             )
                     else:
-                        current_rating = book.get_user_metadata(
-                            rating_column_name, True
-                        )["#value#"]
+                        metadata = book.get_user_metadata(rating_column_name, True)
+                        assert metadata is not None
+                        current_rating = metadata["#value#"]
                         if current_rating != kobo_rating:
                             library_db.set_custom(
                                 book.calibre_id,
@@ -5071,9 +5105,11 @@ class KoboUtilitiesAction(InterfaceAction):
 
                 if time_spent_reading_column_name is not None:
                     debug("setting time_spent_reading=", time_spent_reading)
-                    current_time_spent_reading = book.get_user_metadata(
+                    metadata = book.get_user_metadata(
                         time_spent_reading_column_name, True
-                    )["#value#"]
+                    )
+                    assert metadata is not None
+                    current_time_spent_reading = metadata["#value#"]
                     debug("time spent reading - in book=", current_time_spent_reading)
 
                     if value_changed(current_time_spent_reading, time_spent_reading):
@@ -5084,9 +5120,11 @@ class KoboUtilitiesAction(InterfaceAction):
 
                 if rest_of_book_estimate_column_name is not None:
                     debug("setting rest_of_book_estimate=", rest_of_book_estimate)
-                    current_rest_of_book_estimate = book.get_user_metadata(
+                    metadata = book.get_user_metadata(
                         time_spent_reading_column_name, True
-                    )["#value#"]
+                    )
+                    assert metadata is not None
+                    current_rest_of_book_estimate = metadata["#value#"]
                     debug(
                         "rest of book estimate - in book=",
                         current_rest_of_book_estimate,
@@ -5177,7 +5215,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
         return (reading_locations_updated, books_without_reading_locations, count_books)
 
-    def _restore_current_bookmark(self, books):
+    def _restore_current_bookmark(self, books: List[Book]):
         assert self.device is not None
         updated_books = 0
         not_on_device_books = 0
@@ -5256,7 +5294,7 @@ class KoboUtilitiesAction(InterfaceAction):
             cursor = connection.cursor()
             for book in books:
                 count_books += 1
-                for contentID in book.contentIDs:
+                for contentID in cast("List[str]", book.contentIDs):
                     chapter_values = (contentID,)
                     cursor.execute(chapter_query, chapter_values)
                     try:
@@ -5282,9 +5320,11 @@ class KoboUtilitiesAction(InterfaceAction):
                         kobo_rest_of_book_estimate = None
 
                         if kobo_chapteridbookmarked_column:
-                            reading_location_string = book.get_user_metadata(
+                            metadata = book.get_user_metadata(
                                 kobo_chapteridbookmarked_column, True
-                            )["#value#"]
+                            )
+                            assert metadata is not None
+                            reading_location_string = metadata["#value#"]
                             debug("reading_location_string=", reading_location_string)
                             if reading_location_string is not None:
                                 if result["MimeType"] == MIMETYPE_KOBO:
@@ -5347,9 +5387,11 @@ class KoboUtilitiesAction(InterfaceAction):
                                 )
 
                         if kobo_percentRead_column:
-                            kobo_percentRead = book.get_user_metadata(
+                            metadata = book.get_user_metadata(
                                 kobo_percentRead_column, True
-                            )["#value#"]
+                            )
+                            assert metadata is not None
+                            kobo_percentRead = metadata["#value#"]
                             kobo_percentRead = (
                                 kobo_percentRead
                                 if kobo_percentRead
@@ -5377,9 +5419,9 @@ class KoboUtilitiesAction(InterfaceAction):
                             )
                             debug("setting to now - last_read= ", last_read)
                         elif last_read_column:
-                            last_read = book.get_user_metadata(last_read_column, True)[
-                                "#value#"
-                            ]
+                            metadata = book.get_user_metadata(last_read_column, True)
+                            assert metadata is not None
+                            last_read = metadata["#value#"]
                             if last_read is not None:
                                 last_read = last_read.strftime(
                                     self.device_timestamp_string
@@ -5414,9 +5456,10 @@ class KoboUtilitiesAction(InterfaceAction):
                             if rating_column == "rating":
                                 rating = book.rating
                             else:
-                                rating = book.get_user_metadata(rating_column, True)[
-                                    "#value#"
-                                ]
+                                metadata = book.get_user_metadata(rating_column, True)
+                                assert metadata is not None
+                                rating = metadata["#value#"]
+                            assert isinstance(rating, int)
                             rating = None if not rating or rating == 0 else rating / 2
                             debug(
                                 "rating=",
@@ -5446,9 +5489,11 @@ class KoboUtilitiesAction(InterfaceAction):
                                 rating_change_query = rating_update
 
                         if time_spent_reading_column:
-                            kobo_time_spent_reading = book.get_user_metadata(
+                            metadata = book.get_user_metadata(
                                 time_spent_reading_column, True
-                            )["#value#"]
+                            )
+                            assert metadata is not None
+                            kobo_time_spent_reading = metadata["#value#"]
                             kobo_time_spent_reading = (
                                 kobo_time_spent_reading
                                 if kobo_time_spent_reading is not None
@@ -5458,9 +5503,11 @@ class KoboUtilitiesAction(InterfaceAction):
                             chapter_set_clause += ", TimeSpentReading = ? "
 
                         if rest_of_book_estimate_column:
-                            kobo_rest_of_book_estimate = book.get_user_metadata(
+                            metadata = book.get_user_metadata(
                                 rest_of_book_estimate_column, True
-                            )["#value#"]
+                            )
+                            assert metadata is not None
+                            kobo_rest_of_book_estimate = metadata["#value#"]
                             kobo_rest_of_book_estimate = (
                                 kobo_rest_of_book_estimate
                                 if kobo_rest_of_book_estimate is not None
@@ -5529,7 +5576,9 @@ class KoboUtilitiesAction(InterfaceAction):
 
         return (updated_books, not_on_device_books, count_books)
 
-    def _get_shelves_from_device(self, books, options, progressbar: ProgressBar):
+    def _get_shelves_from_device(
+        self, books: List[Book], options: Dict[str, Any], progressbar: ProgressBar
+    ):
         if options:
             self.options = options
 
@@ -5576,7 +5625,7 @@ class KoboUtilitiesAction(InterfaceAction):
             count_books += 1
             shelf_names = []
             update_library = False
-            for contentID in book.contentIDs:
+            for contentID in cast("List[str]", book.contentIDs):
                 debug("title='%s' contentId='%s'" % (book.title, contentID))
                 fetch_values = (contentID,)
                 debug("tetch_query='%s'" % (fetch_query))
@@ -5596,9 +5645,9 @@ class KoboUtilitiesAction(InterfaceAction):
             if update_library and len(shelf_names) > 0:
                 debug("device shelf_names='%s'" % (shelf_names))
                 debug("device set(shelf_names)='%s'" % (set(shelf_names)))
-                old_value = book.get_user_metadata(bookshelf_column_name, True)[
-                    "#value#"
-                ]
+                metadata = book.get_user_metadata(bookshelf_column_name, True)
+                assert metadata is not None
+                old_value = metadata["#value#"]
                 debug("library shelf names='%s'" % (old_value))
                 if old_value is None or set(old_value) != set(shelf_names):
                     debug("shelves are not the same")
@@ -5682,7 +5731,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 self.timestamp_string = "%Y-%m-%dT%H:%M:%SZ"
         return self.timestamp_string
 
-    def _set_reader_fonts(self, contentIDs, delete=False):
+    def _set_reader_fonts(self, contentIDs: List[str], delete: bool = False):
         debug("start")
         updated_fonts = 0
         added_fonts = 0
@@ -5809,7 +5858,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
         return koboConfig, config_file_path
 
-    def _update_config_reader_settings(self, options):
+    def _update_config_reader_settings(self, options: Dict[str, Any]):
         config_section_reading = "Reading"
 
         koboConfig, config_file_path = self.get_config_file()
@@ -5851,7 +5900,7 @@ class KoboUtilitiesAction(InterfaceAction):
         with open(config_file_path, "w") as config_file:
             koboConfig.write(config_file)
 
-    def _backup_annotation_files(self, books, dest_path):
+    def _backup_annotation_files(self, books: List[Book], dest_path: str):
         annotations_found = 0
         kepubs = 0
         no_annotations = 0
@@ -5861,16 +5910,17 @@ class KoboUtilitiesAction(InterfaceAction):
         assert device is not None
 
         debug("self.device.path='%s'" % (device.path))
-        kepub_dir = device.driver.normalize_path(".kobo/kepub/")
-        annotations_dir = device.driver.normalize_path(
-            device.path + "Digital Editions/Annotations/"
+        kepub_dir = cast("str", device.driver.normalize_path(".kobo/kepub/"))
+        annotations_dir = cast(
+            "str",
+            device.driver.normalize_path(device.path + "Digital Editions/Annotations/"),
         )
         annotations_ext = ".annot"
 
         for book in books:
             count_books += 1
 
-            for book_path in book.paths:
+            for book_path in cast("List[str]", book.paths):
                 relative_path = book_path.replace(device.path, "")
                 annotation_file = device.driver.normalize_path(
                     annotations_dir + relative_path + annotations_ext
@@ -5910,7 +5960,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
         return (annotations_found, no_annotations, kepubs, count_books)
 
-    def _check_device_is_ready(self, function_message):
+    def _check_device_is_ready(self, function_message: str):
         self.device = self.get_device()
 
         if self.gui.job_manager.has_device_jobs(queued_also=True):
@@ -5955,15 +6005,17 @@ class KoboUtilitiesAction(InterfaceAction):
             debug("no books selected")
             return
 
-        db = self.gui.current_db
+        db: LibraryDatabase = self.gui.current_db
 
         # Use local versions as just need a few details.
-        def _convert_calibre_ids_to_books(db, ids):
+        def _convert_calibre_ids_to_books(db: LibraryDatabase, ids: List[int]):
             return [_convert_calibre_id_to_book(db, book_id) for book_id in ids]
 
-        def _convert_calibre_id_to_book(db, book_id, get_cover=False):
+        def _convert_calibre_id_to_book(
+            db: LibraryDatabase, book_id: int, get_cover: bool = False
+        ):
             mi = db.get_metadata(book_id, index_is_id=True, get_cover=get_cover)
-            book = {}
+            book: Dict[str, Any] = {}
             book["good"] = True
             book["calibre_id"] = mi.id
             book["title"] = mi.title
@@ -5974,7 +6026,7 @@ class KoboUtilitiesAction(InterfaceAction):
             book["added"] = False
             return book
 
-        book_ids = self.gui.library_view.get_selected_ids()
+        book_ids: List[int] = self.gui.library_view.get_selected_ids()
         books = _convert_calibre_ids_to_books(db, book_ids)
         progressbar = ProgressBar(
             parent=self.gui, window_title=_("Getting ToC status for books"), on_top=True
@@ -6010,7 +6062,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
             self.update_device_toc_for_books(update_books)
 
-    def load_ebook(self, pathtoebook):
+    def load_ebook(self, pathtoebook: str) -> EpubContainer:
         debug("creating container")
         try:
             container = EpubContainer(pathtoebook, default_log)
@@ -6020,7 +6072,13 @@ class KoboUtilitiesAction(InterfaceAction):
 
         return container
 
-    def _read_toc(self, toc, toc_depth=1, format_on_device="EPUB", container=None):
+    def _read_toc(
+        self,
+        toc: TOC,
+        toc_depth: int = 1,
+        format_on_device: str = "EPUB",
+        container: Optional[EpubContainer] = None,
+    ):
         chapters = []
         debug("toc.title=", toc.title)
         debug("toc_depth=", toc_depth)
@@ -6054,7 +6112,7 @@ class KoboUtilitiesAction(InterfaceAction):
         debug("finished")
         return chapters
 
-    def _get_manifest_entries(self, container):
+    def _get_manifest_entries(self, container: EpubContainer):
         debug("start")
         manifest_entries = []
         for spine_name, _spine_linear in container.spine_names:
@@ -6067,7 +6125,11 @@ class KoboUtilitiesAction(InterfaceAction):
         return manifest_entries
 
     def _get_chapter_list(
-        self, book, pathtoebook, book_location, format_on_device="EPUB"
+        self,
+        book: Dict[str, Any],
+        pathtoebook: str,
+        book_location: str,
+        format_on_device: str = "EPUB",
     ):
         debug("for %s" % book_location)
         from calibre.ebooks.oeb.polish.toc import get_toc
@@ -6097,7 +6159,9 @@ class KoboUtilitiesAction(InterfaceAction):
         book[book_location + "_container"] = container
         return
 
-    def _get_chapter_status(self, db, books, progressbar: ProgressBar):
+    def _get_chapter_status(
+        self, db: LibraryDatabase, books: List[Dict[str, Any]], progressbar: ProgressBar
+    ):
         debug("Starting check of chapter status for {0} books".format(len(books)))
         assert self.device is not None
         connection = self.device_database_connection(use_row_factory=True)
@@ -6174,6 +6238,7 @@ class KoboUtilitiesAction(InterfaceAction):
             pathtoebook = db.format_abspath(
                 book_id, book["library_format"], index_is_id=True
             )
+            assert isinstance(pathtoebook, str)
             debug("Getting chapters from library...")
             try:
                 self._get_chapter_list(
@@ -6361,7 +6426,11 @@ class KoboUtilitiesAction(InterfaceAction):
             i += 1
 
     def _get_database_chapters(
-        self, connection, koboContentId, book_format="EPUB", contentId=9
+        self,
+        connection: DeviceDatabaseConnection,
+        koboContentId: str,
+        book_format: str = "EPUB",
+        contentId: int = 9,
     ):
         chapters = []
         debug(
@@ -6405,7 +6474,7 @@ class KoboUtilitiesAction(InterfaceAction):
         return chapters
 
     def _get_database_current_chapter(
-        self, koboContentId: str, connection
+        self, koboContentId: str, connection: DeviceDatabaseConnection
     ) -> Optional[str]:
         debug("start")
         readingLocationchapterQuery = "SELECT ContentID, ChapterIDBookmarked, ReadStatus FROM content WHERE ContentID = ?"
@@ -6439,7 +6508,9 @@ class KoboUtilitiesAction(InterfaceAction):
 
         return reading_location
 
-    def _get_readingposition_index(self, book, koboDatabaseReadingLocation):
+    def _get_readingposition_index(
+        self, book: Dict[str, Any], koboDatabaseReadingLocation: str
+    ):
         new_toc_readingposition_index = None
         reading_location_match = re.match(
             r"\((\d+)\)(.*)\#?.*", koboDatabaseReadingLocation
@@ -6478,7 +6549,12 @@ class KoboUtilitiesAction(InterfaceAction):
 
         return new_toc_readingposition_index
 
-    def _compare_toc_entries(self, book, book_format1="library", book_format2="kobo"):
+    def _compare_toc_entries(
+        self,
+        book: Dict[str, Any],
+        book_format1: str = "library",
+        book_format2: str = "kobo",
+    ):
         debug(
             "book_format1='%s', book_format2: %s, count ToC entries: %d"
             % (book_format1, book_format2, len(book[book_format1 + "_chapters"]))
@@ -6506,7 +6582,10 @@ class KoboUtilitiesAction(InterfaceAction):
         return True
 
     def _compare_manifest_entries(
-        self, book, book_format1="library", book_format2="kobo"
+        self,
+        book: Dict[str, Any],
+        book_format1: str = "library",
+        book_format2: str = "kobo",
     ):
         debug(
             "book_format1='%s', book_format2:'%s', count ToC entries: %d"
@@ -6531,7 +6610,7 @@ class KoboUtilitiesAction(InterfaceAction):
         except Exception:
             return False
 
-    def update_device_toc_for_books(self, books):
+    def update_device_toc_for_books(self, books: List[Dict[str, Any]]):
         self.gui.status_bar.show_message(
             _("Updating ToC in device database for {0} books.").format(len(books)), 3000
         )
@@ -6561,7 +6640,12 @@ class KoboUtilitiesAction(InterfaceAction):
         progressbar.hide()
 
     def update_device_toc_for_book(
-        self, connection, book, bookID, bookTitle, book_format="EPUB"
+        self,
+        connection: DeviceDatabaseConnection,
+        book: Dict[str, Any],
+        bookID: str,
+        bookTitle: str,
+        book_format: str = "EPUB",
     ):
         debug(
             "bookTitle=%s, len(book['library_chapters'])=%d"
@@ -6585,7 +6669,7 @@ class KoboUtilitiesAction(InterfaceAction):
             has_chapter = databaseChapterId is not None
             debug("has_chapter=", has_chapter)
             if (
-                has_chapter
+                databaseChapterId is not None
                 and chapter["path"].endswith("finish.xhtml")
                 and chapterContentId != databaseChapterId
             ):
@@ -6635,7 +6719,9 @@ class KoboUtilitiesAction(InterfaceAction):
         self.update_database_content_entry(connection, book["ContentID"], num_chapters)
         return 0
 
-    def getDatabaseChapterId(self, bookId, toc_file, connection):
+    def getDatabaseChapterId(
+        self, bookId: str, toc_file: str, connection: DeviceDatabaseConnection
+    ) -> Optional[str]:
         cursor = connection.cursor()
         t = ("{0}%{1}%".format(bookId, toc_file),)
         cursor.execute("select ContentID from Content where ContentID like ?", t)
@@ -6648,7 +6734,9 @@ class KoboUtilitiesAction(InterfaceAction):
         debug("chapterContentId=%s" % chapterContentId)
         return chapterContentId
 
-    def removeChapterFromDatabase(self, chapterContentId, bookID, connection):
+    def removeChapterFromDatabase(
+        self, chapterContentId: str, bookID: str, connection: DeviceDatabaseConnection
+    ):
         cursor = connection.cursor()
         t = (chapterContentId,)
         cursor.execute("delete from Content where ContentID = ?", t)
@@ -6662,14 +6750,18 @@ class KoboUtilitiesAction(InterfaceAction):
 
         return
 
-    def update_database_content_entry(self, connection, contentId, num_chapters):
+    def update_database_content_entry(
+        self, connection: DeviceDatabaseConnection, contentId: str, num_chapters: int
+    ):
         cursor = connection.cursor()
         t = (contentId, num_chapters)
         cursor.execute("UPDATE content SET NumShortcovers = ? where ContentID = ?", t)
 
         return
 
-    def remove_all_toc_entries(self, connection, contentId):
+    def remove_all_toc_entries(
+        self, connection: DeviceDatabaseConnection, contentId: str
+    ):
         debug("contentId=", contentId)
 
         cursor = connection.cursor()
@@ -6682,13 +6774,13 @@ class KoboUtilitiesAction(InterfaceAction):
 
     def addChapterToDatabase(
         self,
-        chapterContentId,
-        chapter,
-        bookID,
-        bookTitle,
-        volumeIndex,
-        connection,
-        book_format="EPUB",
+        chapterContentId: str,
+        chapter: Dict[str, Any],
+        bookID: str,
+        bookTitle: str,
+        volumeIndex: int,
+        connection: DeviceDatabaseConnection,
+        book_format: str = "EPUB",
     ):
         cursorContent = connection.cursor()
         insertContentQuery = (
@@ -6767,14 +6859,14 @@ class KoboUtilitiesAction(InterfaceAction):
 
     def addManifestEntryToDatabase(
         self,
-        manifest_entry,
-        bookID,
-        bookTitle,
-        title,
-        volumeIndex,
-        connection,
-        file_size=None,
-        file_offset=None,
+        manifest_entry: str,
+        bookID: str,
+        bookTitle: str,
+        title: str,
+        volumeIndex: int,
+        connection: DeviceDatabaseConnection,
+        file_size: int,
+        file_offset: int,
     ):
         cursorContent = connection.cursor()
         insertContentQuery = (
@@ -6831,7 +6923,7 @@ class KoboUtilitiesAction(InterfaceAction):
     End ToC Updating
     """
 
-    def show_help(self, anchor=None):
+    def show_help(self, anchor: Optional[str] = None):
         debug("anchor=", anchor)
 
         # Extract on demand the help file resource

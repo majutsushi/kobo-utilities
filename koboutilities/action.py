@@ -447,9 +447,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 shortcut_name=_("Manage series information in device library"),
                 triggered=self.manage_series_on_device,
                 is_device_action=True,
-                # is_supported=device is not None and device.supports_series,
-                is_supported=False,
-                not_supported_reason="Deprecated; to be removed in a future version",
+                is_supported=device is not None and device.supports_series,
             )
 
             self.create_menu_item_ex(

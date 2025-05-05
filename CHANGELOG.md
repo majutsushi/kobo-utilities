@@ -1,5 +1,13 @@
 # Changelog
 
+## Version 2.23.0 - 2025-05-05
+
+- Remove obsolete "Order series collections" feature
+- Re-enable "Manage series information" feature
+- Show Help link in plugin menu
+- Mention automatic metadata management in documentation
+- Add some menu icons
+
 ## Version 2.22.1 - 2025-04-20
 
 - Fixed the metadata update dialog not finding the correct plugboards

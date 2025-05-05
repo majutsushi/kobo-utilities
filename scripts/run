@@ -233,13 +233,9 @@ def prepare_release(args: argparse.Namespace) -> None:
     current_version = Version(*map(int, toml["project"]["version"].split(".")))
 
     if args.release_type == "major":
-        new_version = Version(
-            current_version.major + 1, current_version.minor, current_version.patch
-        )
+        new_version = Version(current_version.major + 1, 0, 0)
     elif args.release_type == "minor":
-        new_version = Version(
-            current_version.major, current_version.minor + 1, current_version.patch
-        )
+        new_version = Version(current_version.major, current_version.minor + 1, 0)
     else:
         new_version = Version(
             current_version.major, current_version.minor, current_version.patch + 1

@@ -21,7 +21,6 @@ from calibre.gui2 import (
 )
 from calibre.gui2.actions import menu_action_unique_name
 from calibre.gui2.keyboard import ShortcutConfig
-from calibre.gui2.library.delegates import TextDelegate
 from calibre.utils.config import config_dir
 from calibre.utils.date import UNDEFINED_DATE, format_date, now
 from qt.core import (
@@ -35,7 +34,6 @@ from qt.core import (
     QHBoxLayout,
     QIcon,
     QLabel,
-    QLineEdit,
     QListWidget,
     QPixmap,
     QProgressBar,
@@ -440,17 +438,6 @@ class ReadOnlyTableWidgetItem(QTableWidgetItem):
         self.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
 
 
-class NumericTableWidgetItem(QTableWidgetItem):
-    def __init__(self, number, is_read_only=False):
-        super(NumericTableWidgetItem, self).__init__("")
-        self.setData(Qt.ItemDataRole.DisplayRole, number)
-        if is_read_only:
-            self.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
-
-    def value(self):
-        return self.data(Qt.ItemDataRole.DisplayRole)
-
-
 class RatingTableWidgetItem(QTableWidgetItem):
     def __init__(self, rating, is_read_only=False):
         super(RatingTableWidgetItem, self).__init__("")
@@ -502,37 +489,6 @@ class ReadOnlyTextIconWidgetItem(ReadOnlyTableWidgetItem):
             self.setIcon(icon)
 
 
-class ReadOnlyLineEdit(QLineEdit):
-    def __init__(self, text, parent):
-        if text is None:
-            text = ""
-        super(ReadOnlyLineEdit, self).__init__(text, parent)
-        self.setEnabled(False)
-
-
-class KeyValueComboBox(QComboBox):
-    def __init__(self, parent, values, selected_key):
-        super(KeyValueComboBox, self).__init__(parent)
-        self.values = values
-        self.populate_combo(selected_key)
-
-    def populate_combo(self, selected_key):
-        self.clear()
-        selected_idx = idx = -1
-        for key, value in list(self.values.items()):
-            idx = idx + 1
-            self.addItem(value)
-            if key == selected_key:
-                selected_idx = idx
-        self.setCurrentIndex(selected_idx)
-
-    def selected_key(self):
-        for key, value in list(self.values.items()):
-            if value == str(self.currentText()).strip():
-                return key
-        return None
-
-
 class ProfileComboBox(QComboBox):
     def __init__(self, parent, profiles, selected_text=None):
         super(ProfileComboBox, self).__init__(parent)
@@ -553,29 +509,6 @@ class ProfileComboBox(QComboBox):
         elif self.count() > 0:
             self.setCurrentIndex(0)
         self.blockSignals(False)
-
-
-class KeyComboBox(QComboBox):
-    def __init__(self, parent, values, selected_key):
-        super(KeyComboBox, self).__init__(parent)
-        self.values = values
-        self.populate_combo(selected_key)
-
-    def populate_combo(self, selected_key):
-        self.clear()
-        selected_idx = idx = -1
-        for key in sorted(self.values.keys()):
-            idx = idx + 1
-            self.addItem(key)
-            if key == selected_key:
-                selected_idx = idx
-        self.setCurrentIndex(selected_idx)
-
-    def selected_key(self):
-        for key, _value in list(self.values.items()):
-            if key == str(self.currentText()).strip():
-                return key
-        return None
 
 
 class SimpleComboBox(QComboBox):
@@ -723,22 +656,6 @@ class KeyboardConfigDialog(SizePersistedDialog):
     def commit(self):
         self.keyboard_widget.commit()
         self.accept()
-
-
-class TextWithLengthDelegate(TextDelegate):
-    """
-    Override the calibre TextDelegate to set a maximum length.
-    """
-
-    def __init__(self, parent, text_length=None):
-        super(TextWithLengthDelegate, self).__init__(parent)
-        self.text_length = text_length
-
-    def createEditor(self, parent, option, index):
-        editor = super(TextWithLengthDelegate, self).createEditor(parent, option, index)
-        if editor is not None and self.text_length:
-            editor.setMaxLength(self.text_length)
-        return editor
 
 
 class ProgressBar(QDialog):

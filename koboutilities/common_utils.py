@@ -500,6 +500,7 @@ class ProfileComboBox(QComboBox):
         for list_name in sorted(profiles.keys()):
             self.addItem(list_name)
         self.select_view(selected_text)
+        self.blockSignals(False)
 
     def select_view(self, selected_text):
         self.blockSignals(True)

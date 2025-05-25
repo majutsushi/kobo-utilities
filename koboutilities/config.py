@@ -1068,7 +1068,7 @@ class ProfilesTab(QWidget):
         ratings_column_name = self.plugin_action.gui.library_view.model().orig_headers[
             "rating"
         ]
-        custom_columns["rating"] = {"name": ratings_column_name}
+        custom_columns["rating"] = ratings_column_name
         return custom_columns
 
     def get_text_custom_columns(self):
@@ -1079,17 +1079,17 @@ class ProfilesTab(QWidget):
         column_types = ["datetime"]
         return self.get_custom_columns(column_types)
 
-    def get_custom_columns(self, column_types: List[str]) -> Dict[str, Dict[str, Any]]:
+    def get_custom_columns(self, column_types: List[str]) -> Dict[str, str]:
         if self.parent_dialog.supports_create_custom_column:
             assert self.parent_dialog.get_create_new_custom_column_instance is not None
             custom_columns = self.parent_dialog.get_create_new_custom_column_instance.current_columns()
         else:
             custom_columns = self.plugin_action.gui.library_view.model().custom_columns
-        available_columns = {}
+        available_columns: Dict[str, str] = {}
         for key, column in custom_columns.items():
             typ = column["datatype"]
             if typ in column_types and not column["is_multiple"]:
-                available_columns[key] = column
+                available_columns[key] = column["name"]
         return available_columns
 
     def create_custom_column(self, lookup_name: str):

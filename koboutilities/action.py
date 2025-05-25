@@ -2203,7 +2203,7 @@ class KoboUtilitiesAction(InterfaceAction):
             show=True,
         )
 
-    def get_series_columns(self) -> Dict[str, Dict[str, Any]]:
+    def get_series_columns(self) -> Dict[str, str]:
         custom_columns = cast(
             "Dict[str, Dict[str, Any]]", self.gui.library_view.model().custom_columns
         )
@@ -2211,7 +2211,7 @@ class KoboUtilitiesAction(InterfaceAction):
         for key, column in list(custom_columns.items()):
             typ = column["datatype"]
             if typ == "series":
-                series_columns[key] = column
+                series_columns[key] = column["name"]
         return series_columns
 
     def upload_covers(self) -> None:

@@ -6,7 +6,7 @@ __copyright__ = "2011, Grant Drake <grant.drake@gmail.com>"
 __docformat__ = "restructuredtext en"
 
 import re
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
+from typing import TYPE_CHECKING, Dict, List, Optional, cast
 
 from calibre.ebooks.metadata import fmt_sidx
 from calibre.ebooks.metadata.book.base import Metadata
@@ -29,7 +29,7 @@ def get_indent_for_index(series_index: Optional[float]) -> int:
 class SeriesBook(object):
     series_column = "Series"
 
-    def __init__(self, mi: Book, series_columns: Dict[str, Dict[str, Any]]):
+    def __init__(self, mi: Book, series_columns: Dict[str, str]):
         debug("mi.series_index=", mi.series_index)
         self._orig_mi = Metadata(_("Unknown"), other=mi)
         self._mi = mi

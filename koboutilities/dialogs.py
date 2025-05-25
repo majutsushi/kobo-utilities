@@ -1327,13 +1327,13 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
 
     def get_date_columns(
         self, column_names: List[str] = DATE_COLUMNS
-    ) -> Dict[str, Dict[str, str]]:
-        available_columns = {}
+    ) -> Dict[str, str]:
+        available_columns: Dict[str, str] = {}
         for column_name in column_names:
             calibre_column_name = (
                 self.plugin_action.gui.library_view.model().orig_headers[column_name]
             )
-            available_columns[column_name] = {"name": calibre_column_name}
+            available_columns[column_name] = calibre_column_name
         available_columns.update(self.get_date_custom_columns())
         return available_columns
 
@@ -1341,13 +1341,13 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         column_types = ["datetime"]
         return self.get_custom_columns(column_types)
 
-    def get_custom_columns(self, column_types: List[str]) -> Dict[str, Dict[str, Any]]:
+    def get_custom_columns(self, column_types: List[str]) -> Dict[str, str]:
         custom_columns = self.plugin_action.gui.library_view.model().custom_columns
         available_columns = {}
         for key, column in custom_columns.items():
             typ = column["datatype"]
             if typ in column_types:
-                available_columns[key] = column
+                available_columns[key] = column["name"]
         return available_columns
 
 
@@ -1445,13 +1445,13 @@ class GetShelvesFromDeviceDialog(SizePersistedDialog):
         column_types = ["text"]
         return self.get_custom_columns(column_types)
 
-    def get_custom_columns(self, column_types: List[str]) -> Dict[str, Dict[str, Any]]:
+    def get_custom_columns(self, column_types: List[str]) -> Dict[str, str]:
         custom_columns = self.plugin_action.gui.library_view.model().custom_columns
-        available_columns = {}
+        available_columns: Dict[str, str] = {}
         for key, column in custom_columns.items():
             typ = column["datatype"]
             if typ in column_types:
-                available_columns[key] = column
+                available_columns[key] = column["name"]
         return available_columns
 
     def ok_clicked(self) -> None:
@@ -2524,7 +2524,7 @@ class SeriesColumnComboBox(QComboBox):
         QComboBox.__init__(self, parent)
         self.series_columns = series_columns
         for key, column in series_columns.items():
-            self.addItem("%s (%s)" % (key, column["name"]))
+            self.addItem("%s (%s)" % (key, column))
         self.insertItem(0, "Series")
 
     def select_text(self, selected_key: str):
@@ -2751,7 +2751,7 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         plugin_action: KoboUtilitiesAction,
         books: List[SeriesBook],
         all_series: List[Tuple[int, str]],
-        series_columns: Dict[str, Dict[str, Any]],
+        series_columns: Dict[str, str],
     ):
         SizePersistedDialog.__init__(
             self, parent, "kobo utilities plugin:series dialog"
@@ -2963,7 +2963,7 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         if series_column == "Series":
             self.series_table.set_series_column_headers(series_column)
         else:
-            header_text = self.series_columns[series_column]["name"]
+            header_text = self.series_columns[series_column]
             self.series_table.set_series_column_headers(header_text)
 
     def initialize_series_name_combo(

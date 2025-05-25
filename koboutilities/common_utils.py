@@ -556,7 +556,7 @@ class CustomColumnComboBox(QComboBox):
     def __init__(
         self,
         parent: QWidget,
-        custom_columns: Optional[Dict[str, Dict[str, Any]]] = None,
+        custom_columns: Optional[Dict[str, str]] = None,
         selected_column: str = "",
         initial_items: Optional[List[str]] = None,
         create_column_callback: Optional[Callable[[], bool]] = None,
@@ -575,7 +575,7 @@ class CustomColumnComboBox(QComboBox):
 
     def populate_combo(
         self,
-        custom_columns: Dict[str, Dict[str, Any]],
+        custom_columns: Dict[str, str],
         selected_column: str,
         initial_items: Optional[Union[Dict[str, str], List[str]]] = None,
         show_lookup_name: bool = True,
@@ -589,9 +589,9 @@ class CustomColumnComboBox(QComboBox):
         for key in sorted(custom_columns.keys()):
             self.column_names.append(key)
             display_name = (
-                "%s (%s)" % (key, custom_columns[key]["name"])
+                "%s (%s)" % (key, custom_columns[key])
                 if show_lookup_name
-                else custom_columns[key]["name"]
+                else custom_columns[key]
             )
             self.addItem(display_name)
             if key == selected_column:

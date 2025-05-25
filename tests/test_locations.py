@@ -183,7 +183,7 @@ class DeviceDb:
     new_callable=mock.PropertyMock,
     return_value=TIMESTAMP_STRING,
 )
-class TestKoboUtilities(unittest.TestCase):
+class TestLocations(unittest.TestCase):
     def setUp(self):
         self.plugin = KoboUtilitiesAction(None, None)
         self.plugin.device = action.KoboDevice(
@@ -457,4 +457,4 @@ def row_factory(cursor: apsw.Cursor, row: apsw.SQLiteValues):
 
 
 if __name__ == "__main__":
-    unittest.main(module="test_koboutilities", verbosity=2)
+    unittest.main(module=Path(__file__).stem, verbosity=2)

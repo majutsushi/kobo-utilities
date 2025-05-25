@@ -30,6 +30,7 @@ from dataclasses import dataclass
 from datetime import datetime as dt
 from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
+from typing import Dict
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import requests
@@ -136,12 +137,12 @@ def test(args: argparse.Namespace) -> None:
     for bin_path in [CALIBRE_MINIMUM_BIN_PATH, CALIBRE_LATEST_BIN_PATH]:
         if not bin_path.exists():
             update_calibre(args)
-        failed_tests |= run_tests(plugin_zip, bin_path)
+        failed_tests |= run_tests(plugin_zip, bin_path, args)
     if failed_tests:
         raise FailedTests("Some tests failed")
 
 
-def run_tests(plugin_zip: Path, bin_path: Path) -> bool:
+def run_tests(plugin_zip: Path, bin_path: Path, args: argparse.Namespace) -> bool:
     log.info("Running tests with Calibre %s", bin_path.name)
     with TemporaryDirectory(prefix="calibre.user.") as userdir:
         userdir_path = Path(userdir)
@@ -173,19 +174,25 @@ def run_tests(plugin_zip: Path, bin_path: Path) -> bool:
         )
 
         # Run tests
+        tests = args.tests if args.tests else Path("tests").glob("test_*.py")
         failed_tests = False
-        for test in Path("tests").glob("test_*.py"):
-            log.info("Running test: %s", test)
-            try:
-                subprocess.run(
-                    [bin_path / "calibre-debug", test],
-                    check=True,
-                    env={**os.environ, **test_env},
-                )
-            except subprocess.CalledProcessError:
-                failed_tests = True
+        for test in tests:
+            failed_tests |= run_test(bin_path, test_env, test)
 
     return failed_tests
+
+
+def run_test(bin_path: Path, test_env: Dict[str, str], test: Path) -> bool:
+    log.info("Running test: %s", test)
+    try:
+        subprocess.run(
+            [bin_path / "calibre-debug", test],
+            check=True,
+            env={**os.environ, **test_env},
+        )
+    except subprocess.CalledProcessError:
+        return True
+    return False
 
 
 def update_calibre(args: argparse.Namespace) -> None:
@@ -338,6 +345,9 @@ def parse_args() -> argparse.Namespace:
     build_parser.set_defaults(func=build)
     test_parser = subparsers.add_parser("test")
     test_parser.set_defaults(func=test)
+    test_parser.add_argument(
+        "tests", metavar="test", nargs="*", type=Path, help="the test to run"
+    )
     prepare_release_parser = subparsers.add_parser("prepare-release")
     prepare_release_parser.set_defaults(func=prepare_release)
     prepare_release_parser.add_argument(

@@ -6,7 +6,7 @@ __copyright__ = "2011, Grant Drake <grant.drake@gmail.com>"
 __docformat__ = "restructuredtext en"
 
 import re
-from typing import TYPE_CHECKING, Any, Dict, Optional, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
 
 from calibre.ebooks.metadata import fmt_sidx
 from calibre.ebooks.metadata.book.base import Metadata
@@ -85,21 +85,21 @@ class SeriesBook(object):
 
         return
 
-    def id(self):
+    def id(self) -> Optional[int]:
         if hasattr(self._mi, "id"):
-            return self._mi.id
+            return cast("int", self._mi.id)
         return None
 
-    def authors(self):
+    def authors(self) -> List[str]:
         return self._mi.authors
 
-    def title(self):
+    def title(self) -> str:
         return self._mi.title
 
     def set_title(self, title: str):
         self._mi.title = title
 
-    def is_title_changed(self):
+    def is_title_changed(self) -> bool:
         return self._mi.title != self._orig_title
 
     def pubdate(self) -> Optional[dt.datetime]:
@@ -110,7 +110,7 @@ class SeriesBook(object):
     def set_pubdate(self, pubdate: dt.datetime):
         self._mi.pubdate = pubdate
 
-    def is_pubdate_changed(self):
+    def is_pubdate_changed(self) -> bool:
         if hasattr(self._mi, "pubdate") and hasattr(self._orig_mi, "pubdate"):
             return self._mi.pubdate != self._orig_pubdate
         return False

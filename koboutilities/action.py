@@ -782,7 +782,7 @@ class KoboUtilitiesAction(InterfaceAction):
         is_no_device_action: bool = False,
         is_supported: bool = True,
         not_supported_reason: str = _("Not supported for this device"),
-    ):
+    ) -> QAction:
         if self.device is None and not is_no_device_action:
             tooltip = _("No device connected")
             enabled = False
@@ -883,7 +883,7 @@ class KoboUtilitiesAction(InterfaceAction):
         return contentIDs
 
     @property
-    def device_driver_name(self):
+    def device_driver_name(self) -> str:
         if self.device:
             device_driver_name = self.device.driver.name
         else:
@@ -2457,7 +2457,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 )
         return ContentID.replace("\\", "/")
 
-    def get_contentIDs_for_books(self, book_ids: List[int]):
+    def get_contentIDs_for_books(self, book_ids: List[int]) -> List[str]:
         contentIDs = []
         for book_id in book_ids:
             contentIDs_for_book = self.get_contentIDs_from_id(book_id)
@@ -2664,12 +2664,12 @@ class KoboUtilitiesAction(InterfaceAction):
         debug("books=", books)
         return books
 
-    def get_device_path_from_contentID(self, contentID: str, mimetype: str):
+    def get_device_path_from_contentID(self, contentID: str, mimetype: str) -> str:
         assert self.device is not None
         card = "carda" if contentID.startswith("file:///mnt/sd/") else "main"
         return self.device.driver.path_from_contentid(contentID, "6", mimetype, card)
 
-    def get_contentIDs_from_id(self, book_id: int):
+    def get_contentIDs_from_id(self, book_id: int) -> List[Optional[str]]:
         debug("book_id=", book_id)
         paths = []
         for x in ("memory", "card_a"):
@@ -3404,7 +3404,9 @@ class KoboUtilitiesAction(InterfaceAction):
             formats = db.formats(_id, index_is_id=True)
             return [fmt.lower() for fmt in formats.split(",")]
 
-        def generate_annotation_paths(ids: List[int]):
+        def generate_annotation_paths(
+            ids: List[int],
+        ) -> Dict[int, Dict[str, Union[str, List[str]]]]:
             # Generate path templates
             # Individual storage mount points scanned/resolved in driver.get_annotations()
             path_map = {}
@@ -5680,7 +5682,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
         return (books_with_shelves, books_without_shelves, count_books)
 
-    def fetch_book_fonts(self, contentID: str):
+    def fetch_book_fonts(self, contentID: str) -> Dict[str, Any]:
         debug("start")
         connection = self.device_database_connection()
         book_options = {}
@@ -5840,7 +5842,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
         return updated_fonts, added_fonts, deleted_fonts, count_books
 
-    def get_config_file(self):
+    def get_config_file(self) -> Tuple[ConfigParser, str]:
         assert self.device is not None
         assert self.device.driver._main_prefix is not None
         config_file_path = self.device.driver.normalize_path(
@@ -6078,7 +6080,7 @@ class KoboUtilitiesAction(InterfaceAction):
         toc_depth: int = 1,
         format_on_device: str = "EPUB",
         container: Optional[EpubContainer] = None,
-    ):
+    ) -> List[Dict[str, Any]]:
         chapters = []
         debug("toc.title=", toc.title)
         debug("toc_depth=", toc_depth)
@@ -6112,7 +6114,7 @@ class KoboUtilitiesAction(InterfaceAction):
         debug("finished")
         return chapters
 
-    def _get_manifest_entries(self, container: EpubContainer):
+    def _get_manifest_entries(self, container: EpubContainer) -> List[Dict[str, Any]]:
         debug("start")
         manifest_entries = []
         for spine_name, _spine_linear in container.spine_names:
@@ -6431,7 +6433,7 @@ class KoboUtilitiesAction(InterfaceAction):
         koboContentId: str,
         book_format: str = "EPUB",
         contentId: int = 9,
-    ):
+    ) -> List[Dict[str, Any]]:
         chapters = []
         debug(
             "koboContentId='%s', book_format='%s', contentId='%s'"

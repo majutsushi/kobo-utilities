@@ -694,7 +694,7 @@ def do_clean_images_dir(
         images_tree=options["images_tree"],
     )
 
-    extra_image_files = {}
+    extra_image_files: Dict[str, List[str]] = {}
     extra_image_files["main_memory"] = extra_image_files_main
     extra_image_files["sd_card"] = extra_image_files_sd
 
@@ -849,7 +849,7 @@ def do_remove_annotations(
         )
         msg = _("{0} annotations files removed.").format(len(removed_annotation_files))
 
-    remove_annotations_result = {}
+    remove_annotations_result: Dict[str, Any] = {}
     remove_annotations_result["message"] = msg
     remove_annotations_result["details"] = details
     remove_annotations_result["options"] = options

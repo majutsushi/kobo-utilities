@@ -20,6 +20,7 @@ from calibre.utils.config import config_dir
 from calibre.utils.date import UNDEFINED_DATE, format_date, now
 from qt.core import (
     QAbstractItemView,
+    QAction,
     QByteArray,
     QComboBox,
     QDateTime,
@@ -30,6 +31,7 @@ from qt.core import (
     QIcon,
     QLabel,
     QListWidget,
+    QMenu,
     QPixmap,
     QProgressBar,
     QPushButton,
@@ -51,7 +53,6 @@ if TYPE_CHECKING:
     from types import TracebackType
 
     from calibre.gui2.dialogs.message_box import MessageBox
-    from qt import QAction, QMenu
 
     from .action import KoboUtilitiesAction
     from .config import ConfigWidget
@@ -168,7 +169,7 @@ def create_menu_action_unique(
     is_checked: Optional[bool] = None,
     shortcut_name: Optional[str] = None,
     unique_name: Optional[str] = None,
-):
+) -> QAction:
     """
     Create a menu action with the specified criteria and action, using the new
     InterfaceAction.create_menu_action() function which ensures that regardless of
@@ -616,7 +617,7 @@ class CustomColumnComboBox(QComboBox):
 
         self.setCurrentIndex(selected_idx)
 
-    def get_selected_column(self):
+    def get_selected_column(self) -> str:
         return self.column_names[self.currentIndex()]
 
     def current_text_changed(self, new_text: str):

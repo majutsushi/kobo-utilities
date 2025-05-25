@@ -1325,7 +1325,9 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
             not checked and self.author_checkbox.checkState() == Qt.CheckState.Checked
         )
 
-    def get_date_columns(self, column_names: List[str] = DATE_COLUMNS):
+    def get_date_columns(
+        self, column_names: List[str] = DATE_COLUMNS
+    ) -> Dict[str, Dict[str, str]]:
         available_columns = {}
         for column_name in column_names:
             calibre_column_name = (
@@ -1339,7 +1341,7 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         column_types = ["datetime"]
         return self.get_custom_columns(column_types)
 
-    def get_custom_columns(self, column_types: List[str]):
+    def get_custom_columns(self, column_types: List[str]) -> Dict[str, Dict[str, Any]]:
         custom_columns = self.plugin_action.gui.library_view.model().custom_columns
         available_columns = {}
         for key, column in custom_columns.items():
@@ -1443,7 +1445,7 @@ class GetShelvesFromDeviceDialog(SizePersistedDialog):
         column_types = ["text"]
         return self.get_custom_columns(column_types)
 
-    def get_custom_columns(self, column_types: List[str]):
+    def get_custom_columns(self, column_types: List[str]) -> Dict[str, Dict[str, Any]]:
         custom_columns = self.plugin_action.gui.library_view.model().custom_columns
         available_columns = {}
         for key, column in custom_columns.items():
@@ -2473,7 +2475,7 @@ class TitleWidgetItem(QTableWidgetItem):
             super(TitleWidgetItem, self).__init__(book.title)
             self.title_sort = book.title_sort
 
-    def __lt__(self, other: Any):
+    def __lt__(self, other: Any) -> bool:
         if isinstance(other, TitleWidgetItem):
             return self.title_sort < other.title_sort
         return super().__lt__(other)
@@ -4484,7 +4486,7 @@ class ToCBookListTableWidget(QTableWidget):
         assert vert_header is not None
         vert_header.hide()
 
-        self.books = {}
+        self.books: Dict[int, Dict[str, Any]] = {}
         for row, book in enumerate(books):
             self.populate_table_row(row, book)
             self.books[row] = book
@@ -4652,7 +4654,7 @@ class ToCBookListTableWidget(QTableWidget):
         return books
 
     @property
-    def books_to_send(self):
+    def books_to_send(self) -> List[Dict[str, Any]]:
         books = []
         for row in range(self.rowCount()):
             if cast(

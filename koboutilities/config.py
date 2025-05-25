@@ -9,7 +9,7 @@ __docformat__ = "restructuredtext en"
 import copy
 import traceback
 from functools import partial
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union, cast
 
 from calibre.constants import DEBUG as _DEBUG
 from calibre.gui2 import choose_dir, error_dialog, open_url, question_dialog
@@ -286,7 +286,7 @@ BACKUP_OPTIONS_DEFAULTS = {
     KEY_BACKUP_ZIP_DATABASE: True,
 }
 
-GET_SHELVES_OPTIONS_DEFAULTS = {
+GET_SHELVES_OPTIONS_DEFAULTS: Dict[str, Union[Optional[str], bool]] = {
     KEY_SHELVES_CUSTOM_COLUMN: None,
     KEY_ALL_BOOKS: True,
     KEY_REPLACE_SHELVES: True,
@@ -409,14 +409,14 @@ plugin_prefs.defaults[READING_POSITION_CHANGES_STORE_NAME] = (
 )
 
 
-def get_plugin_pref(store_name: str, option: str):
+def get_plugin_pref(store_name: str, option: str) -> Any:
     debug("start - store_name='%s', option='%s'" % (store_name, option))
     c = plugin_prefs[store_name]
     default_value = plugin_prefs.defaults[store_name][option]
     return c.get(option, default_value)
 
 
-def get_plugin_prefs(store_name: str, fill_defaults: bool = False):
+def get_plugin_prefs(store_name: str, fill_defaults: bool = False) -> Any:
     if fill_defaults:
         c = get_prefs(plugin_prefs, store_name)
     else:
@@ -424,7 +424,7 @@ def get_plugin_prefs(store_name: str, fill_defaults: bool = False):
     return c
 
 
-def get_prefs(prefs_store: Optional[Dict[str, Any]], store_name: str):
+def get_prefs(prefs_store: Optional[Dict[str, Any]], store_name: str) -> Dict[str, Any]:
     debug("start - store_name='%s'" % (store_name,))
     store = {}
     if prefs_store is not None and store_name in prefs_store:
@@ -1079,7 +1079,7 @@ class ProfilesTab(QWidget):
         column_types = ["datetime"]
         return self.get_custom_columns(column_types)
 
-    def get_custom_columns(self, column_types: List[str]):
+    def get_custom_columns(self, column_types: List[str]) -> Dict[str, Dict[str, Any]]:
         if self.parent_dialog.supports_create_custom_column:
             assert self.parent_dialog.get_create_new_custom_column_instance is not None
             custom_columns = self.parent_dialog.get_create_new_custom_column_instance.current_columns()
@@ -1685,7 +1685,7 @@ class DevicesTableWidget(QTableWidget):
         self.setItem(row, 4, version_no_widget)
         self.setItem(row, 5, ReadOnlyTextIconWidgetItem("", get_icon(connected_icon)))
 
-    def get_data(self):
+    def get_data(self) -> Dict[str, Dict[str, Any]]:
         debug("start")
         devices = {}
         for row in range(self.rowCount()):

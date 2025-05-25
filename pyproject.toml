@@ -181,5 +181,8 @@ reportUntypedClassDecorator = "error"
 reportUntypedFunctionDecorator = "error"
 reportUntypedNamedTuple = "error"
 
+[tool.ty.environment]
+extra-paths = ["../calibre/src"]
+
 [tool.vulture]
 paths = ["koboutilities", "tests", "scripts/run"]

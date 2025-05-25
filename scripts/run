@@ -68,11 +68,7 @@ def main(args: argparse.Namespace) -> int:
     if args.verbose:
         log.setLevel(logging.DEBUG)
 
-    try:
-        args.func(args)
-    except Exception as e:
-        log.exception(e)
-
+    args.func(args)
     return 0
 
 

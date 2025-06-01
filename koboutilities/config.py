@@ -9,7 +9,7 @@ __docformat__ = "restructuredtext en"
 import copy
 import traceback
 from functools import partial
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from calibre.constants import DEBUG as _DEBUG
 from calibre.gui2 import choose_dir, error_dialog, open_url, question_dialog
@@ -286,7 +286,7 @@ BACKUP_OPTIONS_DEFAULTS = {
     KEY_BACKUP_ZIP_DATABASE: True,
 }
 
-GET_SHELVES_OPTIONS_DEFAULTS: Dict[str, Union[Optional[str], bool]] = {
+GET_SHELVES_OPTIONS_DEFAULTS: dict[str, str | None | bool] = {
     KEY_SHELVES_CUSTOM_COLUMN: None,
     KEY_ALL_BOOKS: True,
     KEY_REPLACE_SHELVES: True,
@@ -424,7 +424,7 @@ def get_plugin_prefs(store_name: str, fill_defaults: bool = False) -> Any:
     return c
 
 
-def get_prefs(prefs_store: Optional[Dict[str, Any]], store_name: str) -> Dict[str, Any]:
+def get_prefs(prefs_store: dict[str, Any] | None, store_name: str) -> dict[str, Any]:
     debug("start - store_name='%s'" % (store_name,))
     store = {}
     if prefs_store is not None and store_name in prefs_store:
@@ -438,10 +438,10 @@ def get_prefs(prefs_store: Optional[Dict[str, Any]], store_name: str) -> Dict[st
 
 
 def get_pref(
-    store: Dict[str, Any],
+    store: dict[str, Any],
     store_name: str,
     option: str,
-    defaults: Optional[Dict[str, Any]] = None,
+    defaults: dict[str, Any] | None = None,
 ):
     if defaults:
         default_value = defaults[option]
@@ -451,7 +451,7 @@ def get_pref(
 
 
 def migrate_library_config_if_required(
-    db: LibraryDatabase, library_config: Dict[str, Any]
+    db: LibraryDatabase, library_config: dict[str, Any]
 ):
     debug("start")
     schema_version = library_config.get(KEY_SCHEMA_VERSION, 0)
@@ -523,7 +523,7 @@ def migrate_library_config_if_required(
     set_library_config(db, library_config)
 
 
-def get_library_config(db: LibraryDatabase) -> Dict[str, Dict[str, Any]]:
+def get_library_config(db: LibraryDatabase) -> dict[str, dict[str, Any]]:
     library_config = None
 
     if library_config is None:
@@ -569,11 +569,11 @@ def get_device_name(device_uuid: str, default_name: str = _("(Unknown device)"))
     return cast("str", device["name"]) if device else default_name
 
 
-def get_device_config(device_uuid: str) -> Optional[Dict[str, Any]]:
+def get_device_config(device_uuid: str) -> dict[str, Any] | None:
     return plugin_prefs[STORE_DEVICES].get(device_uuid, None)
 
 
-def set_library_config(db: LibraryDatabase, library_config: Dict[str, Any]):
+def set_library_config(db: LibraryDatabase, library_config: dict[str, Any]):
     debug("library_config:", library_config)
     db.prefs.set_namespaced(PREFS_NAMESPACE, PREFS_KEY_SETTINGS, library_config)
 
@@ -878,11 +878,7 @@ class ProfilesTab(QWidget):
             )
             return
         if not confirm(
-            _(
-                "Do you want to delete the profile named '{0}'".format(
-                    self.profile_name
-                )
-            ),
+            _(f"Do you want to delete the profile named '{self.profile_name}'"),
             "reading_profile_delete_profile",
             self,
         ):
@@ -1079,13 +1075,13 @@ class ProfilesTab(QWidget):
         column_types = ["datetime"]
         return self.get_custom_columns(column_types)
 
-    def get_custom_columns(self, column_types: List[str]) -> Dict[str, str]:
+    def get_custom_columns(self, column_types: list[str]) -> dict[str, str]:
         if self.parent_dialog.supports_create_custom_column:
             assert self.parent_dialog.get_create_new_custom_column_instance is not None
             custom_columns = self.parent_dialog.get_create_new_custom_column_instance.current_columns()
         else:
             custom_columns = self.plugin_action.gui.library_view.model().custom_columns
-        available_columns: Dict[str, str] = {}
+        available_columns: dict[str, str] = {}
         for key, column in custom_columns.items():
             typ = column["datatype"]
             if typ in column_types and not column["is_multiple"]:
@@ -1381,11 +1377,7 @@ class DevicesTab(QWidget):
             self,
             _("Are you sure?"),
             "<p>"
-            + _(
-                "You are about to remove the <b>{0}</b> device from this list. ".format(
-                    name
-                )
-            )
+            + _(f"You are about to remove the <b>{name}</b> device from this list. ")
             + _("Are you sure you want to continue?"),
         ):
             return
@@ -1580,7 +1572,7 @@ class DeviceColumnComboBox(QComboBox):
         QComboBox.__init__(self, parent)
         self.device_ids = [None, TOKEN_ANY_DEVICE]
 
-    def populate_combo(self, devices: Dict[str, Any], selected_device_uuid: str):
+    def populate_combo(self, devices: dict[str, Any], selected_device_uuid: str):
         self.clear()
         self.addItem("")
         self.addItem(TOKEN_ANY_DEVICE)
@@ -1609,7 +1601,7 @@ class DevicesTableWidget(QTableWidget):
         self.setMinimumSize(380, 0)
 
     def populate_table(
-        self, devices: Dict[str, Any], connected_device: Optional[KoboDevice]
+        self, devices: dict[str, Any], connected_device: KoboDevice | None
     ):
         self.clear()
         self.setRowCount(len(devices))
@@ -1645,8 +1637,8 @@ class DevicesTableWidget(QTableWidget):
     def populate_table_row(
         self,
         row: int,
-        device_config: Dict[str, Any],
-        connected_device: Optional[KoboDevice],
+        device_config: dict[str, Any],
+        connected_device: KoboDevice | None,
     ):
         debug("device_config:", device_config)
         device_type = device_config["type"]
@@ -1685,7 +1677,7 @@ class DevicesTableWidget(QTableWidget):
         self.setItem(row, 4, version_no_widget)
         self.setItem(row, 5, ReadOnlyTextIconWidgetItem("", get_icon(connected_icon)))
 
-    def get_data(self) -> Dict[str, Dict[str, Any]]:
+    def get_data(self) -> dict[str, dict[str, Any]]:
         debug("start")
         devices = {}
         for row in range(self.rowCount()):
@@ -1700,7 +1692,7 @@ class DevicesTableWidget(QTableWidget):
             devices[device_config["uuid"]] = device_config
         return devices
 
-    def get_selected_device_info(self) -> Tuple[Optional[Dict[str, Any]], bool]:
+    def get_selected_device_info(self) -> tuple[dict[str, Any] | None, bool]:
         if self.currentRow() >= 0:
             widget = self.item(self.currentRow(), 1)
             assert widget is not None
@@ -1836,7 +1828,7 @@ class ConfigWidget(QWidget):
         return self.devices_tab.devices_table.get_data()
 
     def delete_device_from_lists(
-        self, library_config: Dict[str, Dict[str, Any]], device_uuid: str
+        self, library_config: dict[str, dict[str, Any]], device_uuid: str
     ):
         del device_uuid
         set_library_config(self.plugin_action.gui.current_db, library_config)
@@ -1874,7 +1866,7 @@ class ConfigWidget(QWidget):
         self.plugin_action.show_help(anchor="ConfigurationDialog")
 
     @property
-    def get_create_new_custom_column_instance(self) -> Optional[CreateNewCustomColumn]:
+    def get_create_new_custom_column_instance(self) -> CreateNewCustomColumn | None:
         if (
             self._get_create_new_custom_column_instance is None
             and self.supports_create_custom_column

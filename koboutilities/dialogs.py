@@ -16,10 +16,6 @@ from typing import (
     Any,
     Callable,
     Dict,
-    List,
-    Optional,
-    Tuple,
-    Union,
     cast,
 )
 from urllib.parse import quote_plus
@@ -235,10 +231,10 @@ class AuthorTableWidgetItem(ReadOnlyTableWidgetItem):
 class QueueProgressDialog(QProgressDialog):
     def __init__(
         self,
-        gui: Optional[ui.Main],  # TODO Can this actually be None?
-        options: Dict[str, Any],
+        gui: ui.Main | None,  # TODO Can this actually be None?
+        options: dict[str, Any],
         queue: Callable[..., None],  # TODO Should only have one supported signature
-        db: Optional[LibraryDatabase],
+        db: LibraryDatabase | None,
         plugin_action: KoboUtilitiesAction,
     ):
         QProgressDialog.__init__(self, "", "", 0, 0, gui)
@@ -293,11 +289,9 @@ class QueueProgressDialog(QProgressDialog):
         self.setValue(1)
         search_condition = ""
         if self.options[cfg.KEY_DO_NOT_STORE_IF_REOPENED]:
-            search_condition = "and ({0}:false or {0}:<100)".format(
-                kobo_percentRead_column
-            )
+            search_condition = f"and ({kobo_percentRead_column}:false or {kobo_percentRead_column}:<100)"
         if self.options["allOnDevice"]:
-            search_condition = "ondevice:True {0}".format(search_condition)
+            search_condition = f"ondevice:True {search_condition}"
             debug("search_condition=", search_condition)
             onDeviceIds = set(
                 library_db.search_getting_ids(  # pyright: ignore[reportAttributeAccessIssue]
@@ -469,7 +463,7 @@ class ReaderOptionsDialog(SizePersistedDialog):
         self,
         parent: QWidget,
         plugin_action: KoboUtilitiesAction,
-        contentID: Optional[str],
+        contentID: str | None,
     ):
         SizePersistedDialog.__init__(
             self, parent, "kobo utilities plugin:reader font settings dialog"
@@ -506,7 +500,7 @@ class ReaderOptionsDialog(SizePersistedDialog):
         # Cause our dialog size to be restored from prefs or created on first usage
         self.resize_dialog()
 
-    def initialize_controls(self, contentID: Optional[str]):
+    def initialize_controls(self, contentID: str | None):
         self.setWindowTitle(DIALOG_NAME)
         layout = QVBoxLayout(self)
         self.setLayout(layout)
@@ -704,7 +698,7 @@ class ReaderOptionsDialog(SizePersistedDialog):
                 "value", int(str(self.left_margins_spin.value()))
             )
 
-    def line_spacing_spin_changed(self, checked: Optional[bool]):
+    def line_spacing_spin_changed(self, checked: bool | None):
         del checked
         self.custom_line_spacing_edit.setText(
             str(self.line_spacings[int(str(self.line_spacing_spin.value()))])
@@ -772,7 +766,7 @@ class ReaderOptionsDialog(SizePersistedDialog):
 
         self.change_settings(device_settings)
 
-    def change_settings(self, reader_settings: Dict[str, Any]):
+    def change_settings(self, reader_settings: dict[str, Any]):
         font_face = reader_settings.get(
             cfg.KEY_READING_FONT_FAMILY,
             cfg.READING_OPTIONS_DEFAULTS[cfg.KEY_READING_FONT_FAMILY],
@@ -1326,9 +1320,9 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         )
 
     def get_date_columns(
-        self, column_names: List[str] = DATE_COLUMNS
-    ) -> Dict[str, str]:
-        available_columns: Dict[str, str] = {}
+        self, column_names: list[str] = DATE_COLUMNS
+    ) -> dict[str, str]:
+        available_columns: dict[str, str] = {}
         for column_name in column_names:
             calibre_column_name = (
                 self.plugin_action.gui.library_view.model().orig_headers[column_name]
@@ -1341,7 +1335,7 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         column_types = ["datetime"]
         return self.get_custom_columns(column_types)
 
-    def get_custom_columns(self, column_types: List[str]) -> Dict[str, str]:
+    def get_custom_columns(self, column_types: list[str]) -> dict[str, str]:
         custom_columns = self.plugin_action.gui.library_view.model().custom_columns
         available_columns = {}
         for key, column in custom_columns.items():
@@ -1445,9 +1439,9 @@ class GetShelvesFromDeviceDialog(SizePersistedDialog):
         column_types = ["text"]
         return self.get_custom_columns(column_types)
 
-    def get_custom_columns(self, column_types: List[str]) -> Dict[str, str]:
+    def get_custom_columns(self, column_types: list[str]) -> dict[str, str]:
         custom_columns = self.plugin_action.gui.library_view.model().custom_columns
-        available_columns: Dict[str, str] = {}
+        available_columns: dict[str, str] = {}
         for key, column in custom_columns.items():
             typ = column["datatype"]
             if typ in column_types:
@@ -2449,9 +2443,9 @@ class LockSeriesDialog(SizePersistedDialog):
 
 
 class TitleWidgetItem(QTableWidgetItem):
-    def __init__(self, book: Union[Book, SeriesBook]):
+    def __init__(self, book: Book | SeriesBook):
         if isinstance(book, SeriesBook):
-            super(TitleWidgetItem, self).__init__(book.title())
+            super().__init__(book.title())
             self.title_sort = book.title()
             if not book.is_valid():
                 self.setIcon(get_icon("dialog_warning.png"))
@@ -2472,7 +2466,7 @@ class TitleWidgetItem(QTableWidgetItem):
                 self.setIcon(get_icon("ok.png"))
                 self.setToolTip(_("The series data is unchanged"))
         else:
-            super(TitleWidgetItem, self).__init__(book.title)
+            super().__init__(book.title)
             self.title_sort = book.title_sort
 
     def __lt__(self, other: Any) -> bool:
@@ -2482,7 +2476,7 @@ class TitleWidgetItem(QTableWidgetItem):
 
 
 class AuthorsTableWidgetItem(ReadOnlyTableWidgetItem):
-    def __init__(self, authors: List[str], author_sort: Optional[str] = None):
+    def __init__(self, authors: list[str], author_sort: str | None = None):
         text = " & ".join(authors)
         ReadOnlyTableWidgetItem.__init__(self, text)
         self.setForeground(Qt.GlobalColor.darkGray)
@@ -2501,10 +2495,10 @@ class AuthorsTableWidgetItem(ReadOnlyTableWidgetItem):
 class SeriesTableWidgetItem(ReadOnlyTableWidgetItem):
     def __init__(
         self,
-        series_name: Optional[str],
+        series_name: str | None,
         series_index: str,
         is_original: bool = False,
-        assigned_index: Optional[float] = None,
+        assigned_index: float | None = None,
     ):
         if series_name:
             text = "%s [%s]" % (series_name, series_index)
@@ -2520,7 +2514,7 @@ class SeriesTableWidgetItem(ReadOnlyTableWidgetItem):
 
 
 class SeriesColumnComboBox(QComboBox):
-    def __init__(self, parent: QWidget, series_columns: Dict[str, Any]):
+    def __init__(self, parent: QWidget, series_columns: dict[str, Any]):
         QComboBox.__init__(self, parent)
         self.series_columns = series_columns
         for key, column in series_columns.items():
@@ -2605,7 +2599,7 @@ class SeriesTableWidget(QTableWidget):
             menu_action.triggered.connect(partial(parent.search_web, name))
             self.addAction(menu_action)
 
-    def populate_table(self, books: List[SeriesBook]):
+    def populate_table(self, books: list[SeriesBook]):
         self.clear()
         self.setAlternatingRowColors(True)
         self.setRowCount(len(books))
@@ -2678,7 +2672,7 @@ class SeriesTableWidget(QTableWidget):
         self.selectRow(row)
         self.scrollToItem(self.currentItem())
 
-    def event_has_mods(self, event: Optional[QMouseEvent] = None):
+    def event_has_mods(self, event: QMouseEvent | None = None):
         mods = (
             event.modifiers() if event is not None else QApplication.keyboardModifiers()
         )
@@ -2687,7 +2681,7 @@ class SeriesTableWidget(QTableWidget):
             or mods & Qt.KeyboardModifier.ShiftModifier
         )
 
-    def mousePressEvent(self, e: Optional[QMouseEvent]):
+    def mousePressEvent(self, e: QMouseEvent | None):
         assert e is not None
         ep = e.pos()
         selection_model = self.selectionModel()
@@ -2702,7 +2696,7 @@ class SeriesTableWidget(QTableWidget):
             self.setDragEnabled(True)
         return QTableWidget.mousePressEvent(self, e)
 
-    def dropEvent(self, event: Optional[QDropEvent]):
+    def dropEvent(self, event: QDropEvent | None):
         assert event is not None
         selection_model = self.selectionModel()
         assert selection_model is not None
@@ -2749,9 +2743,9 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         self,
         parent: ui.Main,
         plugin_action: KoboUtilitiesAction,
-        books: List[SeriesBook],
-        all_series: List[Tuple[int, str]],
-        series_columns: Dict[str, str],
+        books: list[SeriesBook],
+        all_series: list[tuple[int, str]],
+        series_columns: dict[str, str],
     ):
         SizePersistedDialog.__init__(
             self, parent, "kobo utilities plugin:series dialog"
@@ -2931,7 +2925,7 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         debug("start")
         for book in self.books:
             book.revert_changes()
-        super(ManageSeriesDeviceDialog, self).reject()
+        super().reject()
 
     def series_column_changed(self):
         debug("start")
@@ -2967,7 +2961,7 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
             self.series_table.set_series_column_headers(header_text)
 
     def initialize_series_name_combo(
-        self, series_column: str, series_name: Optional[str]
+        self, series_column: str, series_name: str | None
     ) -> None:
         self.series_combo.clear()
         if series_name is None:
@@ -3307,7 +3301,7 @@ class BooksNotInDeviceDatabaseTableWidget(QTableWidget):
         if self.fmt is None:
             self.fmt = "MMM yyyy"
 
-    def populate_table(self, books: List[Book]):
+    def populate_table(self, books: list[Book]):
         self.clear()
         self.setAlternatingRowColors(True)
         self.setRowCount(len(books))
@@ -3387,7 +3381,7 @@ class BooksNotInDeviceDatabaseTableWidget(QTableWidget):
 
 
 class ShowBooksNotInDeviceDatabaseDialog(SizePersistedDialog):
-    def __init__(self, parent: ui.Main, books: List[Book]):
+    def __init__(self, parent: ui.Main, books: list[Book]):
         SizePersistedDialog.__init__(
             self, parent, "kobo utilities plugin:not in device database dialog"
         )
@@ -3431,7 +3425,7 @@ class ShowReadingPositionChangesDialog(SizePersistedDialog):
         self,
         parent: QWidget,
         plugin_action: KoboUtilitiesAction,
-        reading_locations: Tuple[Dict[int, Dict[str, Any]], Dict[str, Any]],
+        reading_locations: tuple[dict[int, dict[str, Any]], dict[str, Any]],
         db: LibraryDatabase,
         profileName: str,
         goodreads_sync_installed: bool = False,
@@ -3596,7 +3590,7 @@ class ShowReadingPositionChangesTableWidget(QTableWidget):
             self.rest_of_book_estimate_column,
         ) = parent.plugin_action.get_column_names()
 
-    def populate_table(self, reading_positions: Dict[int, Dict[str, Any]]):
+    def populate_table(self, reading_positions: dict[int, dict[str, Any]]):
         self.clear()
         self.setAlternatingRowColors(True)
         self.setRowCount(len(reading_positions))
@@ -3643,7 +3637,7 @@ class ShowReadingPositionChangesTableWidget(QTableWidget):
             self.setColumnWidth(col, minimum)
 
     def populate_table_row(
-        self, row: int, book_id: int, reading_position: Dict[str, Any]
+        self, row: int, book_id: int, reading_position: dict[str, Any]
     ):
         self.blockSignals(True)
 
@@ -3719,7 +3713,7 @@ class FixDuplicateShelvesDialog(SizePersistedDialog):
         self,
         parent: ui.Main,
         plugin_action: KoboUtilitiesAction,
-        shelves: List[List[Any]],
+        shelves: list[list[Any]],
     ):
         SizePersistedDialog.__init__(
             self,
@@ -3825,7 +3819,7 @@ class DuplicateShelvesInDeviceDatabaseTableWidget(QTableWidget):
         QTableWidget.__init__(self, parent)
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
 
-    def populate_table(self, shelves: List[List[Any]]):
+    def populate_table(self, shelves: list[list[Any]]):
         self.clear()
         self.setAlternatingRowColors(True)
         self.setRowCount(len(shelves))
@@ -3862,7 +3856,7 @@ class DuplicateShelvesInDeviceDatabaseTableWidget(QTableWidget):
         if self.columnWidth(col) < minimum:
             self.setColumnWidth(col, minimum)
 
-    def populate_table_row(self, row: int, shelf: List[Any]):
+    def populate_table_row(self, row: int, shelf: list[Any]):
         self.blockSignals(True)
         shelf_name = shelf[0] if shelf[0] else _("(Unnamed collection)")
         titleColumn = QTableWidgetItem(shelf_name)
@@ -3893,7 +3887,7 @@ class OrderSeriesShelvesTableWidget(QTableWidget):
         self.header_labels = [_("Collection/series name"), _("Books in collection")]
         self.shelves = {}
 
-    def populate_table(self, shelves: List[Dict[str, Any]]):
+    def populate_table(self, shelves: list[dict[str, Any]]):
         self.clear()
         self.setAlternatingRowColors(True)
         self.setRowCount(len(shelves))
@@ -3921,7 +3915,7 @@ class OrderSeriesShelvesTableWidget(QTableWidget):
         if self.columnWidth(col) < minimum:
             self.setColumnWidth(col, minimum)
 
-    def populate_table_row(self, row: int, shelf: Dict[str, Any]):
+    def populate_table_row(self, row: int, shelf: dict[str, Any]):
         self.blockSignals(True)
         nameColumn = QTableWidgetItem(shelf["name"])
         nameColumn.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
@@ -3934,7 +3928,7 @@ class OrderSeriesShelvesTableWidget(QTableWidget):
         self.setItem(row, 1, shelf_count)
         self.blockSignals(False)
 
-    def get_shelves(self) -> List[Dict[str, Any]]:
+    def get_shelves(self) -> list[dict[str, Any]]:
         shelves = []
         for row in range(self.rowCount()):
             rnum = self.item(row, 0).data(Qt.ItemDataRole.UserRole)  # type: ignore[reportOptionalMemberAccess]
@@ -3965,7 +3959,7 @@ class SetRelatedBooksDialog(SizePersistedDialog):
         self,
         parent: ui.Main,
         plugin_action: KoboUtilitiesAction,
-        related_types: List[Dict[str, Any]],
+        related_types: list[dict[str, Any]],
     ):
         SizePersistedDialog.__init__(
             self, parent, "kobo utilities plugin:set related books dialog"
@@ -4122,7 +4116,7 @@ class SetRelatedBooksDialog(SizePersistedDialog):
 
 
 class FontChoiceComboBox(QComboBox):
-    def __init__(self, parent: QWidget, font_list: Dict[str, str]):
+    def __init__(self, parent: QWidget, font_list: dict[str, str]):
         QComboBox.__init__(self, parent)
         for name, font in sorted(font_list.items()):
             self.addItem(name, font)
@@ -4152,7 +4146,7 @@ class ReadingDirectionChoiceComboBox(QComboBox):
     def __init__(
         self,
         parent: QWidget,
-        reading_direction_list: Dict[str, str] = READING_DIRECTIONS,
+        reading_direction_list: dict[str, str] = READING_DIRECTIONS,
     ):
         QComboBox.__init__(self, parent)
         for name, font in sorted(reading_direction_list.items()):
@@ -4222,7 +4216,7 @@ class ReadingStatusGroupBox(QGroupBox):
 
 
 class TemplateConfig(QWidget):  # {{{
-    def __init__(self, val: Optional[str] = None, mi: Optional[Book] = None):
+    def __init__(self, val: str | None = None, mi: Book | None = None):
         QWidget.__init__(self)
         self.mi = mi
         debug("mi=", self.mi)
@@ -4275,10 +4269,10 @@ class UpdateBooksToCDialog(SizePersistedDialog):
         parent: ui.Main,
         plugin_action: KoboUtilitiesAction,
         icon: QIcon,
-        books: List[Dict[str, Any]],
+        books: list[dict[str, Any]],
     ):
         del icon
-        super(UpdateBooksToCDialog, self).__init__(
+        super().__init__(
             parent,
             "kobo utilities plugin:update book toc dialog",
             plugin_action=plugin_action,
@@ -4469,7 +4463,7 @@ class ToCBookListTableWidget(QTableWidget):
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.books = {}
 
-    def populate_table(self, books: List[Dict[str, Any]]):
+    def populate_table(self, books: list[dict[str, Any]]):
         self.clear()
         self.setAlternatingRowColors(True)
         self.setRowCount(len(books))
@@ -4486,7 +4480,7 @@ class ToCBookListTableWidget(QTableWidget):
         assert vert_header is not None
         vert_header.hide()
 
-        self.books: Dict[int, Dict[str, Any]] = {}
+        self.books: dict[int, dict[str, Any]] = {}
         for row, book in enumerate(books):
             self.populate_table_row(row, book)
             self.books[row] = book
@@ -4505,7 +4499,7 @@ class ToCBookListTableWidget(QTableWidget):
         if self.columnWidth(col) < minimum:
             self.setColumnWidth(col, minimum)
 
-    def populate_table_row(self, row: int, book: Dict[str, Any]):
+    def populate_table_row(self, row: int, book: dict[str, Any]):
         book_status = 0
         if book["good"]:
             icon = get_icon("ok.png")
@@ -4639,7 +4633,7 @@ class ToCBookListTableWidget(QTableWidget):
         self.setItem(row, self.STATUS_COMMENT_COLUMN_NO, comment_cell)
 
     @property
-    def books_to_update_toc(self) -> List[Dict[str, Any]]:
+    def books_to_update_toc(self) -> list[dict[str, Any]]:
         books = []
         for row in range(self.rowCount()):
             if cast(
@@ -4654,7 +4648,7 @@ class ToCBookListTableWidget(QTableWidget):
         return books
 
     @property
-    def books_to_send(self) -> List[Dict[str, Any]]:
+    def books_to_send(self) -> list[dict[str, Any]]:
         books = []
         for row in range(self.rowCount()):
             if cast(
@@ -4737,8 +4731,8 @@ class ToCBookListTableWidget(QTableWidget):
 
 
 class IconWidgetItem(ReadOnlyTextIconWidgetItem):
-    def __init__(self, text: Optional[str], icon: QIcon, sort_key: int):
-        super(IconWidgetItem, self).__init__(text, icon)
+    def __init__(self, text: str | None, icon: QIcon, sort_key: int):
+        super().__init__(text, icon)
         self.sort_key = sort_key
 
     # Qt uses a simple < check for sorting items, override this to use the sortKey

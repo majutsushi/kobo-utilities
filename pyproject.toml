@@ -34,7 +34,7 @@ select = [
   # pep8-naming
   # "N",
   # pyupgrade
-  # "UP",
+  "UP",
   # flake8-2020
   "YTT",
   # flake8-bandit
@@ -116,6 +116,10 @@ ignore = [
   "COM819",
   "ISC001",
   "ISC002",
+  # Ignore string formatting issues for now
+  "UP030",
+  "UP031",
+  "UP032",
 ]
 
 unfixable = [

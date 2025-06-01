@@ -9,7 +9,7 @@ __docformat__ = "restructuredtext en"
 import inspect
 import os
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Type, Union, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import apsw
 from calibre.constants import DEBUG, iswindows
@@ -86,7 +86,7 @@ def debug(*args: Any):
         )
 
 
-def set_plugin_icon_resources(name: str, resources: Dict[str, bytes]):
+def set_plugin_icon_resources(name: str, resources: dict[str, bytes]):
     """
     Set our global store of plugin name and icon resources for sharing between
     the InterfaceAction class which reads them and the ConfigWidget
@@ -97,7 +97,7 @@ def set_plugin_icon_resources(name: str, resources: Dict[str, bytes]):
     plugin_icon_resources = resources
 
 
-def get_icon(icon_name: Optional[str]):
+def get_icon(icon_name: str | None):
     """
     Retrieve a QIcon for the named image from the zip file if it exists,
     or if not then from Calibre's image cache.
@@ -145,7 +145,7 @@ def get_pixmap(icon_name: str):
     return None
 
 
-def get_local_images_dir(subfolder: Optional[str] = None):
+def get_local_images_dir(subfolder: str | None = None):
     """
     Returns a path to the user's local resources/images folder
     If a subfolder name parameter is specified, appends this to the path
@@ -162,13 +162,13 @@ def create_menu_action_unique(
     ia: KoboUtilitiesAction,
     parent_menu: QMenu,
     menu_text: str,
-    triggered: Union[Callable[[], None], Callable[[QAction], None]],
-    image: Optional[str] = None,
-    tooltip: Optional[str] = None,
-    shortcut: Union[str, List[str], None, Literal[False]] = None,
-    is_checked: Optional[bool] = None,
-    shortcut_name: Optional[str] = None,
-    unique_name: Optional[str] = None,
+    triggered: Callable[[], None] | Callable[[QAction], None],
+    image: str | None = None,
+    tooltip: str | None = None,
+    shortcut: str | list[str] | None | Literal[False] = None,
+    is_checked: bool | None = None,
+    shortcut_name: str | None = None,
+    unique_name: str | None = None,
 ) -> QAction:
     """
     Create a menu action with the specified criteria and action, using the new
@@ -253,10 +253,10 @@ class DeviceDatabaseConnection(apsw.Connection):
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]],
-        exc_value: Optional[BaseException],
-        tb: Optional[TracebackType],
-    ) -> Optional[bool]:
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        tb: TracebackType | None,
+    ) -> bool | None:
         try:
             suppress_exception = super().__exit__(exc_type, exc_value, tb)
             if self.__is_db_copied and (
@@ -290,7 +290,7 @@ def check_device_database(database_path: str):
     return check_result
 
 
-def convert_kobo_date(kobo_date: Optional[str]) -> Optional[datetime]:
+def convert_kobo_date(kobo_date: str | None) -> datetime | None:
     if kobo_date is None:
         return None
 
@@ -326,7 +326,7 @@ def convert_kobo_date(kobo_date: Optional[str]) -> Optional[datetime]:
                     except ValueError:
                         # The date is in some unknown format. Return now in the local timezone
                         converted_date = datetime.now(tz=local_tz)
-                        debug("datetime.now() - kobo_date={0}'".format(kobo_date))
+                        debug(f"datetime.now() - kobo_date={kobo_date}'")
     return converted_date
 
 
@@ -337,11 +337,11 @@ class ImageTitleLayout(QHBoxLayout):
 
     def __init__(
         self,
-        parent: Union[SizePersistedDialog, ConfigWidget],
+        parent: SizePersistedDialog | ConfigWidget,
         icon_name: str,
         title: str,
     ):
-        super(ImageTitleLayout, self).__init__()
+        super().__init__()
         self.title_image_label = QLabel(parent)
         self.update_title_icon(icon_name)
         self.addWidget(self.title_image_label)
@@ -405,11 +405,11 @@ class SizePersistedDialog(QDialog):
         self,
         parent: QWidget,
         unique_pref_name: str,
-        plugin_action: Optional[KoboUtilitiesAction] = None,
+        plugin_action: KoboUtilitiesAction | None = None,
     ):
-        super(SizePersistedDialog, self).__init__(parent)
+        super().__init__(parent)
         self.unique_pref_name = unique_pref_name
-        self.geom: Optional[QByteArray] = gprefs.get(unique_pref_name, None)
+        self.geom: QByteArray | None = gprefs.get(unique_pref_name, None)
         self.finished.connect(self.dialog_closing)
         self.help_anchor = None
         self.setWindowIcon(get_icon("images/icon.png"))
@@ -433,16 +433,16 @@ class SizePersistedDialog(QDialog):
 
 
 class ReadOnlyTableWidgetItem(QTableWidgetItem):
-    def __init__(self, text: Optional[str]):
+    def __init__(self, text: str | None):
         if text is None:
             text = ""
-        super(ReadOnlyTableWidgetItem, self).__init__(text)
+        super().__init__(text)
         self.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
 
 
 class RatingTableWidgetItem(QTableWidgetItem):
-    def __init__(self, rating: Optional[int], is_read_only: bool = False):
-        super(RatingTableWidgetItem, self).__init__("")
+    def __init__(self, rating: int | None, is_read_only: bool = False):
+        super().__init__("")
         self.setData(Qt.ItemDataRole.DisplayRole, rating)
         if is_read_only:
             self.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
@@ -451,25 +451,25 @@ class RatingTableWidgetItem(QTableWidgetItem):
 class DateTableWidgetItem(QTableWidgetItem):
     def __init__(
         self,
-        date_read: Optional[datetime],
+        date_read: datetime | None,
         is_read_only: bool = False,
         default_to_today: bool = False,
-        fmt: Optional[str] = None,
+        fmt: str | None = None,
     ):
         if date_read is None or (date_read == UNDEFINED_DATE and default_to_today):
             date_read = now()
         if is_read_only:
-            super(DateTableWidgetItem, self).__init__(format_date(date_read, fmt))
+            super().__init__(format_date(date_read, fmt))
             self.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
             self.setData(Qt.ItemDataRole.DisplayRole, QDateTime(date_read))
         else:
-            super(DateTableWidgetItem, self).__init__("")
+            super().__init__("")
             self.setData(Qt.ItemDataRole.DisplayRole, QDateTime(date_read))
 
 
 class CheckableTableWidgetItem(QTableWidgetItem):
     def __init__(self, checked: bool = False):
-        super(CheckableTableWidgetItem, self).__init__("")
+        super().__init__("")
         self.setFlags(
             Qt.ItemFlag.ItemIsSelectable
             | Qt.ItemFlag.ItemIsUserCheckable
@@ -491,8 +491,8 @@ class CheckableTableWidgetItem(QTableWidgetItem):
 
 
 class ReadOnlyTextIconWidgetItem(ReadOnlyTableWidgetItem):
-    def __init__(self, text: Optional[str], icon: QIcon):
-        super(ReadOnlyTextIconWidgetItem, self).__init__(text)
+    def __init__(self, text: str | None, icon: QIcon):
+        super().__init__(text)
         if icon:
             self.setIcon(icon)
 
@@ -501,14 +501,14 @@ class ProfileComboBox(QComboBox):
     def __init__(
         self,
         parent: QWidget,
-        profiles: Dict[str, Dict[str, Any]],
-        selected_text: Optional[str] = None,
+        profiles: dict[str, dict[str, Any]],
+        selected_text: str | None = None,
     ):
-        super(ProfileComboBox, self).__init__(parent)
+        super().__init__(parent)
         self.populate_combo(profiles, selected_text)
 
     def populate_combo(
-        self, profiles: Dict[str, Dict[str, Any]], selected_text: Optional[str] = None
+        self, profiles: dict[str, dict[str, Any]], selected_text: str | None = None
     ):
         self.blockSignals(True)
         self.clear()
@@ -517,7 +517,7 @@ class ProfileComboBox(QComboBox):
         self.select_view(selected_text)
         self.blockSignals(False)
 
-    def select_view(self, selected_text: Optional[str]):
+    def select_view(self, selected_text: str | None):
         self.blockSignals(True)
         if selected_text:
             idx = self.findText(selected_text)
@@ -528,8 +528,8 @@ class ProfileComboBox(QComboBox):
 
 
 class SimpleComboBox(QComboBox):
-    def __init__(self, parent: QWidget, values: List[str], selected_value: str):
-        super(SimpleComboBox, self).__init__(parent)
+    def __init__(self, parent: QWidget, values: list[str], selected_value: str):
+        super().__init__(parent)
         self.values = values
         self.populate_combo(selected_value)
 
@@ -556,16 +556,16 @@ class CustomColumnComboBox(QComboBox):
     def __init__(
         self,
         parent: QWidget,
-        custom_columns: Optional[Dict[str, str]] = None,
+        custom_columns: dict[str, str] | None = None,
         selected_column: str = "",
-        initial_items: Optional[List[str]] = None,
-        create_column_callback: Optional[Callable[[], bool]] = None,
+        initial_items: list[str] | None = None,
+        create_column_callback: Callable[[], bool] | None = None,
     ):
         if custom_columns is None:
             custom_columns = {}
         if initial_items is None:
             initial_items = [""]
-        super(CustomColumnComboBox, self).__init__(parent)
+        super().__init__(parent)
         debug("create_column_callback=", create_column_callback)
         self.create_column_callback = create_column_callback
         self.current_index = 0
@@ -575,9 +575,9 @@ class CustomColumnComboBox(QComboBox):
 
     def populate_combo(
         self,
-        custom_columns: Dict[str, str],
+        custom_columns: dict[str, str],
         selected_column: str,
-        initial_items: Optional[Union[Dict[str, str], List[str]]] = None,
+        initial_items: dict[str, str] | list[str] | None = None,
         show_lookup_name: bool = True,
     ):
         if initial_items is None:
@@ -648,7 +648,7 @@ class KeyboardConfigDialog(SizePersistedDialog):
     """
 
     def __init__(self, gui: ui.Main, group_name: str):
-        super(KeyboardConfigDialog, self).__init__(gui, "Keyboard shortcut dialog")
+        super().__init__(gui, "Keyboard shortcut dialog")
         self.gui = gui
         self.setWindowTitle("Keyboard shortcuts")
         layout = QVBoxLayout(self)
@@ -681,18 +681,16 @@ class KeyboardConfigDialog(SizePersistedDialog):
 class ProgressBar(QDialog):
     def __init__(
         self,
-        parent: Optional[QWidget] = None,
+        parent: QWidget | None = None,
         max_items: int = 100,
         window_title: str = "Progress Bar",
         label: str = "Label goes here",
         on_top: bool = False,
     ):
         if on_top:
-            super(ProgressBar, self).__init__(
-                parent=parent, flags=Qt.WindowType.WindowStaysOnTopHint
-            )
+            super().__init__(parent=parent, flags=Qt.WindowType.WindowStaysOnTopHint)
         else:
-            super(ProgressBar, self).__init__(parent=parent)
+            super().__init__(parent=parent)
         self.application = Application
         self.setWindowTitle(window_title)
         self.l = QVBoxLayout(self)
@@ -759,7 +757,7 @@ def prompt_for_restart(parent: QWidget, title: str, message: str):
 
 class PrefsViewerDialog(SizePersistedDialog):
     def __init__(self, gui: ui.Main, namespace: str):
-        super(PrefsViewerDialog, self).__init__(gui, _("Prefs viewer dialog"))
+        super().__init__(gui, _("Prefs viewer dialog"))
         self.setWindowTitle(_("Preferences for: {}").format(namespace))
 
         self.gui = gui

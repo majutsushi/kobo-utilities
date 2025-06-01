@@ -13,7 +13,7 @@ from enum import Enum
 from pathlib import Path
 from pprint import pprint
 from queue import Queue
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Tuple, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, cast
 from unittest import mock
 
 import apsw
@@ -44,14 +44,14 @@ class ReadStatus(Enum):
 @dataclasses.dataclass
 class TestBook:
     title: str
-    authors: List[str]
-    rating: Optional[int]
-    chapter_id: Optional[str]
+    authors: list[str]
+    rating: int | None
+    chapter_id: str | None
     read_status: ReadStatus
-    percent_read: Optional[int]
-    last_read: Optional[dt]
-    time_spent_reading: Optional[int]
-    rest_of_book_estimate: Optional[int]
+    percent_read: int | None
+    last_read: dt | None
+    time_spent_reading: int | None
+    rest_of_book_estimate: int | None
     is_kepub: bool
     contentID: str = dataclasses.field(init=False)
     mime_type: str = dataclasses.field(init=False)
@@ -157,7 +157,7 @@ class DeviceDb:
                 ),
             )
 
-    def query_books(self) -> Dict[str, Dict[str, Any]]:
+    def query_books(self) -> dict[str, dict[str, Any]]:
         test_query = """
             SELECT content.*, ratings.Rating FROM content
             LEFT OUTER JOIN ratings ON content.ContentID = ratings.ContentID
@@ -209,7 +209,7 @@ class TestLocations(unittest.TestCase):
         self.queue = Queue()
         self.maxDiff = None
 
-    def test_store_bookmarks(self, fwversion: Tuple[int, int, int], timestamp: str):
+    def test_store_bookmarks(self, fwversion: tuple[int, int, int], timestamp: str):
         del fwversion
         del timestamp
         book1 = TestBook(
@@ -328,7 +328,7 @@ class TestLocations(unittest.TestCase):
         self.assertEqual(stored_locations[book2.calibre_id]["RestOfBookEstimate"], 250)
 
     def test_restore_current_bookmark(
-        self, fwversion: Tuple[int, int, int], timestamp: str
+        self, fwversion: tuple[int, int, int], timestamp: str
     ):
         del fwversion
         del timestamp

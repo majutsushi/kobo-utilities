@@ -1,7 +1,7 @@
 # vim:fileencoding=UTF-8:ts=4:sw=4:sta:et:sts=4:ai
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, cast
+from typing import Any, Callable, Dict, cast
 
 __license__ = "GPL v3"
 __copyright__ = "2012-2017, David Forrester <davidfor@internode.on.net>"
@@ -28,12 +28,10 @@ from .common_utils import (
 )
 
 
-def do_device_database_backup(backup_options: Dict[str, Any]):
+def do_device_database_backup(backup_options: dict[str, Any]):
     debug("start")
 
-    def backup_file(
-        backup_zip: ZipFile, file_to_add: str, basename: Optional[str] = None
-    ):
+    def backup_file(backup_zip: ZipFile, file_to_add: str, basename: str | None = None):
         debug("file_to_add=%s" % file_to_add)
         basename = basename if basename else os.path.basename(file_to_add)
         try:
@@ -111,7 +109,7 @@ def do_device_database_backup(backup_options: Dict[str, Any]):
         debug("bookreader_database_file=%s" % bookreader_database_file)
         shutil.copyfile(bookreader_database_file, bookreader_backup_file_path)
     except Exception as e:
-        debug("backup of database BookReader.sqlite failed. Exception: {0}".format(e))
+        debug(f"backup of database BookReader.sqlite failed. Exception: {e}")
         bookreader_backup_file_path = None
 
     try:
@@ -221,24 +219,24 @@ def do_device_database_backup(backup_options: Dict[str, Any]):
 
 
 def do_read_locations(
-    books_to_scan: List[
-        Tuple[
+    books_to_scan: list[
+        tuple[
             int,
-            List[str],
+            list[str],
             str,
-            List[str],
-            Optional[str],
-            Optional[int],
-            Optional[int],
-            Optional[datetime],
-            Optional[int],
-            Optional[int],
+            list[str],
+            str | None,
+            int | None,
+            int | None,
+            datetime | None,
+            int | None,
+            int | None,
         ]
     ],
-    options: Dict[str, Any],
+    options: dict[str, Any],
     cpus: int,
     notification: Callable[[float, str], Any] = lambda _x, y: y,
-) -> Tuple[Dict[int, Dict[str, Any]], Dict[str, Any]]:
+) -> tuple[dict[int, dict[str, Any]], dict[str, Any]]:
     """
     Master job to do read the current reading locations from the device DB
     """
@@ -291,22 +289,22 @@ def do_read_locations(
 
 
 def do_read_locations_all(
-    books: List[
-        Tuple[
+    books: list[
+        tuple[
             int,
-            List[str],
+            list[str],
             str,
-            List[str],
-            Optional[str],
-            Optional[int],
-            Optional[int],
-            Optional[datetime],
-            Optional[int],
-            Optional[int],
+            list[str],
+            str | None,
+            int | None,
+            int | None,
+            datetime | None,
+            int | None,
+            int | None,
         ]
     ],
-    options: Dict[str, Any],
-) -> Dict[int, Dict[str, Any]]:
+    options: dict[str, Any],
+) -> dict[int, dict[str, Any]]:
     """
     Child job, to read location for all the books
     """
@@ -314,22 +312,22 @@ def do_read_locations_all(
 
 
 def _read_locations(
-    books: List[
-        Tuple[
+    books: list[
+        tuple[
             int,
-            List[str],
+            list[str],
             str,
-            List[str],
-            Optional[str],
-            Optional[int],
-            Optional[int],
-            Optional[datetime],
-            Optional[int],
-            Optional[int],
+            list[str],
+            str | None,
+            int | None,
+            int | None,
+            datetime | None,
+            int | None,
+            int | None,
         ]
     ],
-    options: Dict[str, Any],
-) -> Dict[int, Dict[str, Any]]:
+    options: dict[str, Any],
+) -> dict[int, dict[str, Any]]:
     debug("start")
     count_books = 0
     new_locations = {}
@@ -631,7 +629,7 @@ def _read_locations(
     return new_locations
 
 
-def value_changed(old_value: Optional[Any], new_value: Optional[Any]) -> bool:
+def value_changed(old_value: Any | None, new_value: Any | None) -> bool:
     return (
         (old_value is not None and new_value is None)
         or (old_value is None and new_value is not None)
@@ -640,7 +638,7 @@ def value_changed(old_value: Optional[Any], new_value: Optional[Any]) -> bool:
 
 
 def do_clean_images_dir(
-    options: Dict[str, Any],
+    options: dict[str, Any],
     cpus: int,
     notification: Callable[[float, str], Any] = lambda _x, y: y,
 ):
@@ -694,7 +692,7 @@ def do_clean_images_dir(
         images_tree=options["images_tree"],
     )
 
-    extra_image_files: Dict[str, List[str]] = {}
+    extra_image_files: dict[str, list[str]] = {}
     extra_image_files["main_memory"] = extra_image_files_main
     extra_image_files["sd_card"] = extra_image_files_sd
 
@@ -703,7 +701,7 @@ def do_clean_images_dir(
     return extra_image_files
 
 
-def _get_file_imageIds(image_path: Optional[str]) -> Dict[str, str]:
+def _get_file_imageIds(image_path: str | None) -> dict[str, str]:
     imageids_files = {}
     if image_path:
         for path, _dirs, files in os.walk(image_path):
@@ -723,12 +721,12 @@ def _get_file_imageIds(image_path: Optional[str]) -> Dict[str, str]:
 
 
 def _remove_extra_files(
-    extra_imageids_files: Set[str],
-    imageids_files: Dict[str, str],
+    extra_imageids_files: set[str],
+    imageids_files: dict[str, str],
     delete_extra_covers: bool,
     image_path: str,
     images_tree: bool = False,
-) -> List[str]:
+) -> list[str]:
     extra_image_files = []
     from glob import glob
 
@@ -758,7 +756,7 @@ def _remove_extra_files(
 
 def _get_imageId_set(
     database_path: str, device_database_path: str, is_db_copied: bool
-) -> Set[str]:
+) -> set[str]:
     connection = DeviceDatabaseConnection(
         database_path, device_database_path, is_db_copied, use_row_factory=True
     )
@@ -774,8 +772,8 @@ def _get_imageId_set(
 
 
 def do_remove_annotations(
-    options: Dict[str, Any],
-    books: List[Tuple[int, List[str], List[str], str, str]],
+    options: dict[str, Any],
+    books: list[tuple[int, list[str], list[str], str, str]],
     cpus: int,
     notification: Callable[[float, str], Any] = lambda _x, y: y,
 ):
@@ -849,7 +847,7 @@ def do_remove_annotations(
         )
         msg = _("{0} annotations files removed.").format(len(removed_annotation_files))
 
-    remove_annotations_result: Dict[str, Any] = {}
+    remove_annotations_result: dict[str, Any] = {}
     remove_annotations_result["message"] = msg
     remove_annotations_result["details"] = details
     remove_annotations_result["options"] = options
@@ -864,7 +862,7 @@ def do_remove_annotations(
 
 def _get_annotation_files(
     annotations_path: str, annotations_ext: str
-) -> Dict[str, str]:
+) -> dict[str, str]:
     annotation_files = {}
     if annotations_path:
         for path, dirs, files in os.walk(annotations_path):
@@ -880,11 +878,11 @@ def _get_annotation_files(
 
 
 def _get_annotation_files_for_books(
-    books: List[Tuple[int, List[str], List[str], str, str]],
+    books: list[tuple[int, list[str], list[str], str, str]],
     annotations_path: str,
     annotations_ext: str,
     device_path: str,
-) -> Dict[str, str]:
+) -> dict[str, str]:
     annotation_files = {}
     debug("annotations_path=", annotations_path)
     debug("device_path=", device_path)
@@ -908,11 +906,11 @@ def _get_annotation_files_for_books(
 
 
 def _check_annotation_files(
-    annotation_files: Dict[str, str],
+    annotation_files: dict[str, str],
     annotations_dir: str,
     device_path: str,
     annotation_test_func: Callable[[str, str, str, str], bool],
-) -> Dict[str, str]:
+) -> dict[str, str]:
     annotation_files_to_remove = {}
     for filename in annotation_files:
         debug("filename='%s', path='%s'" % (filename, annotation_files[filename]))

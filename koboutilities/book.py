@@ -6,7 +6,7 @@ __copyright__ = "2011, Grant Drake <grant.drake@gmail.com>"
 __docformat__ = "restructuredtext en"
 
 import re
-from typing import TYPE_CHECKING, Dict, List, Optional, cast
+from typing import TYPE_CHECKING, Optional, cast
 
 from calibre.ebooks.metadata import fmt_sidx
 from calibre.ebooks.metadata.book.base import Metadata
@@ -20,16 +20,16 @@ if TYPE_CHECKING:
     from calibre.devices.kobo.books import Book
 
 
-def get_indent_for_index(series_index: Optional[float]) -> int:
+def get_indent_for_index(series_index: float | None) -> int:
     if not series_index:
         return 0
     return len(str(series_index).split(".")[1].rstrip("0"))
 
 
-class SeriesBook(object):
+class SeriesBook:
     series_column = "Series"
 
-    def __init__(self, mi: Book, series_columns: Dict[str, str]):
+    def __init__(self, mi: Book, series_columns: dict[str, str]):
         debug("mi.series_index=", mi.series_index)
         self._orig_mi = Metadata(_("Unknown"), other=mi)
         self._mi = mi
@@ -38,7 +38,7 @@ class SeriesBook(object):
         self._orig_series = cast("Optional[str]", self._mi.kobo_series)
         self.get_series_index()
         self._series_columns = series_columns
-        self._assigned_indexes: Dict[str, Optional[float]] = {"Series": None}
+        self._assigned_indexes: dict[str, float | None] = {"Series": None}
         self._series_indents = {
             "Series": get_indent_for_index(cast("float", mi.series_index))
         }
@@ -85,12 +85,12 @@ class SeriesBook(object):
 
         return
 
-    def id(self) -> Optional[int]:
+    def id(self) -> int | None:
         if hasattr(self._mi, "id"):
             return cast("int", self._mi.id)
         return None
 
-    def authors(self) -> List[str]:
+    def authors(self) -> list[str]:
         return self._mi.authors
 
     def title(self) -> str:
@@ -102,7 +102,7 @@ class SeriesBook(object):
     def is_title_changed(self) -> bool:
         return self._mi.title != self._orig_title
 
-    def pubdate(self) -> Optional[dt.datetime]:
+    def pubdate(self) -> dt.datetime | None:
         if hasattr(self._mi, "pubdate"):
             return cast("dt.datetime", self._mi.pubdate)
         return None
@@ -120,7 +120,7 @@ class SeriesBook(object):
             return True
         return self._mi.series_index != self._orig_series_index
 
-    def orig_series_name(self) -> Optional[str]:
+    def orig_series_name(self) -> str | None:
         return self._orig_series
 
     def orig_series_index(self):
@@ -134,10 +134,10 @@ class SeriesBook(object):
 
         return fmt_sidx(self._orig_series_index)
 
-    def series_name(self) -> Optional[str]:
+    def series_name(self) -> str | None:
         return cast("Optional[str]", self._mi.series)
 
-    def set_series_name(self, series_name: Optional[str]) -> None:
+    def set_series_name(self, series_name: str | None) -> None:
         self._mi.series = series_name
 
     def series_index(self) -> float:
@@ -148,7 +148,7 @@ class SeriesBook(object):
             return self._series_index_format % self._mi.series_index
         return fmt_sidx(self._mi.series_index)
 
-    def set_series_index(self, series_index: Optional[float]):
+    def set_series_index(self, series_index: float | None):
         self._mi.series_index = series_index  # pyright: ignore[reportAttributeAccessIssue]
         self.set_series_indent(get_indent_for_index(series_index))
 
@@ -161,7 +161,7 @@ class SeriesBook(object):
     def assigned_index(self):
         return self._assigned_indexes[self.series_column]
 
-    def set_assigned_index(self, index: Optional[float]) -> None:
+    def set_assigned_index(self, index: float | None) -> None:
         self._assigned_indexes[self.series_column] = index
 
     def is_valid(self) -> bool:

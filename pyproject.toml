@@ -142,6 +142,7 @@ extraPaths = ["../calibre/src", "calibre-repo/src"]
 ignore = ["../calibre/src", "calibre-repo/src"]
 pythonVersion = "3.8"
 # reportImportCycles = "warning"
+reportUndefinedVariable = "none"               # Already checked by ruff
 reportUnnecessaryTypeIgnoreComment = "warning"
 
 # Individual strict checks
@@ -177,7 +178,7 @@ reportUnnecessaryComparison = "error"
 reportUnnecessaryContains = "error"
 reportUnnecessaryIsInstance = "error"
 reportUnusedClass = "error"
-reportUnusedImport = "error"
+reportUnusedImport = "none"              # Already checked by ruff
 reportUnusedFunction = "error"
 reportUnusedVariable = "error"
 reportUntypedBaseClass = "error"

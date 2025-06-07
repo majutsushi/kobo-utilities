@@ -1,0 +1,28 @@
+{
+    "SchemaVersion": 0.1,
+    "profiles": {
+        "Default": {
+            "customColumnOptions": {
+                "currentReadingLocationColumn": "#kobo_reading_location",
+                "lastReadColumn": "#kobo_last_read",
+                "percentReadColumn": "#kobo_percent_read",
+                "ratingColumn": "",
+                "restOfBookEstimateColumn": "#kobo_rest_of_book_estimate",
+                "timeSpentReadingColumn": "#kobo_time_spent_reading"
+            },
+            "forDevice": "*Any Device",
+            "profileName": "Default",
+            "storeOptionsStore": {
+                "doNotStoreIfReopened": true,
+                "promptToStore": true,
+                "storeIfMoreRecent": true,
+                "storeOnConnect": true
+            }
+        }
+    },
+    "readingPositionChangesStore": {
+        "selectBooksInLibrary": false,
+        "updeateGoodreadsProgress": false
+    },
+    "shelvesColumn": null
+}

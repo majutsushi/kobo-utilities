@@ -189,8 +189,8 @@ class TestLocations(unittest.TestCase):
         self.plugin.device = action.KoboDevice(
             driver=mock.MagicMock(),
             is_kobotouch=True,
-            profile={},
-            backup_config={},
+            profile=config.ProfileConfig(),
+            backup_config=config.BackupOptionsStoreConfig(),
             device_type="",
             drive_info={},
             uuid="1234",
@@ -293,25 +293,31 @@ class TestLocations(unittest.TestCase):
             ),
         )
 
-        cfg = {
-            config.KEY_CLEAR_IF_UNREAD: False,
-            config.KEY_STORE_IF_MORE_RECENT: True,
-            config.KEY_DO_NOT_STORE_IF_REOPENED: True,
-            config.KEY_CURRENT_LOCATION_CUSTOM_COLUMN: None,
-            config.KEY_PERCENT_READ_CUSTOM_COLUMN: "#percent_read",
-            config.KEY_RATING_CUSTOM_COLUMN: None,
-            config.KEY_LAST_READ_CUSTOM_COLUMN: "#last_read",
-            config.KEY_TIME_SPENT_READING_COLUMN: "#time_spent_reading",
-            config.KEY_REST_OF_BOOK_ESTIMATE_COLUMN: "#rest_of_book_estimate",
-            "epub_location_like_kepub": False,
-            "fetch_queries": {
-                "kepub": action.KEPUB_FETCH_QUERY,
-                "epub": action.EPUB_FETCH_QUERY,
-            },
-            "database_path": "unused",
-            "device_database_path": "unused",
-            "is_db_copied": False,
-        }
+        bookmark_options = config.BookmarkOptionsConfig()
+        bookmark_options.clearIfUnread = False
+        bookmark_options.storeIfMoreRecent = True
+        bookmark_options.doNotStoreIfReopened = True
+        custom_columns = config.CustomColumns(
+            None,
+            "#percent_read",
+            None,
+            "#last_read",
+            "#time_spent_reading",
+            "#rest_of_book_estimate",
+        )
+        options = config.ReadLocationsJobOptions(
+            bookmark_options,
+            False,
+            config.FetchQueries(action.KEPUB_FETCH_QUERY, action.EPUB_FETCH_QUERY),
+            "unused",
+            "unused",
+            False,
+            "unused",
+            custom_columns,
+            supports_ratings=True,
+            allOnDevice=True,
+            prompt_to_store=False,
+        )
 
         # Run tested function
         with mock.patch.object(
@@ -319,7 +325,7 @@ class TestLocations(unittest.TestCase):
             "DeviceDatabaseConnection",
             return_value=device_db.db_conn,
         ):
-            stored_locations = jobs._read_locations(books_in_calibre, cfg)
+            stored_locations = jobs._read_locations(books_in_calibre, options)
 
         pprint(stored_locations)
         self.assertNotIn(book1.calibre_id, stored_locations)
@@ -370,15 +376,7 @@ class TestLocations(unittest.TestCase):
         )
         books = [book1, book2, book3]
 
-        plugin = self.plugin
-        plugin.options = {
-            "profileName": None,
-            config.KEY_READING_STATUS: True,  # TODO
-            config.KEY_DATE_TO_NOW: False,
-            config.KEY_SET_RATING: True,
-        }
-
-        column_names = (
+        column_names = config.CustomColumns(
             "#chapter_id",
             "#percent_read",
             "rating",
@@ -437,6 +435,12 @@ class TestLocations(unittest.TestCase):
         db_book3["RestOfBookEstimate"] = 0
         db_book3["Rating"] = None
 
+        plugin = self.plugin
+        options = config.BookmarkOptionsConfig()
+        options.readingStatus = True
+        options.setDateToNow = False
+        options.rating = True
+
         with ExitStack() as stack:
             stack.enter_context(
                 mock.patch.object(plugin, "get_column_names", return_value=column_names)
@@ -446,7 +450,9 @@ class TestLocations(unittest.TestCase):
                     plugin, "device_database_connection", return_value=device_db.db_conn
                 )
             )
-            plugin._restore_current_bookmark([book.to_calibre_book() for book in books])
+            plugin._restore_current_bookmark(
+                [book.to_calibre_book() for book in books], options, None
+            )
 
         db_books_after = device_db.query_books()
         self.assertDictEqual(device_books_before, db_books_after)

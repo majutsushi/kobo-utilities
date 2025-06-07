@@ -55,7 +55,7 @@ if TYPE_CHECKING:
     from calibre.gui2.dialogs.message_box import MessageBox
 
     from .action import KoboUtilitiesAction
-    from .config import ConfigWidget
+    from .config import ConfigDictWrapper, ConfigWidget, ProfileConfig
 
 MIMETYPE_KOBO = "application/x-kobo-epub+zip"
 
@@ -501,14 +501,16 @@ class ProfileComboBox(QComboBox):
     def __init__(
         self,
         parent: QWidget,
-        profiles: dict[str, dict[str, Any]],
+        profiles: ConfigDictWrapper[ProfileConfig],
         selected_text: str | None = None,
     ):
         super().__init__(parent)
         self.populate_combo(profiles, selected_text)
 
     def populate_combo(
-        self, profiles: dict[str, dict[str, Any]], selected_text: str | None = None
+        self,
+        profiles: ConfigDictWrapper[ProfileConfig],
+        selected_text: str | None = None,
     ):
         self.blockSignals(True)
         self.clear()
@@ -576,7 +578,7 @@ class CustomColumnComboBox(QComboBox):
     def populate_combo(
         self,
         custom_columns: dict[str, str],
-        selected_column: str,
+        selected_column: str | None,
         initial_items: dict[str, str] | list[str] | None = None,
         show_lookup_name: bool = True,
     ):

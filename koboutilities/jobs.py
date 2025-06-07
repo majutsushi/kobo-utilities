@@ -8,6 +8,7 @@ __copyright__ = "2012-2017, David Forrester <davidfor@internode.on.net>"
 __docformat__ = "restructuredtext en"
 
 import os
+import pickle
 import re
 import shutil
 from datetime import datetime
@@ -28,8 +29,9 @@ from .common_utils import (
 )
 
 
-def do_device_database_backup(backup_options: dict[str, Any]):
+def do_device_database_backup(backup_options_raw: bytes):
     debug("start")
+    backup_options: cfg.DatabaseBackupJobOptions = pickle.loads(backup_options_raw)  # noqa: S301
 
     def backup_file(backup_zip: ZipFile, file_to_add: str, basename: str | None = None):
         debug("file_to_add=%s" % file_to_add)
@@ -40,21 +42,19 @@ def do_device_database_backup(backup_options: dict[str, Any]):
             debug("file '%s' not added. Exception was: %s" % (file_to_add, e))
 
     debug("backup_options=", backup_options)
-    device_name = backup_options["device_name"]
-    serial_number = backup_options["serial_number"]
-    backup_file_template = backup_options["backup_file_template"]
-    dest_dir = backup_options[cfg.KEY_BACKUP_DEST_DIRECTORY]
-    copies_to_keep = backup_options[cfg.KEY_BACKUP_COPIES_TO_KEEP]
-    do_daily_backup = backup_options[cfg.KEY_DO_DAILY_BACKUP]
-    zip_database = backup_options[cfg.KEY_BACKUP_ZIP_DATABASE]
-    database_file = backup_options["database_file"]
-    device_path = backup_options["device_path"]
+    device_name = backup_options.device_name
+    serial_number = backup_options.serial_number
+    backup_file_template = backup_options.backup_file_template
+    dest_dir = backup_options.backup_store_config.backupDestDirectory
+    copies_to_keep = backup_options.backup_store_config.backupCopiesToKeepSpin
+    do_daily_backup = backup_options.backup_store_config.doDailyBackp
+    zip_database = backup_options.backup_store_config.backupZipDatabase
+    database_file = backup_options.database_file
+    device_path = backup_options.device_path
     debug("copies_to_keep=", copies_to_keep)
 
     bookreader_backup_file_template = "BookReader-{0}-{1}-{2}"
-    bookreader_database_file = os.path.join(
-        backup_options["device_path"], ".kobo", "BookReader.sqlite"
-    )
+    bookreader_database_file = os.path.join(device_path, ".kobo", "BookReader.sqlite")
 
     now = datetime.now()  # noqa: DTZ005
     backup_timestamp = now.strftime("%Y%m%d-%H%M%S")
@@ -233,10 +233,10 @@ def do_read_locations(
             int | None,
         ]
     ],
-    options: dict[str, Any],
+    options: cfg.ReadLocationsJobOptions,
     cpus: int,
     notification: Callable[[float, str], Any] = lambda _x, y: y,
-) -> tuple[dict[int, dict[str, Any]], dict[str, Any]]:
+) -> tuple[dict[int, dict[str, Any]], cfg.ReadLocationsJobOptions]:
     """
     Master job to do read the current reading locations from the device DB
     """
@@ -249,7 +249,7 @@ def do_read_locations(
     args = [
         do_read_locations_all.__module__,
         do_read_locations_all.__name__,
-        (books_to_scan, options),
+        (books_to_scan, pickle.dumps(options)),
     ]
     debug("len(books_to_scan)=%d" % (len(books_to_scan)))
     job: ParallelJob = ParallelJob("arbitrary", "Read locations", done=None, args=args)
@@ -303,12 +303,12 @@ def do_read_locations_all(
             int | None,
         ]
     ],
-    options: dict[str, Any],
+    options: bytes,
 ) -> dict[int, dict[str, Any]]:
     """
     Child job, to read location for all the books
     """
-    return _read_locations(books, options)
+    return _read_locations(books, pickle.loads(options))  # noqa: S301
 
 
 def _read_locations(
@@ -326,25 +326,28 @@ def _read_locations(
             int | None,
         ]
     ],
-    options: dict[str, Any],
+    options: cfg.ReadLocationsJobOptions,
 ) -> dict[int, dict[str, Any]]:
     debug("start")
     count_books = 0
     new_locations = {}
-    clear_if_unread = options[cfg.KEY_CLEAR_IF_UNREAD]
-    store_if_more_recent = options[cfg.KEY_STORE_IF_MORE_RECENT]
-    do_not_store_if_reopened = options[cfg.KEY_DO_NOT_STORE_IF_REOPENED]
-    epub_location_like_kepub = options["epub_location_like_kepub"]
-    kepub_fetch_query = options["fetch_queries"]["kepub"]
-    epub_fetch_query = options["fetch_queries"]["epub"]
+    clear_if_unread = options.bookmark_options.clearIfUnread
+    store_if_more_recent = options.bookmark_options.storeIfMoreRecent
+    do_not_store_if_reopened = options.bookmark_options.doNotStoreIfReopened
+    epub_location_like_kepub = options.epub_location_like_kepub
+    kepub_fetch_query = options.fetch_queries.kepub
+    epub_fetch_query = options.fetch_queries.epub
 
-    kobo_percentRead_column_name = options[cfg.KEY_PERCENT_READ_CUSTOM_COLUMN]
-    last_read_column_name = options[cfg.KEY_LAST_READ_CUSTOM_COLUMN]
+    kobo_percentRead_column_name = None
+    last_read_column_name = None
+    if options.custom_columns is not None:
+        kobo_percentRead_column_name = options.custom_columns.percent_read
+        last_read_column_name = options.custom_columns.last_read
 
     connection = DeviceDatabaseConnection(
-        options["database_path"],
-        options["device_database_path"],
-        options["is_db_copied"],
+        options.database_path,
+        options.device_database_path,
+        options.is_db_copied,
         use_row_factory=True,
     )
     cursor = connection.cursor()
@@ -638,16 +641,17 @@ def value_changed(old_value: Any | None, new_value: Any | None) -> bool:
 
 
 def do_clean_images_dir(
-    options: dict[str, Any],
+    options_raw: bytes,
     cpus: int,
     notification: Callable[[float, str], Any] = lambda _x, y: y,
 ):
     del cpus
-    main_image_path = options["main_image_path"]
-    sd_image_path = options["sd_image_path"]
-    database_path = options["database_path"]
-    device_database_path = options["device_database_path"]
-    is_db_copied = options["is_db_copied"]
+    options: cfg.CleanImagesDirJobOptions = pickle.loads(options_raw)  # noqa: S301
+    main_image_path = options.main_image_path
+    sd_image_path = options.sd_image_path
+    database_path = options.database_path
+    device_database_path = options.device_database_path
+    is_db_copied = options.is_db_copied
 
     notification(1 / 7, "Getting ImageIDs from main images directory")
     debug(
@@ -673,9 +677,9 @@ def do_clean_images_dir(
     extra_image_files_main = _remove_extra_files(
         extra_imageids_files_main,
         imageids_files_main,
-        options["delete_extra_covers"],
+        options.delete_extra_covers,
         main_image_path,
-        images_tree=options["images_tree"],
+        images_tree=options.images_tree,
     )
 
     notification(5 / 7, "Checking/removing images from SD card images directory")
@@ -687,9 +691,9 @@ def do_clean_images_dir(
     extra_image_files_sd = _remove_extra_files(
         extra_imageids_files_sd,
         imageids_files_sd,
-        options["delete_extra_covers"],
+        options.delete_extra_covers,
         sd_image_path,
-        images_tree=options["images_tree"],
+        images_tree=options.images_tree,
     )
 
     extra_image_files: dict[str, list[str]] = {}
@@ -772,15 +776,16 @@ def _get_imageId_set(
 
 
 def do_remove_annotations(
-    options: dict[str, Any],
+    options_raw: bytes,
     books: list[tuple[int, list[str], list[str], str, str]],
     cpus: int,
     notification: Callable[[float, str], Any] = lambda _x, y: y,
 ):
     del cpus
-    annotations_dir = options["annotations_dir"]
-    annotations_ext = options["annotations_ext"]
-    device_path = options["device_path"]
+    options: cfg.RemoveAnnotationsJobOptions = pickle.loads(options_raw)  # noqa: S301
+    annotations_dir = options.annotations_dir
+    annotations_ext = options.annotations_ext
+    device_path = options.device_path
     msg = None
     details = None
     steps = 3
@@ -793,13 +798,13 @@ def do_remove_annotations(
     debug("options:", options)
     debug("len(books):", len(books))
     debug("annotations_dir: '%s'" % (annotations_dir))
-    if options[cfg.KEY_REMOVE_ANNOT_ACTION] == cfg.KEY_REMOVE_ANNOT_ALL:
+    if options.remove_annot_action == cfg.RemoveAnnotationsAction.All:
         if os.path.exists(annotations_dir):
             debug("removing annotations directory")
             shutil.rmtree(annotations_dir)
             msg = _("Annotations directory removed.")
             debug("removing annotations directory - done")
-    elif options[cfg.KEY_REMOVE_ANNOT_ACTION] == cfg.KEY_REMOVE_ANNOT_SELECTED:
+    elif options.remove_annot_action == cfg.RemoveAnnotationsAction.Selected:
         if books and len(books) > 0:
             annotation_files = _get_annotation_files_for_books(
                 books, annotations_dir, annotations_ext, device_path
@@ -812,13 +817,13 @@ def do_remove_annotations(
 
     if len(annotation_files.keys()) > 0:
         annotation_test_func = None
-        if options[cfg.KEY_REMOVE_ANNOT_ACTION] == cfg.KEY_REMOVE_ANNOT_NOBOOK:
+        if options.remove_annot_action == cfg.RemoveAnnotationsAction.NotOnDevice:
             annotation_test_func = _book_file_does_not_exists
-        elif options[cfg.KEY_REMOVE_ANNOT_ACTION] == cfg.KEY_REMOVE_ANNOT_EMPTY:
+        elif options.remove_annot_action == cfg.RemoveAnnotationsAction.Empty:
             annotation_test_func = _annotation_file_is_empty
-        elif options[cfg.KEY_REMOVE_ANNOT_ACTION] == cfg.KEY_REMOVE_ANNOT_NONEMPTY:
+        elif options.remove_annot_action == cfg.RemoveAnnotationsAction.NotEmpty:
             annotation_test_func = _annotation_file_is_not_empty
-        elif options[cfg.KEY_REMOVE_ANNOT_ACTION] == cfg.KEY_REMOVE_ANNOT_SELECTED:
+        elif options.remove_annot_action == cfg.RemoveAnnotationsAction.Selected:
             pass
         if annotation_test_func:
             current_step += 1

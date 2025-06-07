@@ -15,14 +15,13 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Dict,
     cast,
 )
 from urllib.parse import quote_plus
 
 from calibre.devices.kobo.driver import KOBO
 from calibre.ebooks.metadata import authors_to_string
-from calibre.gui2 import choose_dir, error_dialog, gprefs, open_url, question_dialog, ui
+from calibre.gui2 import choose_dir, error_dialog, open_url, question_dialog, ui
 from calibre.gui2.complete2 import EditWithComplete
 from calibre.gui2.dialogs.confirm_delete import confirm
 from calibre.gui2.dialogs.template_dialog import TemplateDialog
@@ -212,7 +211,7 @@ load_translations()
 
 
 def have_rating_column(plugin_action: KoboUtilitiesAction):
-    rating_column = plugin_action.get_rating_column()
+    rating_column = plugin_action.get_column_names().rating
     return rating_column != ""
 
 
@@ -228,12 +227,15 @@ class AuthorTableWidgetItem(ReadOnlyTableWidgetItem):
         return super().__lt__(other)
 
 
-class QueueProgressDialog(QProgressDialog):
+class ReadLocationsProgressDialog(QProgressDialog):
     def __init__(
         self,
         gui: ui.Main | None,  # TODO Can this actually be None?
-        options: dict[str, Any],
-        queue: Callable[..., None],  # TODO Should only have one supported signature
+        options: cfg.ReadLocationsJobOptions,
+        queue: Callable[
+            [cfg.ReadLocationsJobOptions, list[tuple[Any]]],
+            None,
+        ],
         db: LibraryDatabase | None,
         plugin_action: KoboUtilitiesAction,
     ):
@@ -244,19 +246,11 @@ class QueueProgressDialog(QProgressDialog):
         self.options, self.queue, self.db = (options, queue, db)
         self.plugin_action = plugin_action
         self.gui = gui
-        self.i, self.books_to_scan = 0, []
-        self.profileName = self.options.get("profileName", None)
-
-        self.options["count_selected_books"] = 0
-        if self.options["job_function"] == "clean_images_dir":
-            self.setWindowTitle(_("Creating queue for checking images directory"))
-            QTimer.singleShot(0, self.do_clean_images_dir_queue)
-        elif self.options["job_function"] == "remove_annotations":
-            self.setWindowTitle(_("Creating queue for removing annotations files"))
-            QTimer.singleShot(0, self.do_remove_annotations_queue)
-        else:
-            self.setWindowTitle(_("Queueing books for storing reading position"))
-            QTimer.singleShot(0, self.do_books)
+        self.i = 0
+        self.books_to_scan = []
+        self.profileName = self.options.profile_name
+        self.setWindowTitle(_("Queueing books for storing reading position"))
+        QTimer.singleShot(0, self.do_books)
         self.exec()
 
     def do_books(self):
@@ -265,32 +259,22 @@ class QueueProgressDialog(QProgressDialog):
         library_db = self.db
         assert library_db is not None
 
-        (
-            kobo_chapteridbookmarked_column,
-            kobo_percentRead_column,
-            rating_column,
-            last_read_column,
-            time_spent_reading_column,
-            rest_of_book_estimate_column,
-        ) = self.plugin_action.get_column_names()
-        self.options[cfg.KEY_CURRENT_LOCATION_CUSTOM_COLUMN] = (
-            kobo_chapteridbookmarked_column
-        )
-        self.options[cfg.KEY_PERCENT_READ_CUSTOM_COLUMN] = kobo_percentRead_column
-        self.options[cfg.KEY_RATING_CUSTOM_COLUMN] = rating_column
-        self.options[cfg.KEY_LAST_READ_CUSTOM_COLUMN] = last_read_column
-        self.options[cfg.KEY_TIME_SPENT_READING_COLUMN] = time_spent_reading_column
-        self.options[cfg.KEY_REST_OF_BOOK_ESTIMATE_COLUMN] = (
-            rest_of_book_estimate_column
-        )
+        custom_columns = self.plugin_action.get_column_names()
+        self.options.custom_columns = custom_columns
+        kobo_chapteridbookmarked_column = custom_columns.current_location
+        kobo_percentRead_column = custom_columns.percent_read
+        rating_column = custom_columns.rating
+        last_read_column = custom_columns.last_read
+        time_spent_reading_column = custom_columns.time_spent_reading
+        rest_of_book_estimate_column = custom_columns.rest_of_book_estimate
 
         debug("kobo_percentRead_column='%s'" % kobo_percentRead_column)
         self.setLabelText(_("Preparing the list of books ..."))
         self.setValue(1)
         search_condition = ""
-        if self.options[cfg.KEY_DO_NOT_STORE_IF_REOPENED]:
+        if self.options.bookmark_options.doNotStoreIfReopened:
             search_condition = f"and ({kobo_percentRead_column}:false or {kobo_percentRead_column}:<100)"
-        if self.options["allOnDevice"]:
+        if self.options.allOnDevice:
             search_condition = f"ondevice:True {search_condition}"
             debug("search_condition=", search_condition)
             onDeviceIds = set(
@@ -378,10 +362,6 @@ class QueueProgressDialog(QProgressDialog):
             self.setValue(self.i)
 
         debug("Finish")
-        return self.do_queue()
-
-    def do_queue(self):
-        debug("start")
         if self.gui is None:
             # There is a nasty QT bug with the timers/logic above which can
             # result in the do_queue method being called twice
@@ -390,6 +370,24 @@ class QueueProgressDialog(QProgressDialog):
 
         # Queue a job to process these ePub books
         self.queue(self.options, self.books_to_scan)
+
+
+class CleanImagesDirProgressDialog(QProgressDialog):
+    def __init__(
+        self,
+        gui: ui.Main | None,  # TODO Can this actually be None?
+        options: cfg.CleanImagesDirJobOptions,
+        queue: Callable[[cfg.CleanImagesDirJobOptions], None],
+    ):
+        QProgressDialog.__init__(self, "", "", 0, 0, gui)
+        debug("init")
+        self.setMinimumWidth(500)
+        self.options = options
+        self.queue = queue
+        self.gui = gui
+        self.setWindowTitle(_("Creating queue for checking images directory"))
+        QTimer.singleShot(0, self.do_clean_images_dir_queue)
+        self.exec()
 
     def do_clean_images_dir_queue(self):
         debug("start")
@@ -402,13 +400,38 @@ class QueueProgressDialog(QProgressDialog):
         # Queue a job to process these ePub books
         self.queue(self.options)
 
+
+class RemoveAnnotationsProgressDialog(QProgressDialog):
+    def __init__(
+        self,
+        gui: ui.Main | None,  # TODO Can this actually be None?
+        options: cfg.RemoveAnnotationsJobOptions,
+        queue: Callable[[cfg.RemoveAnnotationsJobOptions, list[tuple[Any]]], None],
+        db: LibraryDatabase | None,
+        plugin_action: KoboUtilitiesAction,
+    ):
+        QProgressDialog.__init__(self, "", "", 0, 0, gui)
+        debug("init")
+        self.setMinimumWidth(500)
+        self.books = []
+        self.options = options
+        self.queue = queue
+        self.db = db
+        self.plugin_action = plugin_action
+        self.gui = gui
+        self.books_to_scan = []
+
+        self.setWindowTitle(_("Creating queue for removing annotations files"))
+        QTimer.singleShot(0, self.do_remove_annotations_queue)
+        self.exec()
+
     def do_remove_annotations_queue(self):
         debug("start")
         if self.gui is None:
             # There is a nasty QT bug with the timers/logic above which can
             # result in the do_queue method being called twice
             return
-        if self.options[cfg.KEY_REMOVE_ANNOT_ACTION] == cfg.KEY_REMOVE_ANNOT_SELECTED:
+        if self.options.remove_annot_action == cfg.RemoveAnnotationsAction.Selected:
             library_db = self.db  # self.gui.current_db
             assert library_db is not None
 
@@ -424,8 +447,7 @@ class QueueProgressDialog(QProgressDialog):
                 )
             self.setRange(0, len(self.books))
 
-            for book in self.books:
-                self.i += 1
+            for i, book in enumerate(self.books, start=1):
                 if self.plugin_action.isDeviceView():
                     device_book_paths = [book.path]
                     contentIDs = [book.contentID]
@@ -450,12 +472,11 @@ class QueueProgressDialog(QProgressDialog):
                     self.books_to_scan.append(
                         (book.calibre_id, book.contentIDs, book.paths, title, authors)
                     )
-                self.setValue(self.i)
-        else:
-            self.hide()
+                self.setValue(i)
+        self.hide()
 
         # Queue a job to process these ePub books
-        self.do_queue()
+        self.queue(self.options, self.books_to_scan)
 
 
 class ReaderOptionsDialog(SizePersistedDialog):
@@ -486,14 +507,14 @@ class ReaderOptionsDialog(SizePersistedDialog):
         self.initialize_controls(contentID)
 
         # Set some default values from last time dialog was used.
-        self.prefs = cfg.plugin_prefs[cfg.READING_OPTIONS_STORE_NAME]
-        self.change_settings(self.prefs)
-        debug("prefs", self.prefs)
-        if self.prefs.get(cfg.KEY_READING_LOCK_MARGINS, False):
+        options = cfg.plugin_prefs.ReadingOptions
+        self.change_settings(options)
+        debug("options", options)
+        if options.lockMargins:
             self.lock_margins_checkbox.click()
-        if self.prefs.get(cfg.KEY_UPDATE_CONFIG_FILE, False):
+        if options.updateConfigFile:
             self.update_config_file_checkbox.setCheckState(Qt.CheckState.Checked)
-        if self.prefs.get(cfg.KEY_DO_NOT_UPDATE_IF_SET, False):
+        if options.doNotUpdateIfSet:
             self.do_not_update_if_set_checkbox.setCheckState(Qt.CheckState.Checked)
         self.get_book_settings_pushbutton.setEnabled(contentID is not None)
 
@@ -642,47 +663,30 @@ class ReaderOptionsDialog(SizePersistedDialog):
         button_layout.addWidget(button_box)
 
     def ok_clicked(self):
-        self.prefs = cfg.READING_OPTIONS_DEFAULTS
-        self.prefs[cfg.KEY_READING_FONT_FAMILY] = self.font_list[
-            str(self.font_choice.currentText()).strip()
-        ]
-        self.prefs[cfg.KEY_READING_ALIGNMENT] = str(
-            self.justification_choice.currentText()
-        ).strip()
-        self.prefs[cfg.KEY_READING_FONT_SIZE] = int(str(self.font_size_spin.value()))
-        if self.custom_line_spacing_is_checked():
-            self.prefs[cfg.KEY_READING_LINE_HEIGHT] = float(
-                str(self.custom_line_spacing_edit.text())
-            )
-            debug(
-                "custom -self.prefs[cfg.KEY_READING_LINE_HEIGHT]=",
-                self.prefs[cfg.KEY_READING_LINE_HEIGHT],
-            )
-        else:
-            self.prefs[cfg.KEY_READING_LINE_HEIGHT] = self.line_spacings[
-                int(str(self.line_spacing_spin.value()))
+        with cfg.plugin_prefs.ReadingOptions as options:
+            options.readingFontFamily = self.font_list[
+                self.font_choice.currentText().strip()
             ]
-            debug(
-                "spin - self.prefs[cfg.KEY_READING_LINE_HEIGHT]=",
-                self.prefs[cfg.KEY_READING_LINE_HEIGHT],
+            options.readingAlignment = self.justification_choice.currentText().strip()
+            options.readingFontSize = self.font_size_spin.value()
+            if self.custom_line_spacing_is_checked():
+                options.readingLineHeight = float(self.custom_line_spacing_edit.text())
+                debug("custom - readingLineHeight=", options.readingLineHeight)
+            else:
+                options.readingLineHeight = self.line_spacings[
+                    self.line_spacing_spin.value()
+                ]
+                debug("spin - readingLineHeight=", options.readingLineHeight)
+            options.readingLeftMargin = self.left_margins_spin.value()
+            options.readingRightMargin = self.right_margins_spin.value()
+            options.lockMargins = self.lock_margins_checkbox_is_checked()
+            options.updateConfigFile = (
+                self.update_config_file_checkbox.checkState() == Qt.CheckState.Checked
             )
-        self.prefs[cfg.KEY_READING_LEFT_MARGIN] = int(
-            str(self.left_margins_spin.value())
-        )
-        self.prefs[cfg.KEY_READING_RIGHT_MARGIN] = int(
-            str(self.right_margins_spin.value())
-        )
-        self.prefs[cfg.KEY_READING_LOCK_MARGINS] = (
-            self.lock_margins_checkbox_is_checked()
-        )
-        self.prefs[cfg.KEY_UPDATE_CONFIG_FILE] = (
-            self.update_config_file_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        self.prefs[cfg.KEY_DO_NOT_UPDATE_IF_SET] = (
-            self.do_not_update_if_set_checkbox.checkState() == Qt.CheckState.Checked
-        )
+            options.doNotUpdateIfSet = (
+                self.do_not_update_if_set_checkbox.checkState() == Qt.CheckState.Checked
+            )
 
-        gprefs.set(self.unique_pref_name + ":settings", self.prefs)
         self.accept()
 
     def custom_line_spacing_checkbox_clicked(self, checked: bool):
@@ -732,64 +736,46 @@ class ReaderOptionsDialog(SizePersistedDialog):
         assert normalized_path is not None
         koboConfig.read(normalized_path)
 
-        device_settings = {}
-        device_settings[cfg.KEY_READING_FONT_FAMILY] = (
-            koboConfig.get("Reading", cfg.KEY_READING_FONT_FAMILY)
-            if koboConfig.has_option("Reading", cfg.KEY_READING_FONT_FAMILY)
-            else cfg.READING_OPTIONS_DEFAULTS[cfg.KEY_READING_FONT_FAMILY]
-        )
-        device_settings[cfg.KEY_READING_ALIGNMENT] = (
-            koboConfig.get("Reading", cfg.KEY_READING_ALIGNMENT)
-            if koboConfig.has_option("Reading", cfg.KEY_READING_ALIGNMENT)
-            else cfg.READING_OPTIONS_DEFAULTS[cfg.KEY_READING_ALIGNMENT]
-        )
-        device_settings[cfg.KEY_READING_FONT_SIZE] = (
-            koboConfig.get("Reading", cfg.KEY_READING_FONT_SIZE)
-            if koboConfig.has_option("Reading", cfg.KEY_READING_FONT_SIZE)
-            else cfg.READING_OPTIONS_DEFAULTS[cfg.KEY_READING_FONT_SIZE]
-        )
-        device_settings[cfg.KEY_READING_LINE_HEIGHT] = (
-            float(koboConfig.get("Reading", cfg.KEY_READING_LINE_HEIGHT))
-            if koboConfig.has_option("Reading", cfg.KEY_READING_LINE_HEIGHT)
-            else cfg.READING_OPTIONS_DEFAULTS[cfg.KEY_READING_LINE_HEIGHT]
-        )
-        device_settings[cfg.KEY_READING_LEFT_MARGIN] = (
-            koboConfig.get("Reading", cfg.KEY_READING_LEFT_MARGIN)
-            if koboConfig.has_option("Reading", cfg.KEY_READING_LEFT_MARGIN)
-            else cfg.READING_OPTIONS_DEFAULTS[cfg.KEY_READING_LEFT_MARGIN]
-        )
-        device_settings[cfg.KEY_READING_RIGHT_MARGIN] = (
-            koboConfig.get("Reading", cfg.KEY_READING_RIGHT_MARGIN)
-            if koboConfig.has_option("Reading", cfg.KEY_READING_RIGHT_MARGIN)
-            else cfg.READING_OPTIONS_DEFAULTS[cfg.KEY_READING_RIGHT_MARGIN]
-        )
+        device_settings = cfg.ReadingOptionsConfig()
+        if koboConfig.has_option("Reading", cfg.KEY_READING_FONT_FAMILY):
+            device_settings.readingFontFamily = koboConfig.get(
+                "Reading", cfg.KEY_READING_FONT_FAMILY
+            )
+        if koboConfig.has_option("Reading", cfg.KEY_READING_ALIGNMENT):
+            device_settings.readingAlignment = koboConfig.get(
+                "Reading", cfg.KEY_READING_ALIGNMENT
+            )
+        if koboConfig.has_option("Reading", cfg.KEY_READING_FONT_SIZE):
+            device_settings.readingFontSize = int(
+                koboConfig.get("Reading", cfg.KEY_READING_FONT_SIZE)
+            )
+        if koboConfig.has_option("Reading", cfg.KEY_READING_LINE_HEIGHT):
+            device_settings.readingLineHeight = float(
+                koboConfig.get("Reading", cfg.KEY_READING_LINE_HEIGHT)
+            )
+        if koboConfig.has_option("Reading", cfg.KEY_READING_LEFT_MARGIN):
+            device_settings.readingLeftMargin = int(
+                koboConfig.get("Reading", cfg.KEY_READING_LEFT_MARGIN)
+            )
+        if koboConfig.has_option("Reading", cfg.KEY_READING_RIGHT_MARGIN):
+            device_settings.readingRightMargin = int(
+                koboConfig.get("Reading", cfg.KEY_READING_RIGHT_MARGIN)
+            )
 
         self.change_settings(device_settings)
 
-    def change_settings(self, reader_settings: dict[str, Any]):
-        font_face = reader_settings.get(
-            cfg.KEY_READING_FONT_FAMILY,
-            cfg.READING_OPTIONS_DEFAULTS[cfg.KEY_READING_FONT_FAMILY],
-        )
+    def change_settings(self, reader_settings: cfg.ReadingOptionsConfig):
+        font_face = reader_settings.readingFontFamily
         debug("font_face=", font_face)
         self.font_choice.select_text(font_face)
 
-        justification = reader_settings.get(
-            cfg.KEY_READING_ALIGNMENT,
-            cfg.READING_OPTIONS_DEFAULTS[cfg.KEY_READING_ALIGNMENT],
-        )
+        justification = reader_settings.readingAlignment
         self.justification_choice.select_text(justification)
 
-        font_size = reader_settings.get(
-            cfg.KEY_READING_FONT_SIZE,
-            cfg.READING_OPTIONS_DEFAULTS[cfg.KEY_READING_FONT_SIZE],
-        )
+        font_size = reader_settings.readingFontSize
         self.font_size_spin.setProperty("value", font_size)
 
-        line_spacing = reader_settings.get(
-            cfg.KEY_READING_LINE_HEIGHT,
-            cfg.READING_OPTIONS_DEFAULTS[cfg.KEY_READING_LINE_HEIGHT],
-        )
+        line_spacing = reader_settings.readingLineHeight
         debug("line_spacing='%s'" % line_spacing)
         if line_spacing in self.line_spacings:
             line_spacing_index = self.line_spacings.index(line_spacing)
@@ -803,21 +789,15 @@ class ReaderOptionsDialog(SizePersistedDialog):
         self.custom_line_spacing_edit.setText(str(line_spacing))
         self.line_spacing_spin.setProperty("value", line_spacing_index)
 
-        left_margins = reader_settings.get(
-            cfg.KEY_READING_LEFT_MARGIN,
-            cfg.READING_OPTIONS_DEFAULTS[cfg.KEY_READING_LEFT_MARGIN],
-        )
+        left_margins = reader_settings.readingLeftMargin
         self.left_margins_spin.setProperty("value", left_margins)
-        right_margins = reader_settings.get(
-            cfg.KEY_READING_RIGHT_MARGIN,
-            cfg.READING_OPTIONS_DEFAULTS[cfg.KEY_READING_RIGHT_MARGIN],
-        )
+        right_margins = reader_settings.readingRightMargin
         self.right_margins_spin.setProperty("value", right_margins)
 
     def get_book_settings(self, contentID: str):
         book_options = self.plugin_action.fetch_book_fonts(contentID)
 
-        if len(book_options) > 0:
+        if book_options is not None:
             self.change_settings(book_options)
 
     def get_font_list(self):
@@ -843,48 +823,39 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         self.plugin_action = plugin_action
         self.help_anchor = "UpdateMetadata"
         self.test_book = book
-        self.new_prefs: dict[str, Any] = cfg.METADATA_OPTIONS_DEFAULTS
 
         self.initialize_controls()
 
         # Set some default values from last time dialog was used.
-        title = cfg.get_plugin_pref(cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_SET_TITLE)
+        title = cfg.plugin_prefs.MetadataOptions.title
         self.title_checkbox.setCheckState(
             Qt.CheckState.Checked if title else Qt.CheckState.Unchecked
         )
         self.title_checkbox_clicked(title)
 
-        title_sort = cfg.get_plugin_pref(
-            cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_USE_TITLE_SORT
-        )
+        title_sort = cfg.plugin_prefs.MetadataOptions.titleSort
         self.title_sort_checkbox.setCheckState(
             Qt.CheckState.Checked if title_sort else Qt.CheckState.Unchecked
         )
 
-        author = cfg.get_plugin_pref(
-            cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_SET_AUTHOR
-        )
+        author = cfg.plugin_prefs.MetadataOptions.author
         self.author_checkbox.setCheckState(
             Qt.CheckState.Checked if author else Qt.CheckState.Unchecked
         )
 
-        author_sort = cfg.get_plugin_pref(
-            cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_USE_AUTHOR_SORT
-        )
+        author_sort = cfg.plugin_prefs.MetadataOptions.authourSort
         self.author_sort_checkbox.setCheckState(
             Qt.CheckState.Checked if author_sort else Qt.CheckState.Unchecked
         )
         self.author_checkbox_clicked(author)
 
-        description = cfg.get_plugin_pref(
-            cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_SET_DESCRIPTION
-        )
+        description = cfg.plugin_prefs.MetadataOptions.description
         self.description_checkbox.setCheckState(
             Qt.CheckState.Checked if description else Qt.CheckState.Unchecked
         )
 
-        description_use_template = cfg.get_plugin_pref(
-            cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_DESCRIPTION_USE_TEMPLATE
+        description_use_template = (
+            cfg.plugin_prefs.MetadataOptions.descriptionUseTemplate
         )
         self.description_use_template_checkbox.setCheckState(
             Qt.CheckState.Checked
@@ -892,26 +863,20 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
             else Qt.CheckState.Unchecked
         )
         self.description_checkbox_clicked(description)
-        description_template = cfg.get_plugin_pref(
-            cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_DESCRIPTION_TEMPLATE
-        )
+        description_template = cfg.plugin_prefs.MetadataOptions.descriptionTemplate
         self.description_template_edit.template = description_template
 
-        publisher = cfg.get_plugin_pref(
-            cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_SET_PUBLISHER
-        )
+        publisher = cfg.plugin_prefs.MetadataOptions.publisher
         self.publisher_checkbox.setCheckState(
             Qt.CheckState.Checked if publisher else Qt.CheckState.Unchecked
         )
 
-        published = cfg.get_plugin_pref(
-            cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_SET_PUBLISHED_DATE
-        )
+        published = cfg.plugin_prefs.MetadataOptions.published_date
         self.published_checkbox.setCheckState(
             Qt.CheckState.Checked if published else Qt.CheckState.Unchecked
         )
 
-        isbn = cfg.get_plugin_pref(cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_SET_ISBN)
+        isbn = cfg.plugin_prefs.MetadataOptions.isbn
         supports_ratings = (
             self.plugin_action.device.supports_ratings
             if self.plugin_action.device is not None
@@ -924,9 +889,7 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         )
         self.isbn_checkbox.setEnabled(supports_ratings)
 
-        rating = cfg.get_plugin_pref(
-            cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_SET_RATING
-        )
+        rating = cfg.plugin_prefs.MetadataOptions.rating
         self.rating_checkbox.setCheckState(
             Qt.CheckState.Checked
             if rating and supports_ratings
@@ -936,9 +899,7 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
             have_rating_column(self.plugin_action) and supports_ratings
         )
 
-        series = cfg.get_plugin_pref(
-            cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_SET_SERIES
-        )
+        series = cfg.plugin_prefs.MetadataOptions.series
         self.series_checkbox.setCheckState(
             Qt.CheckState.Checked
             if series
@@ -951,40 +912,28 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
             and self.plugin_action.device.supports_series
         )
 
-        subtitle = cfg.get_plugin_pref(
-            cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_SET_SUBTITLE
-        )
+        subtitle = cfg.plugin_prefs.MetadataOptions.subtitle
         self.subtitle_checkbox.setCheckState(
             Qt.CheckState.Checked if subtitle else Qt.CheckState.Unchecked
         )
         self.subtitle_checkbox_clicked(subtitle)
 
-        subtitle_template = cfg.get_plugin_pref(
-            cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_SUBTITLE_TEMPLATE
-        )
+        subtitle_template = cfg.plugin_prefs.MetadataOptions.subtitleTemplate
         self.subtitle_template_edit.template = subtitle_template
 
-        reading_direction = cfg.get_plugin_pref(
-            cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_SET_READING_DIRECTION
-        )
+        reading_direction = cfg.plugin_prefs.MetadataOptions.set_reading_direction
         self.reading_direction_checkbox.setCheckState(
             Qt.CheckState.Checked if reading_direction else Qt.CheckState.Unchecked
         )
         self.reading_direction_checkbox_clicked(reading_direction)
-        reading_direction = cfg.get_plugin_pref(
-            cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_READING_DIRECTION
-        )
+        reading_direction = cfg.plugin_prefs.MetadataOptions.reading_direction
         self.reading_direction_combo.select_text(reading_direction)
 
-        date_added = cfg.get_plugin_pref(
-            cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_SYNC_DATE
-        )
+        date_added = cfg.plugin_prefs.MetadataOptions.set_sync_date
         self.date_added_checkbox.setCheckState(
             Qt.CheckState.Checked if date_added else Qt.CheckState.Unchecked
         )
-        date_added_column = cfg.get_plugin_pref(
-            cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_SYNC_DATE_COLUMN
-        )
+        date_added_column = cfg.plugin_prefs.MetadataOptions.sync_date_library_date
         self.date_added_column_combo.populate_combo(
             self.get_date_columns(DATE_COLUMNS),
             date_added_column,
@@ -993,24 +942,18 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         )
         self.date_added_checkbox_clicked(date_added)
 
-        use_plugboard = cfg.get_plugin_pref(
-            cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_USE_PLUGBOARD
-        )
+        use_plugboard = cfg.plugin_prefs.MetadataOptions.usePlugboard
         self.use_plugboard_checkbox.setCheckState(
             Qt.CheckState.Checked if use_plugboard else Qt.CheckState.Unchecked
         )
         self.use_plugboard_checkbox_clicked(use_plugboard)
 
-        update_kepubs = cfg.get_plugin_pref(
-            cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_UDPATE_KOBO_EPUBS
-        )
+        update_kepubs = cfg.plugin_prefs.MetadataOptions.update_KoboEpubs
         self.update_kepubs_checkbox.setCheckState(
             Qt.CheckState.Checked if update_kepubs else Qt.CheckState.Unchecked
         )
 
-        language = cfg.get_plugin_pref(
-            cfg.METADATA_OPTIONS_STORE_NAME, cfg.KEY_SET_LANGUAGE
-        )
+        language = cfg.plugin_prefs.MetadataOptions.language
         self.language_checkbox.setCheckState(
             Qt.CheckState.Checked if language else Qt.CheckState.Unchecked
         )
@@ -1158,93 +1101,76 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         layout.addWidget(button_box)
 
     def ok_clicked(self) -> None:
-        new_prefs: dict[str, Any] = cfg.METADATA_OPTIONS_DEFAULTS
-        new_prefs[cfg.KEY_SET_TITLE] = (
-            self.title_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        new_prefs[cfg.KEY_USE_TITLE_SORT] = (
+        new_prefs = cfg.MetadataOptionsConfig()
+        new_prefs.title = self.title_checkbox.checkState() == Qt.CheckState.Checked
+        new_prefs.titleSort = (
             self.title_sort_checkbox.checkState() == Qt.CheckState.Checked
         )
-        new_prefs[cfg.KEY_SET_AUTHOR] = (
-            self.author_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        new_prefs[cfg.KEY_USE_AUTHOR_SORT] = (
+        new_prefs.author = self.author_checkbox.checkState() == Qt.CheckState.Checked
+        new_prefs.authourSort = (
             self.author_sort_checkbox.checkState() == Qt.CheckState.Checked
         )
-        new_prefs[cfg.KEY_SET_DESCRIPTION] = (
+        new_prefs.description = (
             self.description_checkbox.checkState() == Qt.CheckState.Checked
         )
-        new_prefs[cfg.KEY_DESCRIPTION_USE_TEMPLATE] = (
+        new_prefs.descriptionUseTemplate = (
             self.description_use_template_checkbox.checkState() == Qt.CheckState.Checked
         )
-        new_prefs[cfg.KEY_DESCRIPTION_TEMPLATE] = (
-            self.description_template_edit.template
-        )
-        new_prefs[cfg.KEY_SET_PUBLISHER] = (
+        new_prefs.descriptionTemplate = self.description_template_edit.template
+        new_prefs.publisher = (
             self.publisher_checkbox.checkState() == Qt.CheckState.Checked
         )
-        new_prefs[cfg.KEY_SET_PUBLISHED_DATE] = (
+        new_prefs.published_date = (
             self.published_checkbox.checkState() == Qt.CheckState.Checked
         )
-        new_prefs[cfg.KEY_SET_ISBN] = (
-            self.isbn_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        new_prefs[cfg.KEY_SET_RATING] = (
-            self.rating_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        new_prefs[cfg.KEY_SET_SERIES] = (
-            self.series_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        new_prefs[cfg.KEY_USE_PLUGBOARD] = (
+        new_prefs.isbn = self.isbn_checkbox.checkState() == Qt.CheckState.Checked
+        new_prefs.rating = self.rating_checkbox.checkState() == Qt.CheckState.Checked
+        new_prefs.series = self.series_checkbox.checkState() == Qt.CheckState.Checked
+        new_prefs.usePlugboard = (
             self.use_plugboard_checkbox.checkState() == Qt.CheckState.Checked
         )
-        new_prefs[cfg.KEY_SET_LANGUAGE] = (
+        new_prefs.language = (
             self.language_checkbox.checkState() == Qt.CheckState.Checked
         )
-        new_prefs[cfg.KEY_UDPATE_KOBO_EPUBS] = (
+        new_prefs.update_KoboEpubs = (
             self.update_kepubs_checkbox.checkState() == Qt.CheckState.Checked
         )
-        new_prefs[cfg.KEY_SET_SUBTITLE] = (
+        new_prefs.subtitle = (
             self.subtitle_checkbox.checkState() == Qt.CheckState.Checked
         )
-        new_prefs[cfg.KEY_SUBTITLE_TEMPLATE] = self.subtitle_template_edit.template
-        new_prefs[cfg.KEY_SET_READING_DIRECTION] = (
+        new_prefs.subtitleTemplate = self.subtitle_template_edit.template
+        new_prefs.set_reading_direction = (
             self.reading_direction_checkbox.checkState() == Qt.CheckState.Checked
         )
-        new_prefs[cfg.KEY_SYNC_DATE] = (
+        new_prefs.set_sync_date = (
             self.date_added_checkbox.checkState() == Qt.CheckState.Checked
         )
 
         if (
-            new_prefs[cfg.KEY_DESCRIPTION_USE_TEMPLATE]
+            new_prefs.descriptionUseTemplate
             and not self.description_template_edit.validate()
         ):
             return
 
-        if (
-            new_prefs[cfg.KEY_SET_SUBTITLE]
-            and not self.subtitle_template_edit.validate()
-        ):
+        if new_prefs.subtitle and not self.subtitle_template_edit.validate():
             return
 
-        if new_prefs[cfg.KEY_SET_READING_DIRECTION]:
-            new_prefs[cfg.KEY_READING_DIRECTION] = READING_DIRECTIONS[
+        if new_prefs.set_reading_direction:
+            new_prefs.reading_direction = READING_DIRECTIONS[
                 str(self.reading_direction_combo.currentText()).strip()
             ]
 
-        if new_prefs[cfg.KEY_SYNC_DATE]:
-            new_prefs[cfg.KEY_SYNC_DATE_COLUMN] = (
+        if new_prefs.set_sync_date:
+            new_prefs.sync_date_library_date = (
                 self.date_added_column_combo.get_selected_column()
             )
 
-        new_prefs[cfg.KEY_SET_READING_STATUS] = (
+        new_prefs.setRreadingStatus = (
             self.readingStatusGroupBox.readingStatusIsChecked()
         )
         if self.readingStatusGroupBox.readingStatusIsChecked():
-            new_prefs[cfg.KEY_READING_STATUS] = (
-                self.readingStatusGroupBox.readingStatus()
-            )
-            if new_prefs["readingStatus"] < 0:
+            new_prefs.readingStatus = self.readingStatusGroupBox.readingStatus()
+            if new_prefs.readingStatus < 0:
                 error_dialog(
                     self,
                     "No reading status option selected",
@@ -1253,22 +1179,16 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
                     show_copy_button=False,
                 )
                 return
-            new_prefs[cfg.KEY_RESET_POSITION] = (
+            new_prefs.resetPosition = (
                 self.readingStatusGroupBox.reset_position_checkbox.checkState()
                 == Qt.CheckState.Checked
             )
 
-        self.new_prefs = new_prefs
-
         # Only if the user has checked at least one option will we continue
-        for key in new_prefs:
-            debug("key='%s' new_prefs[key]=%s" % (key, new_prefs[key]))
-            if (
-                new_prefs[key]
-                and key != cfg.KEY_READING_STATUS
-                and key != cfg.KEY_USE_PLUGBOARD
-            ):
-                cfg.plugin_prefs[cfg.METADATA_OPTIONS_STORE_NAME] = new_prefs
+        for key, val in new_prefs:
+            debug("key='%s' new_prefs[key]=%s" % (key, val))
+            if val and key != "readingStatus" and key != "usePlugboard":
+                cfg.plugin_prefs.MetadataOptions = new_prefs
                 self.accept()
                 return
         error_dialog(
@@ -1346,7 +1266,7 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
 
 
 class GetShelvesFromDeviceDialog(SizePersistedDialog):
-    def __init__(self, parent: QWidget, plugin_action: KoboUtilitiesAction):
+    def __init__(self, parent: ui.Main, plugin_action: KoboUtilitiesAction):
         SizePersistedDialog.__init__(
             self,
             parent,
@@ -1354,27 +1274,21 @@ class GetShelvesFromDeviceDialog(SizePersistedDialog):
         )
         self.plugin_action = plugin_action
         self.help_anchor = "GetShelvesFromDevice"
-        self.options = cfg.GET_SHELVES_OPTIONS_DEFAULTS
 
         self.initialize_controls()
 
-        all_books = cfg.get_plugin_pref(
-            cfg.GET_SHELVES_OPTIONS_STORE_NAME, cfg.KEY_ALL_BOOKS
-        )
+        all_books = cfg.plugin_prefs.getShelvesOptionStore.allBooks
         self.all_books_checkbox.setCheckState(
             Qt.CheckState.Checked if all_books else Qt.CheckState.Unchecked
         )
 
-        replace_shelves = cfg.get_plugin_pref(
-            cfg.GET_SHELVES_OPTIONS_STORE_NAME, cfg.KEY_REPLACE_SHELVES
-        )
+        replace_shelves = cfg.plugin_prefs.getShelvesOptionStore.replaceShelves
         self.replace_shelves_checkbox.setCheckState(
             Qt.CheckState.Checked if replace_shelves else Qt.CheckState.Unchecked
         )
 
-        shelf_column = cfg.get_plugin_pref(
-            cfg.GET_SHELVES_OPTIONS_STORE_NAME, cfg.KEY_SHELVES_CUSTOM_COLUMN
-        )
+        self.library_config = cfg.get_library_config(self.plugin_action.gui.current_db)
+        shelf_column = self.library_config.shelvesColumn
         self.tag_type_custom_columns = self.get_tag_type_custom_columns()
         self.shelf_column_combo.populate_combo(
             self.tag_type_custom_columns, shelf_column
@@ -1449,19 +1363,16 @@ class GetShelvesFromDeviceDialog(SizePersistedDialog):
         return available_columns
 
     def ok_clicked(self) -> None:
-        options = cfg.GET_SHELVES_OPTIONS_DEFAULTS
-        options[cfg.KEY_SHELVES_CUSTOM_COLUMN] = (
-            self.shelf_column_combo.get_selected_column()
-        )
-        options[cfg.KEY_ALL_BOOKS] = (
-            self.all_books_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        options[cfg.KEY_REPLACE_SHELVES] = (
-            self.replace_shelves_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        self.options = options
+        with cfg.plugin_prefs.getShelvesOptionStore as options:
+            options.allBooks = (
+                self.all_books_checkbox.checkState() == Qt.CheckState.Checked
+            )
+            options.replaceShelves = (
+                self.replace_shelves_checkbox.checkState() == Qt.CheckState.Checked
+            )
 
-        if not options[cfg.KEY_SHELVES_CUSTOM_COLUMN]:
+        shelves_column = self.shelf_column_combo.get_selected_column()
+        if not shelves_column:
             error_dialog(
                 self,
                 _("No collection column selected"),
@@ -1473,7 +1384,9 @@ class GetShelvesFromDeviceDialog(SizePersistedDialog):
             )
             return
 
-        cfg.plugin_prefs[cfg.GET_SHELVES_OPTIONS_STORE_NAME] = options
+        self.library_config.shelvesColumn = shelves_column
+        cfg.set_library_config(self.plugin_action.gui.current_db, self.library_config)
+
         self.accept()
 
 
@@ -1484,82 +1397,51 @@ class BookmarkOptionsDialog(SizePersistedDialog):
         )
         self.plugin_action = plugin_action
         self.help_anchor = "StoreCurrentBookmark"
-        self.options = {}
-
-        # Set some default values from last time dialog was used.
-        c = cfg.plugin_prefs[cfg.BOOKMARK_OPTIONS_STORE_NAME]
-        store_bookmarks = c.get(
-            cfg.KEY_STORE_BOOKMARK,
-            cfg.BOOKMARK_OPTIONS_DEFAULTS[cfg.KEY_STORE_BOOKMARK],
-        )
-        set_status_to_reading = c.get(
-            cfg.KEY_READING_STATUS,
-            cfg.BOOKMARK_OPTIONS_DEFAULTS[cfg.KEY_READING_STATUS],
-        )
-        set_date_to_now = c.get(
-            cfg.KEY_DATE_TO_NOW, cfg.BOOKMARK_OPTIONS_DEFAULTS[cfg.KEY_DATE_TO_NOW]
-        )
-        set_rating = c.get(
-            cfg.KEY_SET_RATING, cfg.BOOKMARK_OPTIONS_DEFAULTS[cfg.KEY_SET_RATING]
-        )
-        clear_if_unread = c.get(
-            cfg.KEY_CLEAR_IF_UNREAD,
-            cfg.BOOKMARK_OPTIONS_DEFAULTS[cfg.KEY_CLEAR_IF_UNREAD],
-        )
-        store_if_more_recent = c.get(
-            cfg.KEY_STORE_IF_MORE_RECENT,
-            cfg.BOOKMARK_OPTIONS_DEFAULTS[cfg.KEY_STORE_IF_MORE_RECENT],
-        )
-        do_not_store_if_reopened = c.get(
-            cfg.KEY_DO_NOT_STORE_IF_REOPENED,
-            cfg.BOOKMARK_OPTIONS_DEFAULTS[cfg.KEY_DO_NOT_STORE_IF_REOPENED],
-        )
-        background_job = c.get(
-            cfg.KEY_BACKGROUND_JOB,
-            cfg.BOOKMARK_OPTIONS_DEFAULTS[cfg.KEY_BACKGROUND_JOB],
-        )
 
         library_config = cfg.get_library_config(self.plugin_action.gui.current_db)
-        self.profiles = library_config.get(cfg.KEY_PROFILES, {})
+        self.profiles = library_config.profiles
         self.profile_name = (
-            self.plugin_action.device.profile["profileName"]
+            self.plugin_action.device.profile.profileName
             if self.plugin_action.device and self.plugin_action.device.profile
             else None
         )
         self.initialize_controls()
 
-        if store_bookmarks:
+        options = cfg.plugin_prefs.BookmarkOptions
+        if options.storeBookmarks:
             self.store_radiobutton.click()
         else:
             self.restore_radiobutton.click()
         self.status_to_reading_checkbox.setCheckState(
-            Qt.CheckState.Checked if set_status_to_reading else Qt.CheckState.Unchecked
+            Qt.CheckState.Checked if options.readingStatus else Qt.CheckState.Unchecked
         )
         self.date_to_now_checkbox.setCheckState(
-            Qt.CheckState.Checked if set_date_to_now else Qt.CheckState.Unchecked
+            Qt.CheckState.Checked if options.setDateToNow else Qt.CheckState.Unchecked
         )
         self.set_rating_checkbox.setCheckState(
             Qt.CheckState.Checked
-            if set_rating
+            if options.rating
             and self.plugin_action.device is not None
             and self.plugin_action.device.supports_ratings
             else Qt.CheckState.Unchecked
         )
 
         self.clear_if_unread_checkbox.setCheckState(
-            Qt.CheckState.Checked if clear_if_unread else Qt.CheckState.Unchecked
+            Qt.CheckState.Checked if options.clearIfUnread else Qt.CheckState.Unchecked
         )
         self.store_if_more_recent_checkbox.setCheckState(
-            Qt.CheckState.Checked if store_if_more_recent else Qt.CheckState.Unchecked
+            Qt.CheckState.Checked
+            if options.storeIfMoreRecent
+            else Qt.CheckState.Unchecked
         )
         self.do_not_store_if_reopened_checkbox.setCheckState(
             Qt.CheckState.Checked
-            if do_not_store_if_reopened
+            if options.doNotStoreIfReopened
             else Qt.CheckState.Unchecked
         )
-        self.do_not_store_if_reopened_checkbox_clicked(do_not_store_if_reopened)
+        self.do_not_store_if_reopened_checkbox_clicked(options.doNotStoreIfReopened)
         self.background_checkbox.setCheckState(
-            Qt.CheckState.Checked if background_job else Qt.CheckState.Unchecked
+            Qt.CheckState.Checked if options.backgroundJob else Qt.CheckState.Unchecked
         )
 
         # Cause our dialog size to be restored from prefs or created on first usage
@@ -1676,34 +1558,33 @@ class BookmarkOptionsDialog(SizePersistedDialog):
                 self, "Invalid profile", msg, show=True, show_copy_button=False
             )
             return
-        new_prefs = {}
-        new_prefs[cfg.KEY_STORE_BOOKMARK] = self.store_radiobutton.isChecked()
-        new_prefs[cfg.KEY_READING_STATUS] = (
-            self.status_to_reading_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        new_prefs[cfg.KEY_DATE_TO_NOW] = (
-            self.date_to_now_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        new_prefs[cfg.KEY_SET_RATING] = (
-            self.set_rating_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        new_prefs[cfg.KEY_CLEAR_IF_UNREAD] = (
-            self.clear_if_unread_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        new_prefs[cfg.KEY_STORE_IF_MORE_RECENT] = (
-            self.store_if_more_recent_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        new_prefs[cfg.KEY_DO_NOT_STORE_IF_REOPENED] = (
-            self.do_not_store_if_reopened_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        new_prefs[cfg.KEY_BACKGROUND_JOB] = (
-            self.background_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        cfg.plugin_prefs[cfg.BOOKMARK_OPTIONS_STORE_NAME] = new_prefs
-        new_prefs["profileName"] = str(profile_name)
-        if new_prefs[cfg.KEY_DO_NOT_STORE_IF_REOPENED]:
-            new_prefs[cfg.KEY_CLEAR_IF_UNREAD] = False
-        self.options = new_prefs
+        self.profile_name = profile_name
+        with cfg.plugin_prefs.BookmarkOptions as options:
+            options.storeBookmarks = self.store_radiobutton.isChecked()
+            options.readingStatus = (
+                self.status_to_reading_checkbox.checkState() == Qt.CheckState.Checked
+            )
+            options.setDateToNow = (
+                self.date_to_now_checkbox.checkState() == Qt.CheckState.Checked
+            )
+            options.rating = (
+                self.set_rating_checkbox.checkState() == Qt.CheckState.Checked
+            )
+            options.clearIfUnread = (
+                self.clear_if_unread_checkbox.checkState() == Qt.CheckState.Checked
+            )
+            options.storeIfMoreRecent = (
+                self.store_if_more_recent_checkbox.checkState() == Qt.CheckState.Checked
+            )
+            options.doNotStoreIfReopened = (
+                self.do_not_store_if_reopened_checkbox.checkState()
+                == Qt.CheckState.Checked
+            )
+            options.backgroundJob = (
+                self.background_checkbox.checkState() == Qt.CheckState.Checked
+            )
+            if options.doNotStoreIfReopened:
+                options.clearIfUnread = False
         self.accept()
 
     def do_not_store_if_reopened_checkbox_clicked(self, checked: bool):
@@ -1740,10 +1621,7 @@ class ChangeReadingStatusOptionsDialog(SizePersistedDialog):
         )
         self.plugin_action = plugin_action
         self.help_anchor = "ChangeReadingStatus"
-
-        self.options = cast(
-            "Dict[str, Any]", gprefs.get(self.unique_pref_name + ":settings", {})
-        )
+        self.options = cfg.MetadataOptionsConfig()
 
         self.initialize_controls()
 
@@ -1773,14 +1651,12 @@ class ChangeReadingStatusOptionsDialog(SizePersistedDialog):
         layout.addWidget(button_box)
 
     def ok_clicked(self) -> None:
-        self.options = self.plugin_action.default_options()
-
-        self.options["setRreadingStatus"] = (
+        self.options.setRreadingStatus = (
             self.readingStatusGroupBox.readingStatusIsChecked()
         )
-        if self.options["setRreadingStatus"]:
-            self.options["readingStatus"] = self.readingStatusGroupBox.readingStatus()
-            if self.options["readingStatus"] < 0:
+        if self.options.setRreadingStatus:
+            self.options.readingStatus = self.readingStatusGroupBox.readingStatus()
+            if self.options.readingStatus < 0:
                 error_dialog(
                     self,
                     "No reading status option selected",
@@ -1789,14 +1665,14 @@ class ChangeReadingStatusOptionsDialog(SizePersistedDialog):
                     show_copy_button=False,
                 )
                 return
-            self.options["resetPosition"] = (
+            self.options.resetPosition = (
                 self.readingStatusGroupBox.reset_position_checkbox.checkState()
                 == Qt.CheckState.Checked
             )
 
         # Only if the user has checked at least one option will we continue
-        for key in self.options:
-            if self.options[key]:
+        for _key, val in self.options:
+            if val:
                 self.accept()
                 return
         error_dialog(
@@ -1818,13 +1694,11 @@ class BackupAnnotationsOptionsDialog(SizePersistedDialog):
         self.plugin_action = plugin_action
         self.help_anchor = "BackupAnnotations"
 
-        self.options = cast(
-            "Dict[str, Any]", gprefs.get(self.unique_pref_name + ":settings", {})
-        )
-
         self.initialize_controls()
 
-        self.dest_directory_edit.setText(self.options.get("dest_directory", ""))
+        self.dest_directory_edit.setText(
+            cfg.plugin_prefs.backupAnnotations.dest_directory
+        )
         # Cause our dialog size to be restored from prefs or created on first usage
         self.resize_dialog()
 
@@ -1873,8 +1747,9 @@ class BackupAnnotationsOptionsDialog(SizePersistedDialog):
                 show_copy_button=False,
             )
 
-        self.options["dest_directory"] = str(self.dest_directory_edit.text())
-        gprefs.set(self.unique_pref_name + ":settings", self.options)
+        cfg.plugin_prefs.backupAnnotations.dest_directory = (
+            self.dest_directory_edit.text()
+        )
         self.accept()
 
     def dest_path(self):
@@ -1899,13 +1774,9 @@ class RemoveAnnotationsOptionsDialog(SizePersistedDialog):
         self.plugin_action = plugin_action
         self.help_anchor = "RemoveAnnotations"
 
-        self.options = cast(
-            "Dict[str, Any]", gprefs.get(self.unique_pref_name + ":settings", {})
-        )
-
         self.initialize_controls()
-        self.annotation_clean_option_idx = self.options.get(
-            cfg.KEY_REMOVE_ANNOT_ACTION, 0
+        self.annotation_clean_option_idx = (
+            cfg.plugin_prefs.removeAnnotations.removeAnnotAction.value
         )
         button = self.annotation_clean_option_button_group.button(
             self.annotation_clean_option_idx
@@ -1930,27 +1801,27 @@ class RemoveAnnotationsOptionsDialog(SizePersistedDialog):
         options_layout.addWidget(annotation_clean_option_group_box, 0, 0, 1, 1)
 
         annotation_clean_options = {
-            cfg.KEY_REMOVE_ANNOT_ALL: (
+            cfg.RemoveAnnotationsAction.All.value: (
                 _("All"),
                 _("Remove the annotations directory and all files within it"),
                 True,
             ),
-            cfg.KEY_REMOVE_ANNOT_SELECTED: (
+            cfg.RemoveAnnotationsAction.Selected.value: (
                 _("For selected books"),
                 _("Only remove annotations files for the selected books"),
                 False,
             ),
-            cfg.KEY_REMOVE_ANNOT_NOBOOK: (
+            cfg.RemoveAnnotationsAction.NotOnDevice.value: (
                 _("Where book is not on device"),
                 _("Remove annotations files where there is no book on the device"),
                 True,
             ),
-            cfg.KEY_REMOVE_ANNOT_EMPTY: (
+            cfg.RemoveAnnotationsAction.Empty.value: (
                 _("Empty"),
                 _("Remove all empty annotations files"),
                 True,
             ),
-            cfg.KEY_REMOVE_ANNOT_NONEMPTY: (
+            cfg.RemoveAnnotationsAction.NotEmpty.value: (
                 _("Not empty"),
                 _("Only remove annotations files if they contain annotations"),
                 True,
@@ -1986,8 +1857,9 @@ class RemoveAnnotationsOptionsDialog(SizePersistedDialog):
         layout.addWidget(button_box)
 
     def ok_clicked(self):
-        self.options[cfg.KEY_REMOVE_ANNOT_ACTION] = self.annotation_clean_option_idx
-        gprefs.set(self.unique_pref_name + ":settings", self.options)
+        cfg.plugin_prefs.removeAnnotations.removeAnnotAction = (
+            cfg.RemoveAnnotationsAction(self.annotation_clean_option_idx)
+        )
         self.accept()
 
     def _annotation_clean_option_radio_clicked(self, radioButton: QRadioButton):
@@ -2006,19 +1878,18 @@ class CoverUploadOptionsDialog(SizePersistedDialog):
 
         self.initialize_controls()
 
-        self.options = cast(
-            "Dict[str, Any]", gprefs.get(self.unique_pref_name + ":settings", {})
-        )
+        options = cfg.plugin_prefs.coverUpload
 
         # Set some default values from last time dialog was used.
-        blackandwhite = self.options.get(cfg.KEY_COVERS_BLACKANDWHITE, False)
+        blackandwhite = options.blackandwhite
         self.blackandwhite_checkbox.setCheckState(
             Qt.CheckState.Checked if blackandwhite else Qt.CheckState.Unchecked
         )
         self.blackandwhite_checkbox_clicked(blackandwhite)
-        ditheredcovers = self.options.get(cfg.KEY_COVERS_DITHERED, False)
         self.ditheredcovers_checkbox.setCheckState(
-            Qt.CheckState.Checked if ditheredcovers else Qt.CheckState.Unchecked
+            Qt.CheckState.Checked
+            if options.dithered_covers
+            else Qt.CheckState.Unchecked
         )
 
         assert self.plugin_action.device is not None
@@ -2038,25 +1909,23 @@ class CoverUploadOptionsDialog(SizePersistedDialog):
             self.driver_supports_cover_letterbox_colors
         )
 
-        letterbox = self.options.get(cfg.KEY_COVERS_LETTERBOX, False)
+        letterbox = options.letterbox
         self.letterbox_checkbox.setCheckState(
             Qt.CheckState.Checked if letterbox else Qt.CheckState.Unchecked
         )
         self.letterbox_checkbox_clicked(letterbox)
-        keep_cover_aspect = self.options.get(cfg.KEY_COVERS_KEEP_ASPECT_RATIO, False)
+        keep_cover_aspect = options.keep_cover_aspect
         self.keep_cover_aspect_checkbox.setCheckState(
             Qt.CheckState.Checked if keep_cover_aspect else Qt.CheckState.Unchecked
         )
         self.keep_cover_aspect_checkbox_clicked(keep_cover_aspect)
-        letterbox_color = self.options.get(cfg.KEY_COVERS_LETTERBOX_COLOR, "#000000")
+        letterbox_color = options.letterbox_color
         self.letterbox_colorbutton.color = letterbox_color
-        pngcovers = self.options.get(cfg.KEY_COVERS_PNG, False)
         self.pngcovers_checkbox.setCheckState(
-            Qt.CheckState.Checked if pngcovers else Qt.CheckState.Unchecked
+            Qt.CheckState.Checked if options.png_covers else Qt.CheckState.Unchecked
         )
-        kepub_covers = self.options.get(cfg.KEY_COVERS_UPDLOAD_KEPUB, False)
         self.kepub_covers_checkbox.setCheckState(
-            Qt.CheckState.Checked if kepub_covers else Qt.CheckState.Unchecked
+            Qt.CheckState.Checked if options.kepub_covers else Qt.CheckState.Unchecked
         )
 
         # Cause our dialog size to be restored from prefs or created on first usage
@@ -2117,30 +1986,28 @@ class CoverUploadOptionsDialog(SizePersistedDialog):
         layout.addWidget(button_box)
 
     def ok_clicked(self):
-        self.options[cfg.KEY_COVERS_BLACKANDWHITE] = (
-            self.blackandwhite_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        self.options[cfg.KEY_COVERS_DITHERED] = (
-            self.ditheredcovers_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        self.options[cfg.KEY_COVERS_PNG] = (
-            self.pngcovers_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        self.options[cfg.KEY_COVERS_KEEP_ASPECT_RATIO] = (
-            self.keep_cover_aspect_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        self.options[cfg.KEY_COVERS_LETTERBOX] = (
-            self.letterbox_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        if self.driver_supports_cover_letterbox_colors:
-            self.options[cfg.KEY_COVERS_LETTERBOX_COLOR] = (
-                self.letterbox_colorbutton.color
+        with cfg.plugin_prefs.coverUpload as options:
+            options.blackandwhite = (
+                self.blackandwhite_checkbox.checkState() == Qt.CheckState.Checked
             )
-        self.options[cfg.KEY_COVERS_UPDLOAD_KEPUB] = (
-            self.kepub_covers_checkbox.checkState() == Qt.CheckState.Checked
-        )
+            options.dithered_covers = (
+                self.ditheredcovers_checkbox.checkState() == Qt.CheckState.Checked
+            )
+            options.png_covers = (
+                self.pngcovers_checkbox.checkState() == Qt.CheckState.Checked
+            )
+            options.keep_cover_aspect = (
+                self.keep_cover_aspect_checkbox.checkState() == Qt.CheckState.Checked
+            )
+            options.letterbox = (
+                self.letterbox_checkbox.checkState() == Qt.CheckState.Checked
+            )
+            if self.driver_supports_cover_letterbox_colors:
+                options.letterbox_color = cast("str", self.letterbox_colorbutton.color)
+            options.kepub_covers = (
+                self.kepub_covers_checkbox.checkState() == Qt.CheckState.Checked
+            )
 
-        gprefs.set(self.unique_pref_name + ":settings", self.options)
         self.accept()
 
     def blackandwhite_checkbox_clicked(self, checked: bool):
@@ -2178,17 +2045,14 @@ class RemoveCoverOptionsDialog(SizePersistedDialog):
 
         self.initialize_controls()
 
-        self.options = cast(
-            "Dict[str, Any]", gprefs.get(self.unique_pref_name + ":settings", {})
-        )
-
-        remove_fullsize_covers = self.options.get(cfg.KEY_REMOVE_FULLSIZE_COVERS, False)
+        options = cfg.plugin_prefs.removeCovers
         self.remove_fullsize_covers_checkbox.setCheckState(
-            Qt.CheckState.Checked if remove_fullsize_covers else Qt.CheckState.Unchecked
+            Qt.CheckState.Checked
+            if options.remove_fullsize_covers
+            else Qt.CheckState.Unchecked
         )
-        kepub_covers = self.options.get(cfg.KEY_COVERS_UPDLOAD_KEPUB, False)
         self.kepub_covers_checkbox.setCheckState(
-            Qt.CheckState.Checked if kepub_covers else Qt.CheckState.Unchecked
+            Qt.CheckState.Checked if options.kepub_covers else Qt.CheckState.Unchecked
         )
 
         # Cause our dialog size to be restored from prefs or created on first usage
@@ -2235,14 +2099,14 @@ class RemoveCoverOptionsDialog(SizePersistedDialog):
         layout.addWidget(button_box)
 
     def ok_clicked(self):
-        self.options[cfg.KEY_REMOVE_FULLSIZE_COVERS] = (
-            self.remove_fullsize_covers_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        self.options[cfg.KEY_COVERS_UPDLOAD_KEPUB] = (
-            self.kepub_covers_checkbox.checkState() == Qt.CheckState.Checked
-        )
-
-        gprefs.set(self.unique_pref_name + ":settings", self.options)
+        with cfg.plugin_prefs.removeCovers as options:
+            options.remove_fullsize_covers = (
+                self.remove_fullsize_covers_checkbox.checkState()
+                == Qt.CheckState.Checked
+            )
+            options.kepub_covers = (
+                self.kepub_covers_checkbox.checkState() == Qt.CheckState.Checked
+            )
         self.accept()
 
 
@@ -2253,7 +2117,7 @@ class BlockAnalyticsOptionsDialog(SizePersistedDialog):
         )
         self.plugin_action = plugin_action
         self.help_anchor = "BlockAnalyticsEvents"
-        self.options = {}
+        self.createAnalyticsEventsTrigger = True
 
         self.initialize_controls()
 
@@ -2300,20 +2164,16 @@ class BlockAnalyticsOptionsDialog(SizePersistedDialog):
         layout.addWidget(button_box)
 
     def ok_clicked(self) -> None:
-        options = {}
-        options[cfg.KEY_CREATE_ANALYTICSEVENTS_TRIGGER] = (
-            self.create_trigger_radiobutton.isChecked()
-        )
-        options[cfg.KEY_DELETE_ANALYTICSEVENTS_TRIGGER] = (
-            self.delete_trigger_radiobutton.isChecked()
-        )
-        self.options = options
-
         # Only if the user has checked at least one option will we continue
-        for key in options:
-            if options[key]:
-                self.accept()
-                return
+        if (
+            self.create_trigger_radiobutton.isChecked()
+            or self.delete_trigger_radiobutton.isChecked()
+        ):
+            self.createAnalyticsEventsTrigger = (
+                self.create_trigger_radiobutton.isChecked()
+            )
+            self.accept()
+            return
         error_dialog(
             self,
             _("No options selected"),
@@ -2333,13 +2193,10 @@ class CleanImagesDirOptionsDialog(SizePersistedDialog):
 
         self.initialize_controls()
 
-        self.options = cast(
-            "Dict[str, Any]", gprefs.get(self.unique_pref_name + ":settings", {})
-        )
-
-        delete_extra_covers = self.options.get("delete_extra_covers", False)
         self.delete_extra_covers_checkbox.setCheckState(
-            Qt.CheckState.Checked if delete_extra_covers else Qt.CheckState.Unchecked
+            Qt.CheckState.Checked
+            if cfg.plugin_prefs.cleanImagesDir.delete_extra_covers
+            else Qt.CheckState.Unchecked
         )
 
         # Cause our dialog size to be restored from prefs or created on first usage
@@ -2379,11 +2236,9 @@ class CleanImagesDirOptionsDialog(SizePersistedDialog):
         layout.addWidget(button_box)
 
     def ok_clicked(self):
-        self.options["delete_extra_covers"] = (
+        cfg.plugin_prefs.cleanImagesDir.delete_extra_covers = (
             self.delete_extra_covers_checkbox.checkState() == Qt.CheckState.Checked
         )
-
-        gprefs.set(self.unique_pref_name + ":settings", self.options)
         self.accept()
 
 
@@ -3425,35 +3280,31 @@ class ShowReadingPositionChangesDialog(SizePersistedDialog):
         self,
         parent: QWidget,
         plugin_action: KoboUtilitiesAction,
-        reading_locations: tuple[dict[int, dict[str, Any]], dict[str, Any]],
+        reading_locations: dict[int, dict[str, Any]],
         db: LibraryDatabase,
-        profileName: str,
+        profileName: str | None,
         goodreads_sync_installed: bool = False,
     ):
         SizePersistedDialog.__init__(
             self, parent, "kobo utilities plugin:show reading position changes dialog"
         )
         self.plugin_action = plugin_action
-        self.reading_locations, self.options = reading_locations
+        self.reading_locations = reading_locations
         self.blockSignals(True)
         self.help_anchor = "ShowReadingPositionChanges"
         self.db = db
-        self.prefs = cfg.READING_POSITION_CHANGES_DEFAULTS
 
         assert self.plugin_action.device is not None
 
         self.profileName = (
-            self.plugin_action.device.profile["profileName"]
+            self.plugin_action.device.profile.profileName
             if not profileName and self.plugin_action.device.profile is not None
             else profileName
         )
         self.deviceName = cfg.get_device_name(self.plugin_action.device.uuid)
-        self.options = cfg.get_plugin_prefs(cfg.READING_POSITION_CHANGES_STORE_NAME)
-        library_config = cfg.get_library_config(self.plugin_action.gui.current_db)
-        self.options = library_config.get(
-            cfg.READING_POSITION_CHANGES_STORE_NAME,
-            cfg.READING_POSITION_CHANGES_DEFAULTS,
-        )
+        options = cfg.get_library_config(
+            self.plugin_action.gui.current_db
+        ).readingPositionChangesStore
 
         self.initialize_controls()
 
@@ -3461,16 +3312,8 @@ class ShowReadingPositionChangesDialog(SizePersistedDialog):
         self.blockSignals(False)
         self.reading_locations_table.populate_table(self.reading_locations)
 
-        self.select_books_checkbox.setChecked(
-            self.options.get(
-                cfg.KEY_SELECT_BOOKS_IN_LIBRARY,
-                cfg.READING_POSITION_CHANGES_DEFAULTS[cfg.KEY_SELECT_BOOKS_IN_LIBRARY],
-            )
-        )
-        update_goodreads_progress = self.options.get(
-            cfg.KEY_UPDATE_GOODREADS_PROGRESS,
-            cfg.READING_POSITION_CHANGES_DEFAULTS[cfg.KEY_UPDATE_GOODREADS_PROGRESS],
-        )
+        self.select_books_checkbox.setChecked(options.selectBooksInLibrary)
+        update_goodreads_progress = options.updeateGoodreadsProgress
         self.update_goodreads_progress_checkbox.setChecked(update_goodreads_progress)
         if goodreads_sync_installed:
             self.update_goodreads_progress_checkbox_clicked(update_goodreads_progress)
@@ -3536,18 +3379,14 @@ class ShowReadingPositionChangesDialog(SizePersistedDialog):
         layout.addWidget(button_box)
 
     def _ok_clicked(self):
-        prefs = cfg.READING_POSITION_CHANGES_DEFAULTS
-        prefs[cfg.KEY_SELECT_BOOKS_IN_LIBRARY] = (
+        library_config = cfg.get_library_config(self.plugin_action.gui.current_db)
+        library_config.readingPositionChangesStore.selectBooksInLibrary = (
             self.select_books_checkbox.checkState() == Qt.CheckState.Checked
         )
-        prefs[cfg.KEY_UPDATE_GOODREADS_PROGRESS] = (
+        library_config.readingPositionChangesStore.updeateGoodreadsProgress = (
             self.update_goodreads_progress_checkbox.checkState()
             == Qt.CheckState.Checked
         )
-
-        library_config = cfg.get_library_config(self.plugin_action.gui.current_db)
-        library_config[cfg.READING_POSITION_CHANGES_STORE_NAME] = prefs
-        self.prefs = prefs
         cfg.set_library_config(self.plugin_action.gui.current_db, library_config)
 
         for i in range(len(self.reading_locations)):
@@ -3581,14 +3420,9 @@ class ShowReadingPositionChangesTableWidget(QTableWidget):
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.db = db
 
-        (
-            self.kobo_chapteridbookmarked_column,
-            self.kobo_percentRead_column,
-            self.rating_column,
-            self.last_read_column,
-            self.time_spent_reading_column,
-            self.rest_of_book_estimate_column,
-        ) = parent.plugin_action.get_column_names()
+        custom_columns = parent.plugin_action.get_column_names()
+        self.kobo_percentRead_column = custom_columns.percent_read
+        self.last_read_column = custom_columns.last_read
 
     def populate_table(self, reading_positions: dict[int, dict[str, Any]]):
         self.clear()
@@ -3724,7 +3558,6 @@ class FixDuplicateShelvesDialog(SizePersistedDialog):
         self.shelves = shelves
         self.blockSignals(True)
         self.help_anchor = "FixDuplicateShelves"
-        self.options = {}
 
         self.initialize_controls()
 
@@ -3736,6 +3569,7 @@ class FixDuplicateShelvesDialog(SizePersistedDialog):
         self.resize_dialog()
 
     def initialize_controls(self):
+        options = cfg.plugin_prefs.fixDuplicatesOptionsStore
         self.setWindowTitle(_("Duplicate collections in device database"))
         layout = QVBoxLayout(self)
         self.setLayout(layout)
@@ -3766,7 +3600,11 @@ class FixDuplicateShelvesDialog(SizePersistedDialog):
         self.keep_newest_radiobutton = QRadioButton(_("Newest"), self)
         options_layout.addWidget(self.keep_newest_radiobutton, 0, 2, 1, 1)
         self.keep_newest_radiobutton.setEnabled(True)
-        self.keep_newest_radiobutton.click()
+
+        if options.keepNewestShelf:
+            self.keep_newest_radiobutton.click()
+        else:
+            self.keep_oldest_radiobutton.click()
 
         self.purge_checkbox = QCheckBox(_("Purge duplicate collections"), self)
         self.purge_checkbox.setToolTip(
@@ -3775,6 +3613,8 @@ class FixDuplicateShelvesDialog(SizePersistedDialog):
                 "If this is done, they might be restore during the next sync to the Kobo server."
             )
         )
+        if options.purgeShelves:
+            self.purge_checkbox.click()
         options_layout.addWidget(self.purge_checkbox, 0, 3, 1, 1)
 
         # Dialog buttons
@@ -3786,15 +3626,6 @@ class FixDuplicateShelvesDialog(SizePersistedDialog):
         layout.addWidget(button_box)
 
     def _ok_clicked(self) -> None:
-        self.options = {}
-
-        self.options[cfg.KEY_KEEP_NEWEST_SHELF] = (
-            self.keep_newest_radiobutton.isChecked()
-        )
-        self.options[cfg.KEY_PURGE_SHELVES] = (
-            self.purge_checkbox.checkState() == Qt.CheckState.Checked
-        )
-
         have_options = (
             self.keep_newest_radiobutton.isChecked()
             or self.keep_oldest_radiobutton.isChecked()
@@ -3802,7 +3633,13 @@ class FixDuplicateShelvesDialog(SizePersistedDialog):
         )
         # Only if the user has checked at least one option will we continue
         if have_options:
-            debug("options=%s" % self.options)
+            with cfg.plugin_prefs.fixDuplicatesOptionsStore as options:
+                options.keepNewestShelf = self.keep_newest_radiobutton.isChecked()
+                options.purgeShelves = (
+                    self.purge_checkbox.checkState() == Qt.CheckState.Checked
+                )
+
+            debug("options=%s" % options)
             self.accept()
             return
         error_dialog(
@@ -3970,13 +3807,12 @@ class SetRelatedBooksDialog(SizePersistedDialog):
         self.help_anchor = "SetRelatedBooks"
         self.dialog_title = _("Set related books")
 
-        self.options = cfg.get_plugin_prefs(cfg.SETRELATEDBOOKS_OPTIONS_STORE_NAME)
         self.initialize_controls()
 
-        self.related_category = self.options.get(
-            cfg.KEY_RELATED_BOOKS_TYPE,
-            cfg.SETRELATEDBOOKS_OPTIONS_DEFAULTS[cfg.KEY_RELATED_BOOKS_TYPE],
+        self.related_category = (
+            cfg.plugin_prefs.setRelatedBooksOptionsStore.relatedBooksType
         )
+        self.deleteAllRelatedBooks = False
         button = self.related_categories_option_button_group.button(
             self.related_category
         )
@@ -4003,12 +3839,12 @@ class SetRelatedBooksDialog(SizePersistedDialog):
         layout.addWidget(related_categories_option_group_box)
 
         related_categories_options = {
-            cfg.KEY_RELATED_BOOKS_SERIES: (
+            cfg.RelatedBooksType.Series.value: (
                 _("Series"),
                 _("The related books will be all books in a series."),
                 True,
             ),
-            cfg.KEY_RELATED_BOOKS_AUTHORS: (
+            cfg.RelatedBooksType.Authors.value: (
                 _("Authors"),
                 _("The related books will be all books by the same author."),
                 False,
@@ -4076,10 +3912,9 @@ class SetRelatedBooksDialog(SizePersistedDialog):
         layout.addWidget(button_box)
 
     def _ok_clicked(self):
-        self.options = {}
-        self.options[cfg.KEY_RELATED_BOOKS_TYPE] = self.related_category
-        cfg.plugin_prefs[cfg.SETRELATEDBOOKS_OPTIONS_STORE_NAME] = self.options
-        self.options["deleteAllRelatedBooks"] = False
+        cfg.plugin_prefs.setRelatedBooksOptionsStore.relatedBooksType = (
+            cfg.RelatedBooksType(self.related_category)
+        )
         self.accept()
         return
 
@@ -4106,8 +3941,7 @@ class SetRelatedBooksDialog(SizePersistedDialog):
         if not mb:
             return
 
-        self.options = {}
-        self.options["deleteAllRelatedBooks"] = True
+        self.deleteAllRelatedBooks = True
         self.accept()
         return
 

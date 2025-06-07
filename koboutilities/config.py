@@ -6,13 +6,16 @@ __license__ = "GPL v3"
 __copyright__ = "2012-2022, David Forrester <davidfor@internode.on.net>"
 __docformat__ = "restructuredtext en"
 
-import copy
+import ast
+import enum
 import traceback
+from dataclasses import dataclass
 from functools import partial
-from typing import TYPE_CHECKING, Any, cast
+from pprint import pformat
+from typing import TYPE_CHECKING, Any, Dict, TypeVar, cast
 
 from calibre.constants import DEBUG as _DEBUG
-from calibre.gui2 import choose_dir, error_dialog, open_url, question_dialog
+from calibre.gui2 import choose_dir, error_dialog, gprefs, open_url, question_dialog
 from calibre.gui2.dialogs.confirm_delete import confirm
 from calibre.utils.config import JSONConfig
 from qt.core import (
@@ -52,6 +55,8 @@ from .common_utils import (
 )
 
 if TYPE_CHECKING:
+    from types import TracebackType
+
     from calibre.db.legacy import LibraryDatabase
 
     from .action import KoboDevice, KoboUtilitiesAction
@@ -75,245 +80,17 @@ DEBUG = _DEBUG
 PREFS_NAMESPACE = "KoboUtilitiesPlugin"
 PREFS_KEY_SETTINGS = "settings"
 
-KEY_SCHEMA_VERSION = "SchemaVersion"
-DEFAULT_SCHEMA_VERSION = 0.1
-
-STORE_LIBRARIES = "libraries"
-KEY_PROFILES = "profiles"
-KEY_CURRENT_LOCATION_CUSTOM_COLUMN = "currentReadingLocationColumn"
-KEY_PERCENT_READ_CUSTOM_COLUMN = "percentReadColumn"
-KEY_RATING_CUSTOM_COLUMN = "ratingColumn"
-KEY_LAST_READ_CUSTOM_COLUMN = "lastReadColumn"
-KEY_TIME_SPENT_READING_COLUMN = "timeSpentReadingColumn"
-KEY_REST_OF_BOOK_ESTIMATE_COLUMN = "restOfBookEstimateColumn"
-KEY_STORE_ON_CONNECT = "storeOnConnect"
-KEY_PROMPT_TO_STORE = "promptToStore"
-KEY_STORE_IF_MORE_RECENT = "storeIfMoreRecent"
-KEY_DO_NOT_STORE_IF_REOPENED = "doNotStoreIfReopened"
-
-KEY_FOR_DEVICE = "forDevice"
-KEY_INDIVIDUAL_DEVICE_OPTIONS = "individualDeviceOptions"
-
-BACKUP_OPTIONS_STORE_NAME = "backupOptionsStore"
-BOOKMARK_OPTIONS_STORE_NAME = "BookmarkOptions"
-COMMON_OPTIONS_STORE_NAME = "commonOptionsStore"
-CUSTOM_COLUMNS_STORE_NAME = "customColumnOptions"
-METADATA_OPTIONS_STORE_NAME = "MetadataOptions"
-READING_OPTIONS_STORE_NAME = "ReadingOptions"
-STORE_OPTIONS_STORE_NAME = "storeOptionsStore"
-FIXDUPLICATESHELVES_OPTIONS_STORE_NAME = "fixDuplicatesOptionsStore"
-SETRELATEDBOOKS_OPTIONS_STORE_NAME = "setRelatedBooksOptionsStore"
-GET_SHELVES_OPTIONS_STORE_NAME = "getShelvesOptionStore"
-READING_POSITION_CHANGES_STORE_NAME = "readingPositionChangesStore"
-
-KEY_STORE_BOOKMARK = "storeBookmarks"
-KEY_DATE_TO_NOW = "setDateToNow"
-KEY_CLEAR_IF_UNREAD = "clearIfUnread"
-KEY_BACKGROUND_JOB = "backgroundJob"
-KEY_SET_TITLE = "title"
-KEY_USE_TITLE_SORT = "titleSort"
-KEY_SET_AUTHOR = "author"
-KEY_USE_AUTHOR_SORT = "authourSort"
-KEY_SET_DESCRIPTION = "description"
-KEY_DESCRIPTION_USE_TEMPLATE = "descriptionUseTemplate"
-KEY_DESCRIPTION_TEMPLATE = "descriptionTemplate"
-KEY_SET_PUBLISHER = "publisher"
-KEY_SET_RATING = "rating"
-KEY_SET_SERIES = "series"
-KEY_SET_SUBTITLE = "subtitle"
-KEY_SUBTITLE_TEMPLATE = "subtitleTemplate"
-KEY_USE_PLUGBOARD = "usePlugboard"
-KEY_UDPATE_KOBO_EPUBS = "update_KoboEpubs"
-KEY_SET_READING_STATUS = "setRreadingStatus"
-KEY_READING_STATUS = "readingStatus"
-KEY_SET_PUBLISHED_DATE = "published_date"
-KEY_SET_ISBN = "isbn"
-KEY_SET_LANGUAGE = "language"
-KEY_SET_READING_DIRECTION = "set_reading_direction"
-KEY_READING_DIRECTION = "reading_direction"
-KEY_SYNC_DATE = "set_sync_date"
-KEY_SYNC_DATE_COLUMN = "sync_date_library_date"
-KEY_RESET_POSITION = "resetPosition"
-
-KEY_CREATE_ANALYTICSEVENTS_TRIGGER = "createAnalyticsEventsTrigger"
-KEY_DELETE_ANALYTICSEVENTS_TRIGGER = "deleteAnalyticsEventsTrigger"
-
-KEY_REMOVE_FULLSIZE_COVERS = "remove_fullsize_covers"
-
-KEY_COVERS_BLACKANDWHITE = "blackandwhite"
-KEY_COVERS_DITHERED = "dithered_covers"
-KEY_COVERS_KEEP_ASPECT_RATIO = "keep_cover_aspect"
-KEY_COVERS_LETTERBOX = "letterbox"
-KEY_COVERS_LETTERBOX_COLOR = "letterbox_color"
-KEY_COVERS_PNG = "png_covers"
-KEY_COVERS_UPDLOAD_KEPUB = "kepub_covers"
-
 KEY_READING_FONT_FAMILY = "readingFontFamily"
 KEY_READING_ALIGNMENT = "readingAlignment"
 KEY_READING_FONT_SIZE = "readingFontSize"
 KEY_READING_LINE_HEIGHT = "readingLineHeight"
 KEY_READING_LEFT_MARGIN = "readingLeftMargin"
 KEY_READING_RIGHT_MARGIN = "readingRightMargin"
-KEY_READING_LOCK_MARGINS = "lockMargins"
-KEY_UPDATE_CONFIG_FILE = "updateConfigFile"
-KEY_DO_NOT_UPDATE_IF_SET = "doNotUpdateIfSet"
-
-KEY_BUTTON_ACTION_DEVICE = "buttonActionDevice"
-KEY_BUTTON_ACTION_LIBRARY = "buttonActionLibrary"
-
-KEY_KEEP_NEWEST_SHELF = "keepNewestShelf"
-KEY_PURGE_SHELVES = "purgeShelves"
-
-KEY_RELATED_BOOKS_SERIES = 0
-KEY_RELATED_BOOKS_AUTHORS = 1
-KEY_RELATED_BOOKS_TYPE = "relatedBooksType"
-
-KEY_REMOVE_ANNOT_ALL = 0
-KEY_REMOVE_ANNOT_SELECTED = 1
-KEY_REMOVE_ANNOT_NOBOOK = 2
-KEY_REMOVE_ANNOT_EMPTY = 3
-KEY_REMOVE_ANNOT_NONEMPTY = 4
-KEY_REMOVE_ANNOT_ACTION = "removeAnnotAction"
-
-KEY_DO_DAILY_BACKUP = "doDailyBackp"
-KEY_BACKUP_EACH_CONNECTION = "backupEachCOnnection"
-KEY_BACKUP_COPIES_TO_KEEP = "backupCopiesToKeepSpin"
-KEY_BACKUP_DEST_DIRECTORY = "backupDestDirectory"
-KEY_BACKUP_ZIP_DATABASE = "backupZipDatabase"
-
-KEY_SHELVES_CUSTOM_COLUMN = "shelvesColumn"
-KEY_ALL_BOOKS = "allBooks"
-KEY_REPLACE_SHELVES = "replaceShelves"
-
-KEY_SELECT_BOOKS_IN_LIBRARY = "selectBooksInLibrary"
-KEY_UPDATE_GOODREADS_PROGRESS = "updeateGoodreadsProgress"
 
 TOKEN_ANY_DEVICE = "*Any Device"  # noqa: S105
 TOKEN_CLEAR_SUBTITLE = "*Clear*"  # noqa: S105
 TOKEN_FILE_TIMESTAMP = "*filetimestamp"  # noqa: S105
 OTHER_SORTS = {TOKEN_FILE_TIMESTAMP: _("* File timestamp")}
-
-STORE_DEVICES = "Devices"
-# Devices store consists of:
-# 'Devices': { 'dev_uuid': {'type':'xxx', 'uuid':'xxx', 'name:'xxx', 'location_code':'main',
-#                           'active':True, 'collections':False} ,
-# For iTunes
-#              'iTunes':   {'type':'iTunes', 'uuid':iTunes', 'name':'iTunes', 'location_code':'',
-#                           'active':True, 'collections':False}, ...}
-DEFAULT_DEVICES_VALUES = {}
-
-BOOKMARK_OPTIONS_DEFAULTS = {
-    KEY_STORE_BOOKMARK: True,
-    KEY_READING_STATUS: True,
-    KEY_DATE_TO_NOW: True,
-    KEY_SET_RATING: True,
-    KEY_CLEAR_IF_UNREAD: False,
-    KEY_BACKGROUND_JOB: False,
-    KEY_STORE_IF_MORE_RECENT: False,
-    KEY_DO_NOT_STORE_IF_REOPENED: False,
-}
-METADATA_OPTIONS_DEFAULTS = {
-    KEY_SET_TITLE: False,
-    KEY_SET_AUTHOR: False,
-    KEY_SET_DESCRIPTION: False,
-    KEY_DESCRIPTION_USE_TEMPLATE: False,
-    KEY_DESCRIPTION_TEMPLATE: None,
-    KEY_SET_PUBLISHER: False,
-    KEY_SET_RATING: False,
-    KEY_SET_SERIES: False,
-    KEY_SET_READING_STATUS: False,
-    KEY_READING_STATUS: -1,
-    KEY_SET_PUBLISHED_DATE: False,
-    KEY_SET_ISBN: False,
-    KEY_SET_LANGUAGE: False,
-    KEY_RESET_POSITION: False,
-    KEY_USE_PLUGBOARD: False,
-    KEY_USE_TITLE_SORT: False,
-    KEY_USE_AUTHOR_SORT: False,
-    KEY_SET_SUBTITLE: False,
-    KEY_SUBTITLE_TEMPLATE: None,
-    KEY_UDPATE_KOBO_EPUBS: False,
-    KEY_SET_READING_DIRECTION: False,
-    KEY_READING_DIRECTION: "Default",
-    KEY_SYNC_DATE: False,
-    KEY_SYNC_DATE_COLUMN: "timestamp",
-}
-READING_OPTIONS_DEFAULTS = {
-    KEY_READING_FONT_FAMILY: "Georgia",
-    KEY_READING_ALIGNMENT: "Off",
-    KEY_READING_FONT_SIZE: 22,
-    KEY_READING_LINE_HEIGHT: 1.3,
-    KEY_READING_LEFT_MARGIN: 3,
-    KEY_READING_RIGHT_MARGIN: 3,
-    KEY_READING_LOCK_MARGINS: False,
-    KEY_UPDATE_CONFIG_FILE: False,
-    KEY_DO_NOT_UPDATE_IF_SET: False,
-}
-STORE_OPTIONS_DEFAULTS = {
-    KEY_STORE_ON_CONNECT: False,
-    KEY_PROMPT_TO_STORE: True,
-    KEY_STORE_IF_MORE_RECENT: False,
-    KEY_DO_NOT_STORE_IF_REOPENED: False,
-}
-COMMON_OPTIONS_DEFAULTS = {
-    KEY_BUTTON_ACTION_DEVICE: "",
-    KEY_BUTTON_ACTION_LIBRARY: "",
-    KEY_INDIVIDUAL_DEVICE_OPTIONS: False,
-}
-OLD_COMMON_OPTIONS_DEFAULTS = {
-    KEY_STORE_ON_CONNECT: False,
-    KEY_PROMPT_TO_STORE: True,
-    KEY_STORE_IF_MORE_RECENT: False,
-    KEY_DO_NOT_STORE_IF_REOPENED: False,
-    KEY_BUTTON_ACTION_DEVICE: "",
-    KEY_BUTTON_ACTION_LIBRARY: "",
-}
-
-FIXDUPLICATESHELVES_OPTIONS_DEFAULTS = {
-    KEY_KEEP_NEWEST_SHELF: True,
-    KEY_PURGE_SHELVES: False,
-}
-
-SETRELATEDBOOKS_OPTIONS_DEFAULTS = {
-    KEY_RELATED_BOOKS_TYPE: KEY_RELATED_BOOKS_SERIES,
-}
-
-BACKUP_OPTIONS_DEFAULTS = {
-    KEY_DO_DAILY_BACKUP: False,
-    KEY_BACKUP_EACH_CONNECTION: False,
-    KEY_BACKUP_COPIES_TO_KEEP: 5,
-    KEY_BACKUP_DEST_DIRECTORY: "",
-    KEY_BACKUP_ZIP_DATABASE: True,
-}
-
-GET_SHELVES_OPTIONS_DEFAULTS: dict[str, str | None | bool] = {
-    KEY_SHELVES_CUSTOM_COLUMN: None,
-    KEY_ALL_BOOKS: True,
-    KEY_REPLACE_SHELVES: True,
-}
-
-CUSTOM_COLUMNS_OPTIONS_DEFAULTS = {
-    KEY_CURRENT_LOCATION_CUSTOM_COLUMN: None,
-    KEY_PERCENT_READ_CUSTOM_COLUMN: None,
-    KEY_RATING_CUSTOM_COLUMN: None,
-    KEY_LAST_READ_CUSTOM_COLUMN: None,
-    KEY_TIME_SPENT_READING_COLUMN: None,
-    KEY_REST_OF_BOOK_ESTIMATE_COLUMN: None,
-}
-
-DEFAULT_PROFILE_VALUES = {
-    KEY_FOR_DEVICE: None,
-    STORE_OPTIONS_STORE_NAME: STORE_OPTIONS_DEFAULTS,
-}
-DEFAULT_LIBRARY_VALUES = {
-    KEY_PROFILES: {"Default": DEFAULT_PROFILE_VALUES},
-    KEY_SCHEMA_VERSION: DEFAULT_SCHEMA_VERSION,
-}
-
-READING_POSITION_CHANGES_DEFAULTS = {
-    KEY_SELECT_BOOKS_IN_LIBRARY: False,
-    KEY_UPDATE_GOODREADS_PROGRESS: False,
-}
 
 CUSTOM_COLUMN_DEFAULT_LOOKUP_READING_LOCATION = "#kobo_reading_location"
 CUSTOM_COLUMN_DEFAULT_LOOKUP_LAST_READ = "#kobo_last_read"
@@ -384,198 +161,481 @@ CUSTOM_COLUMN_DEFAULTS = {
     },
 }
 
+
+# This is necessary because JSONConfig defines a __setitem__() that checks
+# self.no_commit, but since unpickling doesn't call __init__() it won't be set
+# and thus raise an exception.
+# See second note below https://docs.python.org/3/library/pickle.html#object.__setstate__
+class PicklableJSONConfig(JSONConfig):
+    def __new__(cls, *args: Any, **kwargs: Any):
+        obj = super().__new__(cls, *args, **kwargs)
+        # Set it to True because we don't want to write the file when unpickling
+        obj.no_commit = True
+        return obj
+
+
+Self = TypeVar("Self", bound="ConfigWrapper")
+
+
+class ConfigWrapper:
+    def __init__(
+        self,
+        wrapped_dict: dict[str, Any] | None = None,
+        json_config: PicklableJSONConfig | None = None,
+    ):
+        self._wrapped_dict = wrapped_dict if wrapped_dict is not None else {}
+        self._json_config = json_config
+        if json_config is None and isinstance(wrapped_dict, PicklableJSONConfig):
+            self._json_config = wrapped_dict
+
+        for key, val in self.__annotations__.items():
+            if self._is_wrapper(val):
+                annot_wrapped_dict = self._wrapped_dict.setdefault(key, {})
+                self.__dict__[key] = self._new_wrapper(val, annot_wrapped_dict)
+            elif val.startswith(ConfigDictWrapper.__name__):
+                annot_wrapped_dict = self._wrapped_dict.setdefault(key, {})
+                self.__dict__[key] = self._new_dict(val, annot_wrapped_dict)
+            elif key in self._wrapped_dict:
+                self.__dict__[key] = self._wrapped_dict[key]
+            else:
+                try:
+                    self._wrapped_dict[key] = getattr(self, key)
+                except AttributeError as e:
+                    raise AttributeError(
+                        f"Config option '{key}' does not have a default value set"
+                    ) from e
+
+    @staticmethod
+    def _is_wrapper(val: Any) -> bool:
+        return val in globals() and issubclass(globals()[val], ConfigWrapper)
+
+    def _new_wrapper(self, name: str, val: dict[str, Any]) -> ConfigWrapper:
+        return globals()[name](val, self._json_config)
+
+    def _new_dict(
+        self, annot_val: str, wrapped_dict: dict[str, Any]
+    ) -> ConfigDictWrapper[ConfigWrapper]:
+        parsed = ast.parse(annot_val)
+        assert isinstance(parsed.body[0], ast.Expr)
+        annotation = parsed.body[0].value
+        assert isinstance(annotation, ast.Subscript)
+
+        # Necessary for Python 3.8 support
+        if isinstance(annotation.slice, ast.Index):  # pyright: ignore[reportDeprecated]
+            val_type = annotation.slice.value.id  # pyright: ignore[reportAttributeAccessIssue]
+        else:
+            assert isinstance(annotation.slice, ast.Name)
+            val_type = annotation.slice.id
+
+        dict_wrapper = ConfigDictWrapper(
+            globals()[val_type], wrapped_dict, self._json_config
+        )
+        for dict_key, dict_val in wrapped_dict.items():
+            dict_wrapper[dict_key] = self._new_wrapper(val_type, dict_val)
+        return dict_wrapper
+
+    def __str__(self) -> str:
+        return pformat(self._wrapped_dict)
+
+    def __eq__(self, value: Any):
+        if not isinstance(value, ConfigWrapper):
+            return NotImplemented
+        return self._wrapped_dict == value._wrapped_dict
+
+    def __iter__(self):
+        return {
+            k: v for k, v in self.__dict__.items() if k in self.__annotations__
+        }.items().__iter__()
+
+    def __enter__(self: Self) -> Self:
+        if self._json_config is not None:
+            self._json_config.__enter__()
+        return self
+
+    def __exit__(
+        self,
+        exc: type[BaseException] | None,
+        value: BaseException | None,
+        tb: TracebackType | None,
+    ) -> bool | None:
+        if self._json_config is not None:
+            return self._json_config.__exit__(exc, value, tb)
+        return False
+
+    # Workaround for https://github.com/microsoft/pyright/issues/7183
+    # so that access to non-existent attributes gets flagged as an error
+    if not TYPE_CHECKING:
+
+        def __setattr__(self, name: Any, value: Any) -> None:
+            super().__setattr__(name, value)
+            if name != "__annotations__" and name in self.__annotations__:
+                if isinstance(value, (ConfigWrapper, ConfigDictWrapper)):
+                    self._wrapped_dict[name] = value._wrapped_dict
+                else:
+                    self._wrapped_dict[name] = value
+                if self._json_config is not None:
+                    self._json_config.commit()
+
+
+W = TypeVar("W", bound="ConfigWrapper")
+
+
+class ConfigDictWrapper(Dict[str, W]):
+    def __init__(
+        self,
+        cls: type[W],
+        wrapped_dict: dict[str, Any] | None = None,
+        json_config: PicklableJSONConfig | None = None,
+    ) -> None:
+        self._wrapped_dict = wrapped_dict if wrapped_dict is not None else {}
+        self._cls = cls
+        self._json_config = json_config
+
+    def add_item(self, name: str, value: W) -> None:
+        self._wrapped_dict[name] = value._wrapped_dict
+
+    def __setitem__(self, key: str, value: W) -> None:
+        self._wrapped_dict[key] = value._wrapped_dict
+        if value._json_config is None:
+            value._json_config = self._json_config
+        super().__setitem__(key, value)
+        if self._json_config is not None:
+            self._json_config.commit()
+
+    def __delitem__(self, key: str):
+        del self._wrapped_dict[key]
+        return super().__delitem__(key)
+
+
+class BookmarkOptionsConfig(ConfigWrapper):
+    backgroundJob: bool = False
+    clearIfUnread: bool = False
+    doNotStoreIfReopened: bool = False
+    rating: bool = True
+    readingStatus: bool = True
+    setDateToNow: bool = True
+    storeBookmarks: bool = True
+    storeIfMoreRecent: bool = False
+
+
+class MetadataOptionsConfig(ConfigWrapper):
+    author: bool = False
+    authourSort: bool = False
+    description: bool = False
+    descriptionTemplate: str = ""
+    descriptionUseTemplate: bool = False
+    isbn: bool = False
+    language: bool = False
+    published_date: bool = False
+    publisher: bool = False
+    rating: bool = False
+    readingStatus: int = -1
+    reading_direction: str = "Default"
+    resetPosition: bool = False
+    series: bool = False
+    setRreadingStatus: bool = False
+    set_reading_direction: bool = False
+    set_sync_date: bool = False
+    subtitle: bool = False
+    subtitleTemplate: str = ""
+    sync_date_library_date: str = "timestamp"
+    title: bool = False
+    titleSort: bool = False
+    update_KoboEpubs: bool = False
+    usePlugboard: bool = False
+
+
+class ReadingOptionsConfig(ConfigWrapper):
+    readingFontFamily: str = "Georgia"
+    readingAlignment: str = "Off"
+    readingFontSize: int = 22
+    readingLineHeight: float = 1.3
+    readingLeftMargin: int = 3
+    readingRightMargin: int = 3
+    lockMargins: bool = False
+    updateConfigFile: bool = False
+    doNotUpdateIfSet: bool = False
+
+
+class BackupAnnotationsConfig(ConfigWrapper):
+    dest_directory: str = ""
+
+
+class BackupOptionsStoreConfig(ConfigWrapper):
+    backupCopiesToKeepSpin: int = 5
+    backupDestDirectory: str = ""
+    backupEachCOnnection: bool = False
+    backupZipDatabase: bool = True
+    doDailyBackp: bool = False
+
+
+class CleanImagesDirConfig(ConfigWrapper):
+    delete_extra_covers: bool = False
+
+
+class CommonOptionsStoreConfig(ConfigWrapper):
+    buttonActionDevice: str = ""
+    buttonActionLibrary: str = ""
+    individualDeviceOptions: bool = False
+
+
+class CoverUploadConfig(ConfigWrapper):
+    blackandwhite: bool = False
+    dithered_covers: bool = False
+    keep_cover_aspect: bool = False
+    kepub_covers: bool = False
+    letterbox: bool = False
+    letterbox_color: str = "#000000"
+    png_covers: bool = False
+
+
+class FixDuplicatesOptionsStoreConfig(ConfigWrapper):
+    keepNewestShelf: bool = True
+    purgeShelves: bool = False
+
+
+class GetShelvesOptionStoreConfig(ConfigWrapper):
+    allBooks: bool = True
+    replaceShelves: bool = True
+
+
+class RemoveAnnotationsAction(enum.IntEnum):
+    All = 0
+    Selected = 1
+    NotOnDevice = 2
+    Empty = 3
+    NotEmpty = 4
+
+
+class RemoveAnnotationsConfig(ConfigWrapper):
+    removeAnnotAction: RemoveAnnotationsAction = RemoveAnnotationsAction.All
+
+
+class RemoveCoversConfig(ConfigWrapper):
+    kepub_covers: bool = False
+    remove_fullsize_covers: bool = False
+
+
+class RelatedBooksType(enum.IntEnum):
+    Series = 0
+    Authors = 1
+
+
+class SetRelatedBooksOptionsStoreConfig(ConfigWrapper):
+    relatedBooksType: RelatedBooksType = RelatedBooksType.Series
+
+
+class DeviceConfig(ConfigWrapper):
+    active: bool = True
+    location_code: str = "unknown"
+    name: str = "unknown"
+    serial_no: str = "unknown"
+    type: str = "unknown"
+    uuid: str = "unknown"
+    backupOptionsStore: BackupOptionsStoreConfig
+
+
+class PluginConfig(ConfigWrapper):
+    BookmarkOptions: BookmarkOptionsConfig
+    Devices: ConfigDictWrapper[DeviceConfig]
+    MetadataOptions: MetadataOptionsConfig
+    ReadingOptions: ReadingOptionsConfig
+    backupAnnotations: BackupAnnotationsConfig
+    backupOptionsStore: BackupOptionsStoreConfig
+    cleanImagesDir: CleanImagesDirConfig
+    commonOptionsStore: CommonOptionsStoreConfig
+    coverUpload: CoverUploadConfig
+    fixDuplicatesOptionsStore: FixDuplicatesOptionsStoreConfig
+    getShelvesOptionStore: GetShelvesOptionStoreConfig
+    removeAnnotations: RemoveAnnotationsConfig
+    removeCovers: RemoveCoversConfig
+    setRelatedBooksOptionsStore: SetRelatedBooksOptionsStoreConfig
+    _version: int = 0
+
+
+class CustomColumnOptionsConfig(ConfigWrapper):
+    currentReadingLocationColumn: str = ""
+    lastReadColumn: str = ""
+    percentReadColumn: str = ""
+    ratingColumn: str = ""
+    restOfBookEstimateColumn: str = ""
+    timeSpentReadingColumn: str = ""
+
+
+class StoreOptionsStoreConfig(ConfigWrapper):
+    doNotStoreIfReopened: bool = False
+    promptToStore: bool = True
+    storeIfMoreRecent: bool = False
+    storeOnConnect: bool = False
+
+
+class ProfileConfig(ConfigWrapper):
+    forDevice: str | None = TOKEN_ANY_DEVICE
+    profileName: str = "Default"
+    customColumnOptions: CustomColumnOptionsConfig
+    storeOptionsStore: StoreOptionsStoreConfig
+
+
+class ReadingPositionChangesStoreConfig(ConfigWrapper):
+    selectBooksInLibrary: bool = False
+    updeateGoodreadsProgress: bool = False
+
+
+class LibraryConfig(ConfigWrapper):
+    SchemaVersion: float = 0.1
+    profiles: ConfigDictWrapper[ProfileConfig]
+    readingPositionChangesStore: ReadingPositionChangesStoreConfig
+    shelvesColumn: str | None = None
+
+
 # This is where all preferences for this plugin will be stored
-plugin_prefs = JSONConfig("plugins/Kobo Utilities")
-
-# Set defaults
-plugin_prefs.defaults[BOOKMARK_OPTIONS_STORE_NAME] = BOOKMARK_OPTIONS_DEFAULTS
-plugin_prefs.defaults[METADATA_OPTIONS_STORE_NAME] = METADATA_OPTIONS_DEFAULTS
-plugin_prefs.defaults[READING_OPTIONS_STORE_NAME] = READING_OPTIONS_DEFAULTS
-plugin_prefs.defaults[COMMON_OPTIONS_STORE_NAME] = COMMON_OPTIONS_DEFAULTS
-plugin_prefs.defaults[FIXDUPLICATESHELVES_OPTIONS_STORE_NAME] = (
-    FIXDUPLICATESHELVES_OPTIONS_DEFAULTS
-)
-plugin_prefs.defaults[SETRELATEDBOOKS_OPTIONS_STORE_NAME] = (
-    SETRELATEDBOOKS_OPTIONS_DEFAULTS
-)
-plugin_prefs.defaults[STORE_LIBRARIES] = {}
-plugin_prefs.defaults[BACKUP_OPTIONS_STORE_NAME] = BACKUP_OPTIONS_DEFAULTS
-plugin_prefs.defaults[GET_SHELVES_OPTIONS_STORE_NAME] = GET_SHELVES_OPTIONS_DEFAULTS
-plugin_prefs.defaults[STORE_DEVICES] = DEFAULT_DEVICES_VALUES
-plugin_prefs.defaults[CUSTOM_COLUMNS_STORE_NAME] = CUSTOM_COLUMNS_OPTIONS_DEFAULTS
-plugin_prefs.defaults[STORE_OPTIONS_STORE_NAME] = STORE_OPTIONS_DEFAULTS
-plugin_prefs.defaults[READING_POSITION_CHANGES_STORE_NAME] = (
-    READING_POSITION_CHANGES_DEFAULTS
-)
+plugin_prefs = PluginConfig(PicklableJSONConfig("plugins/Kobo Utilities"))
 
 
-def get_plugin_pref(store_name: str, option: str) -> Any:
-    debug("start - store_name='%s', option='%s'" % (store_name, option))
-    c = plugin_prefs[store_name]
-    default_value = plugin_prefs.defaults[store_name][option]
-    return c.get(option, default_value)
+@dataclass
+class CustomColumns:
+    current_location: str | None
+    percent_read: str | None
+    rating: str | None
+    last_read: str | None
+    time_spent_reading: str | None
+    rest_of_book_estimate: str | None
 
 
-def get_plugin_prefs(store_name: str, fill_defaults: bool = False) -> Any:
-    if fill_defaults:
-        c = get_prefs(plugin_prefs, store_name)
-    else:
-        c = plugin_prefs[store_name]
-    return c
+@dataclass
+class FetchQueries:
+    kepub: str
+    epub: str
 
 
-def get_prefs(prefs_store: dict[str, Any] | None, store_name: str) -> dict[str, Any]:
-    debug("start - store_name='%s'" % (store_name,))
-    store = {}
-    if prefs_store is not None and store_name in prefs_store:
-        for key in plugin_prefs.defaults[store_name]:
-            store[key] = prefs_store[store_name].get(
-                key, plugin_prefs.defaults[store_name][key]
-            )
-    else:
-        store = plugin_prefs.defaults[store_name]
-    return store
+@dataclass
+class ReadLocationsJobOptions:
+    bookmark_options: BookmarkOptionsConfig
+    epub_location_like_kepub: bool
+    fetch_queries: FetchQueries
+    database_path: str
+    device_database_path: str
+    is_db_copied: bool
+    profile_name: str | None
+    custom_columns: CustomColumns | None
+    supports_ratings: bool
+    allOnDevice: bool
+    prompt_to_store: bool
 
 
-def get_pref(
-    store: dict[str, Any],
-    store_name: str,
-    option: str,
-    defaults: dict[str, Any] | None = None,
-):
-    if defaults:
-        default_value = defaults[option]
-    else:
-        default_value = plugin_prefs.defaults[store_name][option]
-    return store.get(option, default_value)
+@dataclass
+class RemoveAnnotationsJobOptions:
+    annotations_dir: str
+    annotations_ext: str
+    device_path: str
+    remove_annot_action: RemoveAnnotationsAction
 
 
-def migrate_library_config_if_required(
-    db: LibraryDatabase, library_config: dict[str, Any]
-):
-    debug("start")
-    schema_version = library_config.get(KEY_SCHEMA_VERSION, 0)
-    if schema_version == DEFAULT_SCHEMA_VERSION:
-        return
-    # We have changes to be made - mark schema as updated
-    library_config[KEY_SCHEMA_VERSION] = DEFAULT_SCHEMA_VERSION
+@dataclass
+class CleanImagesDirJobOptions:
+    main_image_path: str
+    sd_image_path: str
+    database_path: str
+    device_database_path: str
+    is_db_copied: bool
+    delete_extra_covers: bool
+    images_tree: bool
 
-    # Any migration code in future will exist in here.
-    if schema_version <= 0.1 and "profiles" not in library_config:
-        print("Migrating Kobo Utilities library config")
-        profile_config = {}
-        profile_config[KEY_FOR_DEVICE] = TOKEN_ANY_DEVICE
 
-        old_store_prefs = plugin_prefs[COMMON_OPTIONS_STORE_NAME]
-        store_prefs = {}
-        store_prefs[KEY_STORE_ON_CONNECT] = get_pref(
-            old_store_prefs,
-            COMMON_OPTIONS_STORE_NAME,
-            KEY_STORE_ON_CONNECT,
-            defaults=OLD_COMMON_OPTIONS_DEFAULTS,
+@dataclass
+class DatabaseBackupJobOptions:
+    backup_store_config: BackupOptionsStoreConfig
+    device_name: str
+    serial_number: str
+    backup_file_template: str
+    database_file: str
+    device_path: str
+
+
+def migrate_gui_settings(plugin_prefs: PluginConfig) -> None:
+    debug("Migrating settings from gui.json")
+
+    configs = (
+        ("clean images dir settings dialog", plugin_prefs.cleanImagesDir),
+        ("cover upload settings dialog", plugin_prefs.coverUpload),
+        ("reader font settings dialog", plugin_prefs.ReadingOptions),
+        (
+            "backup annotation files settings dialog",
+            plugin_prefs.backupAnnotations,
+        ),
+        (
+            "remove annotation files settings dialog",
+            plugin_prefs.removeAnnotations,
+        ),
+        ("remove cover settings dialog", plugin_prefs.removeCovers),
+    )
+
+    def get_gui_settings(name: str) -> dict[str, Any]:
+        return cast(
+            "dict[str, Any]",
+            gprefs.get(f"kobo utilities plugin:{name}:settings", {}),
         )
-        store_prefs[KEY_PROMPT_TO_STORE] = get_pref(
-            old_store_prefs,
-            COMMON_OPTIONS_STORE_NAME,
-            KEY_PROMPT_TO_STORE,
-            defaults=OLD_COMMON_OPTIONS_DEFAULTS,
-        )
-        store_prefs[KEY_STORE_IF_MORE_RECENT] = get_pref(
-            old_store_prefs,
-            COMMON_OPTIONS_STORE_NAME,
-            KEY_STORE_IF_MORE_RECENT,
-            defaults=OLD_COMMON_OPTIONS_DEFAULTS,
-        )
-        store_prefs[KEY_DO_NOT_STORE_IF_REOPENED] = get_pref(
-            old_store_prefs,
-            COMMON_OPTIONS_STORE_NAME,
-            KEY_DO_NOT_STORE_IF_REOPENED,
-            defaults=OLD_COMMON_OPTIONS_DEFAULTS,
-        )
-        debug("store_prefs:", store_prefs)
 
-        column_prefs = {}
-        if library_config.get("currentReadingLocationColumn"):
-            column_prefs[KEY_CURRENT_LOCATION_CUSTOM_COLUMN] = library_config[
-                "currentReadingLocationColumn"
-            ]
-            del library_config["currentReadingLocationColumn"]
-        if library_config.get("precentReadColumn"):
-            column_prefs[KEY_PERCENT_READ_CUSTOM_COLUMN] = library_config[
-                "precentReadColumn"
-            ]
-            del library_config["precentReadColumn"]
-        if library_config.get("ratingColumn"):
-            column_prefs[KEY_RATING_CUSTOM_COLUMN] = library_config["ratingColumn"]
-            del library_config["ratingColumn"]
-        if library_config.get("lastReadColumn"):
-            column_prefs[KEY_LAST_READ_CUSTOM_COLUMN] = library_config["lastReadColumn"]
-            del library_config["lastReadColumn"]
-        debug("column_prefs:", column_prefs)
-        if len(column_prefs) > 0:
-            profile_config[CUSTOM_COLUMNS_STORE_NAME] = column_prefs
-            debug("profile_config:", profile_config)
-            profile_config[STORE_OPTIONS_STORE_NAME] = store_prefs
-            new_profiles = {"Migrated": profile_config}
-            library_config[KEY_PROFILES] = new_profiles
-        debug("library_config:", library_config)
-
-    set_library_config(db, library_config)
+    for gui_key, obj in configs:
+        gui_settings = get_gui_settings(gui_key)
+        for key, val in gui_settings.items():
+            if key in obj.__annotations__:
+                setattr(obj, key, val)
 
 
-def get_library_config(db: LibraryDatabase) -> dict[str, dict[str, Any]]:
+if plugin_prefs._version == 0:
+    with plugin_prefs:
+        migrate_gui_settings(plugin_prefs)
+        plugin_prefs._version = 1
+
+
+def get_library_config(db: LibraryDatabase) -> LibraryConfig:
     library_config = None
 
     if library_config is None:
-        library_config = db.prefs.get_namespaced(
-            PREFS_NAMESPACE, PREFS_KEY_SETTINGS, copy.deepcopy(DEFAULT_LIBRARY_VALUES)
+        library_config = LibraryConfig(
+            db.prefs.get_namespaced(PREFS_NAMESPACE, PREFS_KEY_SETTINGS, {})
         )
-    migrate_library_config_if_required(db, library_config)
     debug("library_config:", library_config)
     return library_config
 
 
 def get_profile_info(db: LibraryDatabase, profile_name: str):
     library_config = get_library_config(db)
-    profiles = library_config.get(KEY_PROFILES, {})
-    return profiles.get(profile_name, DEFAULT_PROFILE_VALUES)
+    if profile_name in library_config.profiles:
+        return library_config.profiles[profile_name]
+    new_profile = ProfileConfig()
+    new_profile.profileName = profile_name
+    return new_profile
 
 
 def get_book_profile_for_device(
     db: LibraryDatabase, device_uuid: str, use_any_device: bool = False
 ):
     library_config = get_library_config(db)
-    profiles_map = library_config.get(KEY_PROFILES, None)
-    selected_profile = None
-    if profiles_map is not None:
-        for profile_name, profile_info in profiles_map.items():
-            if profile_info[KEY_FOR_DEVICE] == device_uuid:
-                profile_info["profileName"] = profile_name
-                selected_profile = profile_info
-                break
-            if use_any_device and profile_info[KEY_FOR_DEVICE] == TOKEN_ANY_DEVICE:
-                profile_info["profileName"] = profile_name
-                selected_profile = profile_info
-
-    if selected_profile is not None:
-        selected_profile[STORE_OPTIONS_STORE_NAME] = get_prefs(
-            selected_profile, STORE_OPTIONS_STORE_NAME
-        )
-    return selected_profile
+    profiles = library_config.profiles
+    for profile in profiles.values():
+        if profile.forDevice == device_uuid:
+            return profile
+        if use_any_device and profile.forDevice == TOKEN_ANY_DEVICE:
+            return profile
+    return None
 
 
 def get_device_name(device_uuid: str, default_name: str = _("(Unknown device)")) -> str:
     device = get_device_config(device_uuid)
-    return cast("str", device["name"]) if device else default_name
+    return device.name if device else default_name
 
 
-def get_device_config(device_uuid: str) -> dict[str, Any] | None:
-    return plugin_prefs[STORE_DEVICES].get(device_uuid, None)
+def get_device_config(device_uuid: str) -> DeviceConfig | None:
+    return plugin_prefs.Devices.get(device_uuid)
 
 
-def set_library_config(db: LibraryDatabase, library_config: dict[str, Any]):
+def set_library_config(db: LibraryDatabase, library_config: LibraryConfig):
     debug("library_config:", library_config)
-    db.prefs.set_namespaced(PREFS_NAMESPACE, PREFS_KEY_SETTINGS, library_config)
+    db.prefs.set_namespaced(
+        PREFS_NAMESPACE, PREFS_KEY_SETTINGS, library_config._wrapped_dict
+    )
 
 
 class ProfilesTab(QWidget):
@@ -587,14 +647,14 @@ class ProfilesTab(QWidget):
         self.help_anchor = "ConfigurationDialog"
         self.library_config = get_library_config(self.plugin_action.gui.current_db)
         debug("self.library_config", self.library_config)
-        self.profiles = self.library_config.get(KEY_PROFILES, {})
+        self.profiles = self.library_config.profiles
         self.current_device_profile = (
             self.plugin_action.device.profile
             if self.plugin_action.device is not None
             else None
         )
         self.profile_name = (
-            self.current_device_profile["profileName"]
+            self.current_device_profile.profileName
             if self.current_device_profile
             else None
         )
@@ -818,8 +878,10 @@ class ProfilesTab(QWidget):
         # As we are about to switch profile, persist the current profiles details if any
         self.persist_profile_config()
         self.profile_name = new_profile_name
-        self.profiles[new_profile_name] = copy.deepcopy(DEFAULT_PROFILE_VALUES)
-        debug("new profile: ", self.profiles[new_profile_name])
+        new_profile = ProfileConfig()
+        new_profile.profileName = new_profile_name
+        self.profiles[new_profile_name] = new_profile
+        debug("new profile: ", new_profile)
         # Now update the profiles combobox
         self.select_profile_combo.populate_combo(self.profiles, new_profile_name)
         self.refresh_current_profile_info()
@@ -859,6 +921,7 @@ class ProfilesTab(QWidget):
         # As we are about to rename profile, persist the current profiles details if any
         self.persist_profile_config()
         self.profiles[new_profile_name] = self.profiles[old_profile_name]
+        self.profiles[new_profile_name].profileName = new_profile_name
         del self.profiles[old_profile_name]
         self.profile_name = new_profile_name
         # Now update the profiles combobox
@@ -892,91 +955,53 @@ class ProfilesTab(QWidget):
         debug("Start")
         # Get configuration for the selected profile
         self.profile_name = str(self.select_profile_combo.currentText()).strip()
-        profile_map = get_profile_info(
-            self.plugin_action.gui.current_db, self.profile_name
-        )
+        profile = get_profile_info(self.plugin_action.gui.current_db, self.profile_name)
 
-        device_uuid = profile_map.get(KEY_FOR_DEVICE, None)
-
-        column_prefs = profile_map.get(
-            CUSTOM_COLUMNS_STORE_NAME, CUSTOM_COLUMNS_OPTIONS_DEFAULTS
-        )
-        current_Location_column = get_pref(
-            column_prefs, CUSTOM_COLUMNS_STORE_NAME, KEY_CURRENT_LOCATION_CUSTOM_COLUMN
-        )
-        percent_read_column = get_pref(
-            column_prefs, CUSTOM_COLUMNS_STORE_NAME, KEY_PERCENT_READ_CUSTOM_COLUMN
-        )
-        rating_column = get_pref(
-            column_prefs, CUSTOM_COLUMNS_STORE_NAME, KEY_RATING_CUSTOM_COLUMN
-        )
-        last_read_column = get_pref(
-            column_prefs, CUSTOM_COLUMNS_STORE_NAME, KEY_LAST_READ_CUSTOM_COLUMN
-        )
-        time_spent_reading_column = get_pref(
-            column_prefs,
-            CUSTOM_COLUMNS_STORE_NAME,
-            KEY_TIME_SPENT_READING_COLUMN,
-        )
-        rest_of_book_estimate_column = get_pref(
-            column_prefs,
-            CUSTOM_COLUMNS_STORE_NAME,
-            KEY_REST_OF_BOOK_ESTIMATE_COLUMN,
-        )
-
-        store_prefs = profile_map.get(STORE_OPTIONS_STORE_NAME, STORE_OPTIONS_DEFAULTS)
-        store_on_connect = get_pref(
-            store_prefs, STORE_OPTIONS_STORE_NAME, KEY_STORE_ON_CONNECT
-        )
-        prompt_to_store = get_pref(
-            store_prefs, STORE_OPTIONS_STORE_NAME, KEY_PROMPT_TO_STORE
-        )
-        store_if_more_recent = get_pref(
-            store_prefs, STORE_OPTIONS_STORE_NAME, KEY_STORE_IF_MORE_RECENT
-        )
-        do_not_store_if_reopened = get_pref(
-            store_prefs, STORE_OPTIONS_STORE_NAME, KEY_DO_NOT_STORE_IF_REOPENED
-        )
+        device_uuid = profile.forDevice
 
         # Display profile configuration in the controls
         self.current_Location_combo.populate_combo(
             self.custom_columns[CUSTOM_COLUMN_DEFAULT_LOOKUP_READING_LOCATION][
                 "current_columns"
             ](),
-            current_Location_column,
+            profile.customColumnOptions.currentReadingLocationColumn,
         )
         self.percent_read_combo.populate_combo(
             self.custom_columns[CUSTOM_COLUMN_DEFAULT_LOOKUP_PERCENT_READ][
                 "current_columns"
             ](),
-            percent_read_column,
+            profile.customColumnOptions.percentReadColumn,
         )
         self.rating_combo.populate_combo(
             self.custom_columns[CUSTOM_COLUMN_DEFAULT_LOOKUP_RATING][
                 "current_columns"
             ](),
-            rating_column,
+            profile.customColumnOptions.ratingColumn,
         )
         self.last_read_combo.populate_combo(
             self.custom_columns[CUSTOM_COLUMN_DEFAULT_LOOKUP_LAST_READ][
                 "current_columns"
             ](),
-            last_read_column,
+            profile.customColumnOptions.lastReadColumn,
         )
         self.time_spent_reading_combo.populate_combo(
             self.custom_columns[CUSTOM_COLUMN_DEFAULT_LOOKUP_TIME_SPENT_READING][
                 "current_columns"
             ](),
-            time_spent_reading_column if time_spent_reading_column is not None else "",
+            profile.customColumnOptions.timeSpentReadingColumn,
         )
         self.rest_of_book_estimate_combo.populate_combo(
             self.custom_columns[CUSTOM_COLUMN_DEFAULT_LOOKUP_REST_OF_BOOK_ESTIMATE][
                 "current_columns"
             ](),
-            rest_of_book_estimate_column
-            if rest_of_book_estimate_column is not None
-            else "",
+            profile.customColumnOptions.restOfBookEstimateColumn,
         )
+
+        store_prefs = profile.storeOptionsStore
+        store_on_connect = store_prefs.storeOnConnect
+        prompt_to_store = store_prefs.promptToStore
+        store_if_more_recent = store_prefs.storeIfMoreRecent
+        do_not_store_if_reopened = store_prefs.doNotStoreIfReopened
 
         self.device_combo.populate_combo(
             self.parent_dialog.get_devices_list(), device_uuid
@@ -1009,48 +1034,34 @@ class ProfilesTab(QWidget):
         profile_config = self.profiles[self.profile_name]
         debug("profile_config:", profile_config)
 
-        profile_config[KEY_FOR_DEVICE] = self.device_combo.get_selected_device()
+        profile_config.forDevice = self.device_combo.get_selected_device()
 
-        store_prefs = {}
-        store_prefs[KEY_STORE_ON_CONNECT] = (
-            self.store_on_connect_checkbox.checkState() == Qt.CheckState.Checked
+        store_prefs = profile_config.storeOptionsStore
+        store_prefs.storeOnConnect = self.store_on_connect_checkbox.isChecked()
+        store_prefs.promptToStore = self.prompt_to_store_checkbox.isChecked()
+        store_prefs.storeIfMoreRecent = self.store_if_more_recent_checkbox.isChecked()
+        store_prefs.doNotStoreIfReopened = (
+            self.do_not_store_if_reopened_checkbox.isChecked()
         )
-        store_prefs[KEY_PROMPT_TO_STORE] = (
-            self.prompt_to_store_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        store_prefs[KEY_STORE_IF_MORE_RECENT] = (
-            self.store_if_more_recent_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        store_prefs[KEY_DO_NOT_STORE_IF_REOPENED] = (
-            self.do_not_store_if_reopened_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        profile_config[STORE_OPTIONS_STORE_NAME] = store_prefs
         debug("store_prefs:", store_prefs)
 
-        column_prefs = {}
-        column_prefs[KEY_CURRENT_LOCATION_CUSTOM_COLUMN] = (
+        column_prefs = profile_config.customColumnOptions
+        column_prefs.currentReadingLocationColumn = (
             self.current_Location_combo.get_selected_column()
         )
         debug(
-            "column_prefs[KEY_CURRENT_LOCATION_CUSTOM_COLUMN]:",
-            column_prefs[KEY_CURRENT_LOCATION_CUSTOM_COLUMN],
+            "column_prefs.currentReadingLocationColumn:",
+            column_prefs.currentReadingLocationColumn,
         )
-        column_prefs[KEY_PERCENT_READ_CUSTOM_COLUMN] = (
-            self.percent_read_combo.get_selected_column()
-        )
-        column_prefs[KEY_RATING_CUSTOM_COLUMN] = self.rating_combo.get_selected_column()
-        column_prefs[KEY_LAST_READ_CUSTOM_COLUMN] = (
-            self.last_read_combo.get_selected_column()
-        )
-        column_prefs[KEY_TIME_SPENT_READING_COLUMN] = (
+        column_prefs.percentReadColumn = self.percent_read_combo.get_selected_column()
+        column_prefs.ratingColumn = self.rating_combo.get_selected_column()
+        column_prefs.lastReadColumn = self.last_read_combo.get_selected_column()
+        column_prefs.timeSpentReadingColumn = (
             self.time_spent_reading_combo.get_selected_column()
         )
-        column_prefs[KEY_REST_OF_BOOK_ESTIMATE_COLUMN] = (
+        column_prefs.restOfBookEstimateColumn = (
             self.rest_of_book_estimate_combo.get_selected_column()
         )
-        profile_config[CUSTOM_COLUMNS_STORE_NAME] = column_prefs
-
-        self.profiles[self.profile_name] = profile_config
 
         debug("end")
 
@@ -1133,8 +1144,8 @@ class DevicesTab(QWidget):
         self._connected_device = plugin_action.device
         self.library_config = get_library_config(self.gui.current_db)
 
-        self.individual_device_options = get_plugin_pref(
-            COMMON_OPTIONS_STORE_NAME, KEY_INDIVIDUAL_DEVICE_OPTIONS
+        self.individual_device_options = (
+            plugin_prefs.commonOptionsStore.individualDeviceOptions
         )
 
         layout = QVBoxLayout()
@@ -1306,14 +1317,14 @@ class DevicesTab(QWidget):
         drive_info = self._connected_device.drive_info
         for location_info in drive_info.values():
             if location_info["location_code"] == "main":
-                new_device = {}
-                new_device["type"] = self._connected_device.device_type
-                new_device["active"] = True
-                new_device["uuid"] = location_info["device_store_uuid"]
-                new_device["name"] = location_info["device_name"]
-                new_device["location_code"] = location_info["location_code"]
-                new_device["serial_no"] = self.plugin_action.device_serial_no()
-                devices[new_device["uuid"]] = new_device
+                new_device = DeviceConfig()
+                new_device.type = self._connected_device.device_type
+                new_device.active = True
+                new_device.uuid = location_info["device_store_uuid"]
+                new_device.name = location_info["device_name"]
+                new_device.location_code = location_info["location_code"]
+                new_device.serial_no = self.plugin_action.device_serial_no()
+                devices[new_device.uuid] = new_device
 
         self.devices_table.populate_table(devices, self._connected_device)
         self.update_from_connection_status(update_table=False)
@@ -1332,7 +1343,7 @@ class DevicesTab(QWidget):
             )
             return
 
-        old_name = device_info["name"]
+        old_name = device_info.name
         new_device_name, ok = QInputDialog.getText(
             self,
             _("Rename device"),
@@ -1347,7 +1358,7 @@ class DevicesTab(QWidget):
             return
         try:
             self.gui.device_manager.set_driveinfo_name(
-                device_info["location_code"], new_device_name
+                device_info.location_code, new_device_name
             )
             self.devices_table.set_current_row_device_name(new_device_name)
             # Ensure the devices combo is refreshed for the current list
@@ -1372,7 +1383,7 @@ class DevicesTab(QWidget):
                 show_copy_button=False,
             )
             return
-        name = device_info["name"]
+        name = device_info.name
         if not question_dialog(
             self,
             _("Are you sure?"),
@@ -1391,7 +1402,7 @@ class DevicesTab(QWidget):
         #       and put some "self-healing" logic elsewhere to ensure a user loading a
         #       list for a deleted device in another library gets it reset at that point.
         self.parent_dialog.delete_device_from_lists(
-            self.library_config, device_info["uuid"]
+            self.library_config, device_info.uuid
         )
         # Ensure the devices combo is refreshed for the current list
         self.parent_dialog.profiles_tab.refresh_current_profile_info()
@@ -1399,10 +1410,7 @@ class DevicesTab(QWidget):
     def update_from_connection_status(
         self, first_time: bool = False, update_table: bool = True
     ):
-        if first_time:
-            devices = plugin_prefs[STORE_DEVICES]
-        else:
-            devices = self.devices_table.get_data()
+        devices = plugin_prefs.Devices if first_time else self.devices_table.get_data()
 
         if self._connected_device is None or self.plugin_action.device is None:
             self.add_device_btn.setEnabled(False)
@@ -1481,37 +1489,19 @@ class DevicesTab(QWidget):
             self.dest_directory_edit.setText(path)
 
     def refresh_current_device_options(self):
+        backup_prefs = plugin_prefs.backupOptionsStore
         if self.individual_device_options:
             (self.current_device_info, _is_connected) = (
                 self.devices_table.get_selected_device_info()
             )
-            if self.current_device_info:
-                backup_prefs = self.current_device_info.get(
-                    BACKUP_OPTIONS_STORE_NAME, BACKUP_OPTIONS_DEFAULTS
-                )
+            if self.current_device_info is not None:
+                backup_prefs = self.current_device_info.backupOptionsStore
             else:
-                backup_prefs = BACKUP_OPTIONS_DEFAULTS
-        else:
-            backup_prefs = get_plugin_prefs(BACKUP_OPTIONS_STORE_NAME)
+                backup_prefs = BackupOptionsStoreConfig()
 
-        do_daily_backup = get_pref(
-            backup_prefs, BACKUP_OPTIONS_STORE_NAME, KEY_DO_DAILY_BACKUP
-        )
-        backup_each_connection = get_pref(
-            backup_prefs, BACKUP_OPTIONS_STORE_NAME, KEY_BACKUP_EACH_CONNECTION
-        )
-        dest_directory = cast(
-            "str",
-            get_pref(
-                backup_prefs, BACKUP_OPTIONS_STORE_NAME, KEY_BACKUP_DEST_DIRECTORY
-            ),
-        )
-        copies_to_keep = get_pref(
-            backup_prefs, BACKUP_OPTIONS_STORE_NAME, KEY_BACKUP_COPIES_TO_KEEP
-        )
-        zip_database = get_pref(
-            backup_prefs, BACKUP_OPTIONS_STORE_NAME, KEY_BACKUP_ZIP_DATABASE
-        )
+        do_daily_backup = backup_prefs.doDailyBackp
+        backup_each_connection = backup_prefs.backupEachCOnnection
+        copies_to_keep = backup_prefs.backupCopiesToKeepSpin
 
         self.do_daily_backp_checkbox.setCheckState(
             Qt.CheckState.Checked if do_daily_backup else Qt.CheckState.Unchecked
@@ -1519,9 +1509,11 @@ class DevicesTab(QWidget):
         self.backup_each_connection_checkbox.setCheckState(
             Qt.CheckState.Checked if backup_each_connection else Qt.CheckState.Unchecked
         )
-        self.dest_directory_edit.setText(dest_directory)
+        self.dest_directory_edit.setText(backup_prefs.backupDestDirectory)
         self.zip_database_checkbox.setCheckState(
-            Qt.CheckState.Checked if zip_database else Qt.CheckState.Unchecked
+            Qt.CheckState.Checked
+            if backup_prefs.backupZipDatabase
+            else Qt.CheckState.Unchecked
         )
         if copies_to_keep == -1:
             self.copies_to_keep_checkbox.setCheckState(Qt.CheckState.Unchecked)
@@ -1536,33 +1528,27 @@ class DevicesTab(QWidget):
     def persist_devices_config(self):
         debug("Start")
 
-        backup_prefs = {}
-        backup_prefs[KEY_DO_DAILY_BACKUP] = (
-            self.do_daily_backp_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        backup_prefs[KEY_BACKUP_EACH_CONNECTION] = (
-            self.backup_each_connection_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        backup_prefs[KEY_BACKUP_ZIP_DATABASE] = (
-            self.zip_database_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        backup_prefs[KEY_BACKUP_DEST_DIRECTORY] = str(self.dest_directory_edit.text())
-        backup_prefs[KEY_BACKUP_COPIES_TO_KEEP] = (
-            int(str(self.copies_to_keep_spin.value()))
-            if self.copies_to_keep_checkbox.checkState() == Qt.CheckState.Checked
-            else -1
-        )
-        debug("backup_prefs:", backup_prefs)
+        with plugin_prefs:
+            backup_prefs = plugin_prefs.backupOptionsStore
+            if self.individual_device_options and self.current_device_info:
+                backup_prefs = self.current_device_info.backupOptionsStore
 
-        if self.individual_device_options:
-            if self.current_device_info:
-                self.current_device_info[BACKUP_OPTIONS_STORE_NAME] = backup_prefs
-        else:
-            plugin_prefs[BACKUP_OPTIONS_STORE_NAME] = backup_prefs
+            backup_prefs.doDailyBackp = self.do_daily_backp_checkbox.isChecked()
+            backup_prefs.backupEachCOnnection = (
+                self.backup_each_connection_checkbox.isChecked()
+            )
+            backup_prefs.backupZipDatabase = self.zip_database_checkbox.isChecked()
+            backup_prefs.backupDestDirectory = self.dest_directory_edit.text()
+            backup_prefs.backupCopiesToKeepSpin = (
+                self.copies_to_keep_spin.value()
+                if self.copies_to_keep_checkbox.isChecked()
+                else -1
+            )
+            debug("backup_prefs:", backup_prefs)
 
-        new_prefs = get_plugin_prefs(COMMON_OPTIONS_STORE_NAME)
-        new_prefs[KEY_INDIVIDUAL_DEVICE_OPTIONS] = self.individual_device_options
-        plugin_prefs[COMMON_OPTIONS_STORE_NAME] = new_prefs
+            plugin_prefs.commonOptionsStore.individualDeviceOptions = (
+                self.individual_device_options
+            )
 
         debug("end")
 
@@ -1572,7 +1558,9 @@ class DeviceColumnComboBox(QComboBox):
         QComboBox.__init__(self, parent)
         self.device_ids = [None, TOKEN_ANY_DEVICE]
 
-    def populate_combo(self, devices: dict[str, Any], selected_device_uuid: str):
+    def populate_combo(
+        self, devices: ConfigDictWrapper[DeviceConfig], selected_device_uuid: str | None
+    ):
         self.clear()
         self.addItem("")
         self.addItem(TOKEN_ANY_DEVICE)
@@ -1580,7 +1568,7 @@ class DeviceColumnComboBox(QComboBox):
         if selected_device_uuid == TOKEN_ANY_DEVICE:
             selected_idx = 1
         for idx, key in enumerate(devices.keys()):
-            self.addItem("%s" % (devices[key]["name"]))
+            self.addItem("%s" % (devices[key].name))
             self.device_ids.append(key)
             if key == selected_device_uuid:
                 selected_idx = idx + 2
@@ -1601,7 +1589,9 @@ class DevicesTableWidget(QTableWidget):
         self.setMinimumSize(380, 0)
 
     def populate_table(
-        self, devices: dict[str, Any], connected_device: KoboDevice | None
+        self,
+        devices: ConfigDictWrapper[DeviceConfig],
+        connected_device: KoboDevice | None,
     ):
         self.clear()
         self.setRowCount(len(devices))
@@ -1637,12 +1627,12 @@ class DevicesTableWidget(QTableWidget):
     def populate_table_row(
         self,
         row: int,
-        device_config: dict[str, Any],
+        device_config: DeviceConfig,
         connected_device: KoboDevice | None,
     ):
         debug("device_config:", device_config)
-        device_type = device_config["type"]
-        device_uuid = device_config["uuid"]
+        device_type = device_config.type
+        device_uuid = device_config.uuid
         device_icon = "reader.png"
         is_connected = False
         if connected_device is not None and self.plugin_action.device is not None:
@@ -1663,36 +1653,37 @@ class DevicesTableWidget(QTableWidget):
         debug("connected_icon=%s" % connected_icon)
 
         name_widget = ReadOnlyTextIconWidgetItem(
-            device_config["name"], get_icon(device_icon)
+            device_config.name, get_icon(device_icon)
         )
         name_widget.setData(Qt.ItemDataRole.UserRole, (device_config, is_connected))
-        type_widget = ReadOnlyTableWidgetItem(device_config["type"])
-        serial_no = device_config.get("serial_no", "")
+        type_widget = ReadOnlyTableWidgetItem(device_config.type)
+        serial_no = device_config.serial_no
         serial_no_widget = ReadOnlyTableWidgetItem(serial_no)
         version_no_widget = ReadOnlyTableWidgetItem(fw_version)
-        self.setItem(row, 0, CheckableTableWidgetItem(device_config["active"]))
+        self.setItem(row, 0, CheckableTableWidgetItem(device_config.active))
         self.setItem(row, 1, name_widget)
         self.setItem(row, 2, type_widget)
         self.setItem(row, 3, serial_no_widget)
         self.setItem(row, 4, version_no_widget)
         self.setItem(row, 5, ReadOnlyTextIconWidgetItem("", get_icon(connected_icon)))
 
-    def get_data(self) -> dict[str, dict[str, Any]]:
+    def get_data(self) -> ConfigDictWrapper[DeviceConfig]:
         debug("start")
-        devices = {}
+        devices = ConfigDictWrapper(DeviceConfig)
         for row in range(self.rowCount()):
             widget = self.item(row, 1)
             assert widget is not None
             (device_config, _is_connected) = widget.data(Qt.ItemDataRole.UserRole)
+            assert isinstance(device_config, DeviceConfig)
             widget = self.item(row, 0)
             assert isinstance(widget, CheckableTableWidgetItem), (
                 f"widget is of type {type(widget)}"
             )
-            device_config["active"] = widget.get_boolean_value()
-            devices[device_config["uuid"]] = device_config
+            device_config.active = bool(widget.get_boolean_value())
+            devices[device_config.uuid] = device_config
         return devices
 
-    def get_selected_device_info(self) -> tuple[dict[str, Any] | None, bool]:
+    def get_selected_device_info(self) -> tuple[DeviceConfig | None, bool]:
         if self.currentRow() >= 0:
             widget = self.item(self.currentRow(), 1)
             assert widget is not None
@@ -1735,7 +1726,7 @@ class OtherTab(QWidget):
         self.library_default_combo = SimpleComboBox(
             self,
             self.parent_dialog.plugin_action.library_actions_map,
-            str(get_plugin_pref(COMMON_OPTIONS_STORE_NAME, KEY_BUTTON_ACTION_LIBRARY)),
+            plugin_prefs.commonOptionsStore.buttonActionLibrary,
         )
         library_default_label.setBuddy(self.library_default_combo)
         options_layout.addWidget(library_default_label, 0, 0, 1, 1)
@@ -1750,7 +1741,7 @@ class OtherTab(QWidget):
         self.device_default_combo = SimpleComboBox(
             self,
             self.parent_dialog.plugin_action.device_actions_map,
-            str(get_plugin_pref(COMMON_OPTIONS_STORE_NAME, KEY_BUTTON_ACTION_DEVICE)),
+            plugin_prefs.commonOptionsStore.buttonActionDevice,
         )
         device_default_label.setBuddy(self.device_default_combo)
         options_layout.addWidget(device_default_label, 1, 0, 1, 1)
@@ -1773,14 +1764,12 @@ class OtherTab(QWidget):
         layout.insertStretch(-1)
 
     def persist_other_config(self):
-        new_prefs = get_plugin_prefs(COMMON_OPTIONS_STORE_NAME)
-        new_prefs[KEY_BUTTON_ACTION_DEVICE] = str(
+        plugin_prefs.commonOptionsStore.buttonActionDevice = (
             self.device_default_combo.currentText()
         )
-        new_prefs[KEY_BUTTON_ACTION_LIBRARY] = str(
+        plugin_prefs.commonOptionsStore.buttonActionLibrary = (
             self.library_default_combo.currentText()
         )
-        plugin_prefs[COMMON_OPTIONS_STORE_NAME] = new_prefs
 
 
 class ConfigWidget(QWidget):
@@ -1827,15 +1816,13 @@ class ConfigWidget(QWidget):
     def get_devices_list(self):
         return self.devices_tab.devices_table.get_data()
 
-    def delete_device_from_lists(
-        self, library_config: dict[str, dict[str, Any]], device_uuid: str
-    ):
+    def delete_device_from_lists(self, library_config: LibraryConfig, device_uuid: str):
         del device_uuid
         set_library_config(self.plugin_action.gui.current_db, library_config)
 
     def save_settings(self):
         device_prefs = self.get_devices_list()
-        plugin_prefs[STORE_DEVICES] = device_prefs
+        plugin_prefs.Devices = device_prefs
 
         # We only need to update the store for the current list, as switching lists
         # will have updated the other lists
@@ -1844,7 +1831,6 @@ class ConfigWidget(QWidget):
         self.devices_tab.persist_devices_config()
 
         library_config = self.profiles_tab.library_config
-        library_config[KEY_PROFILES] = self.profiles_tab.profiles
         set_library_config(self.plugin_action.gui.current_db, library_config)
 
     def edit_shortcuts(self):

@@ -5712,11 +5712,9 @@ class KoboUtilitiesAction(InterfaceAction):
         with self.device_database_connection() as connection:
             cursor = connection.cursor()
             for contentID in contentIDs:
-                test_values = (
-                    self.CONTENTTYPE,
-                    contentID,
-                )
+                test_values = (self.CONTENTTYPE, contentID)
                 if delete:
+                    debug(f"Deleting settings for '{contentID}'")
                     cursor.execute(delete_query, test_values)
                     deleted_fonts += 1
                 elif update_query is not None and add_query is not None:
@@ -5725,9 +5723,15 @@ class KoboUtilitiesAction(InterfaceAction):
                         result = next(cursor)
                         debug("found existing row:", result)
                         if not options.doNotUpdateIfSet:
+                            debug(
+                                f"Updating settings for '{contentID}' with values: {update_values}"
+                            )
                             cursor.execute(update_query, (*update_values, contentID))
                             updated_fonts += 1
                     except StopIteration:
+                        debug(
+                            f"Adding settings for '{contentID}' with values: {add_values}"
+                        )
                         cursor.execute(add_query, (*add_values, contentID))
                         added_fonts += 1
                 count_books += 1

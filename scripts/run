@@ -133,10 +133,13 @@ def msgfmt() -> None:
 def test(args: argparse.Namespace) -> None:
     plugin_zip = build(args)
     failed_tests = False
-    for bin_path in [CALIBRE_MINIMUM_BIN_PATH, CALIBRE_LATEST_BIN_PATH]:
-        if not bin_path.exists():
-            update_calibre(args)
-        failed_tests |= run_tests(plugin_zip, bin_path, args)
+    try:
+        for bin_path in [CALIBRE_MINIMUM_BIN_PATH, CALIBRE_LATEST_BIN_PATH]:
+            if not bin_path.exists():
+                update_calibre(args)
+            failed_tests |= run_tests(plugin_zip, bin_path, args)
+    finally:
+        plugin_zip.unlink()
     if failed_tests:
         raise FailedTests("Some tests failed")
 
@@ -264,8 +267,11 @@ def prepare_release(args: argparse.Namespace) -> None:
 
 def install(args: argparse.Namespace) -> None:
     plugin_zip = build(args)
-    run_calibre(["calibre-debug", "--shutdown-running-calibre"])
-    run_calibre(["calibre-customize", "--add-plugin", plugin_zip])
+    try:
+        run_calibre(["calibre-debug", "--shutdown-running-calibre"])
+        run_calibre(["calibre-customize", "--add-plugin", plugin_zip])
+    finally:
+        plugin_zip.unlink()
 
 
 def install_and_debug(args: argparse.Namespace) -> None:

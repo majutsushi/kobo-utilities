@@ -1006,22 +1006,12 @@ class ProfilesTab(QWidget):
         self.device_combo.populate_combo(
             self.parent_dialog.get_devices_list(), device_uuid
         )
-        self.store_on_connect_checkbox.setCheckState(
-            Qt.CheckState.Checked if store_on_connect else Qt.CheckState.Unchecked
-        )
-        self.prompt_to_store_checkbox.setCheckState(
-            Qt.CheckState.Checked if prompt_to_store else Qt.CheckState.Unchecked
-        )
+        self.store_on_connect_checkbox.setChecked(store_on_connect)
+        self.prompt_to_store_checkbox.setChecked(prompt_to_store)
         self.prompt_to_store_checkbox.setEnabled(store_on_connect)
-        self.store_if_more_recent_checkbox.setCheckState(
-            Qt.CheckState.Checked if store_if_more_recent else Qt.CheckState.Unchecked
-        )
+        self.store_if_more_recent_checkbox.setChecked(store_if_more_recent)
         self.store_if_more_recent_checkbox.setEnabled(store_on_connect)
-        self.do_not_store_if_reopened_checkbox.setCheckState(
-            Qt.CheckState.Checked
-            if do_not_store_if_reopened
-            else Qt.CheckState.Unchecked
-        )
+        self.do_not_store_if_reopened_checkbox.setChecked(do_not_store_if_reopened)
         self.do_not_store_if_reopened_checkbox.setEnabled(store_on_connect)
 
         debug("end")
@@ -1200,7 +1190,7 @@ class DevicesTab(QWidget):
             self.device_options_for_each_checkbox_clicked
         )
         if self.individual_device_options:
-            self.device_options_for_each_checkbox.setCheckState(Qt.CheckState.Checked)
+            self.device_options_for_each_checkbox.setChecked(True)
         layout.addWidget(self.device_options_for_each_checkbox)
 
         options_layout = QGridLayout()
@@ -1444,35 +1434,27 @@ class DevicesTab(QWidget):
         self.dest_directory_label.setEnabled(enabled)
         self.copies_to_keep_checkbox.setEnabled(enabled)
         self.copies_to_keep_checkbox_clicked(
-            enabled
-            and self.copies_to_keep_checkbox.checkState() == Qt.CheckState.Checked
+            enabled and self.copies_to_keep_checkbox.isChecked()
         )
         self.zip_database_checkbox.setEnabled(enabled)
 
     def do_daily_backp_checkbox_clicked(self, checked: bool):
         enable_backup_options = (
-            checked
-            or self.backup_each_connection_checkbox.checkState()
-            == Qt.CheckState.Checked
+            checked or self.backup_each_connection_checkbox.isChecked()
         )
         self.toggle_backup_options_state(enable_backup_options)
-        if self.backup_each_connection_checkbox.checkState() == Qt.CheckState.Checked:
-            self.backup_each_connection_checkbox.setCheckState(Qt.CheckState.Unchecked)
+        if self.backup_each_connection_checkbox.isChecked():
+            self.backup_each_connection_checkbox.setChecked(False)
 
     def backup_each_connection_checkbox_clicked(self, checked: bool):
-        enable_backup_options = (
-            checked
-            or self.do_daily_backp_checkbox.checkState() == Qt.CheckState.Checked
-        )
+        enable_backup_options = checked or self.do_daily_backp_checkbox.isChecked()
         self.toggle_backup_options_state(enable_backup_options)
-        if self.do_daily_backp_checkbox.checkState() == Qt.CheckState.Checked:
-            self.do_daily_backp_checkbox.setCheckState(Qt.CheckState.Unchecked)
+        if self.do_daily_backp_checkbox.isChecked():
+            self.do_daily_backp_checkbox.setChecked(False)
 
     def device_options_for_each_checkbox_clicked(self, checked: bool):
         self.individual_device_options = (
-            checked
-            or self.device_options_for_each_checkbox.checkState()
-            == Qt.CheckState.Checked
+            checked or self.device_options_for_each_checkbox.isChecked()
         )
         self.refresh_current_device_options()
 
@@ -1503,22 +1485,14 @@ class DevicesTab(QWidget):
         backup_each_connection = backup_prefs.backupEachCOnnection
         copies_to_keep = backup_prefs.backupCopiesToKeepSpin
 
-        self.do_daily_backp_checkbox.setCheckState(
-            Qt.CheckState.Checked if do_daily_backup else Qt.CheckState.Unchecked
-        )
-        self.backup_each_connection_checkbox.setCheckState(
-            Qt.CheckState.Checked if backup_each_connection else Qt.CheckState.Unchecked
-        )
+        self.do_daily_backp_checkbox.setChecked(do_daily_backup)
+        self.backup_each_connection_checkbox.setChecked(backup_each_connection)
         self.dest_directory_edit.setText(backup_prefs.backupDestDirectory)
-        self.zip_database_checkbox.setCheckState(
-            Qt.CheckState.Checked
-            if backup_prefs.backupZipDatabase
-            else Qt.CheckState.Unchecked
-        )
+        self.zip_database_checkbox.setChecked(backup_prefs.backupZipDatabase)
         if copies_to_keep == -1:
-            self.copies_to_keep_checkbox.setCheckState(Qt.CheckState.Unchecked)
+            self.copies_to_keep_checkbox.setChecked(False)
         else:
-            self.copies_to_keep_checkbox.setCheckState(Qt.CheckState.Checked)
+            self.copies_to_keep_checkbox.setChecked(True)
             self.copies_to_keep_spin.setProperty("value", copies_to_keep)
         if do_daily_backup:
             self.do_daily_backp_checkbox_clicked(do_daily_backup)

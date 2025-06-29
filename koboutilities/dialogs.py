@@ -513,9 +513,9 @@ class ReaderOptionsDialog(SizePersistedDialog):
         if options.lockMargins:
             self.lock_margins_checkbox.click()
         if options.updateConfigFile:
-            self.update_config_file_checkbox.setCheckState(Qt.CheckState.Checked)
+            self.update_config_file_checkbox.setChecked(True)
         if options.doNotUpdateIfSet:
-            self.do_not_update_if_set_checkbox.setCheckState(Qt.CheckState.Checked)
+            self.do_not_update_if_set_checkbox.setChecked(True)
         self.get_book_settings_pushbutton.setEnabled(contentID is not None)
 
         # Cause our dialog size to be restored from prefs or created on first usage
@@ -680,12 +680,8 @@ class ReaderOptionsDialog(SizePersistedDialog):
             options.readingLeftMargin = self.left_margins_spin.value()
             options.readingRightMargin = self.right_margins_spin.value()
             options.lockMargins = self.lock_margins_checkbox_is_checked()
-            options.updateConfigFile = (
-                self.update_config_file_checkbox.checkState() == Qt.CheckState.Checked
-            )
-            options.doNotUpdateIfSet = (
-                self.do_not_update_if_set_checkbox.checkState() == Qt.CheckState.Checked
-            )
+            options.updateConfigFile = self.update_config_file_checkbox.isChecked()
+            options.doNotUpdateIfSet = self.do_not_update_if_set_checkbox.isChecked()
 
         self.accept()
 
@@ -716,10 +712,10 @@ class ReaderOptionsDialog(SizePersistedDialog):
             )
 
     def custom_line_spacing_is_checked(self):
-        return self.custom_line_spacing_checkbox.checkState() == Qt.CheckState.Checked
+        return self.custom_line_spacing_checkbox.isChecked()
 
     def lock_margins_checkbox_is_checked(self):
-        return self.lock_margins_checkbox.checkState() == Qt.CheckState.Checked
+        return self.lock_margins_checkbox.isChecked()
 
     def get_device_settings(self):
         koboConfig = ConfigParser(allow_no_value=True)
@@ -780,9 +776,9 @@ class ReaderOptionsDialog(SizePersistedDialog):
         if line_spacing in self.line_spacings:
             line_spacing_index = self.line_spacings.index(line_spacing)
             debug("line_spacing_index=", line_spacing_index)
-            self.custom_line_spacing_checkbox.setCheckState(Qt.CheckState.Checked)
+            self.custom_line_spacing_checkbox.setChecked(True)
         else:
-            self.custom_line_spacing_checkbox.setCheckState(Qt.CheckState.Unchecked)
+            self.custom_line_spacing_checkbox.setChecked(False)
             debug("line_spacing_index not found")
             line_spacing_index = 0
         self.custom_line_spacing_checkbox.click()
@@ -828,53 +824,35 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
 
         # Set some default values from last time dialog was used.
         title = cfg.plugin_prefs.MetadataOptions.title
-        self.title_checkbox.setCheckState(
-            Qt.CheckState.Checked if title else Qt.CheckState.Unchecked
-        )
+        self.title_checkbox.setChecked(title)
         self.update_title_sort_checkbox()
 
         title_sort = cfg.plugin_prefs.MetadataOptions.titleSort
-        self.title_sort_checkbox.setCheckState(
-            Qt.CheckState.Checked if title_sort else Qt.CheckState.Unchecked
-        )
+        self.title_sort_checkbox.setChecked(title_sort)
 
         author = cfg.plugin_prefs.MetadataOptions.author
-        self.author_checkbox.setCheckState(
-            Qt.CheckState.Checked if author else Qt.CheckState.Unchecked
-        )
+        self.author_checkbox.setChecked(author)
 
         author_sort = cfg.plugin_prefs.MetadataOptions.authourSort
-        self.author_sort_checkbox.setCheckState(
-            Qt.CheckState.Checked if author_sort else Qt.CheckState.Unchecked
-        )
+        self.author_sort_checkbox.setChecked(author_sort)
         self.update_author_sort_checkbox()
 
         description = cfg.plugin_prefs.MetadataOptions.description
-        self.description_checkbox.setCheckState(
-            Qt.CheckState.Checked if description else Qt.CheckState.Unchecked
-        )
+        self.description_checkbox.setChecked(description)
 
         description_use_template = (
             cfg.plugin_prefs.MetadataOptions.descriptionUseTemplate
         )
-        self.description_use_template_checkbox.setCheckState(
-            Qt.CheckState.Checked
-            if description_use_template
-            else Qt.CheckState.Unchecked
-        )
+        self.description_use_template_checkbox.setChecked(description_use_template)
         self.description_checkbox_clicked(description)
         description_template = cfg.plugin_prefs.MetadataOptions.descriptionTemplate
         self.description_template_edit.template = description_template
 
         publisher = cfg.plugin_prefs.MetadataOptions.publisher
-        self.publisher_checkbox.setCheckState(
-            Qt.CheckState.Checked if publisher else Qt.CheckState.Unchecked
-        )
+        self.publisher_checkbox.setChecked(publisher)
 
         published = cfg.plugin_prefs.MetadataOptions.published_date
-        self.published_checkbox.setCheckState(
-            Qt.CheckState.Checked if published else Qt.CheckState.Unchecked
-        )
+        self.published_checkbox.setChecked(published)
 
         isbn = cfg.plugin_prefs.MetadataOptions.isbn
         supports_ratings = (
@@ -882,30 +860,20 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
             if self.plugin_action.device is not None
             else False
         )
-        self.isbn_checkbox.setCheckState(
-            Qt.CheckState.Checked
-            if isbn and supports_ratings
-            else Qt.CheckState.Unchecked
-        )
+        self.isbn_checkbox.setChecked(isbn and supports_ratings)
         self.isbn_checkbox.setEnabled(supports_ratings)
 
         rating = cfg.plugin_prefs.MetadataOptions.rating
-        self.rating_checkbox.setCheckState(
-            Qt.CheckState.Checked
-            if rating and supports_ratings
-            else Qt.CheckState.Unchecked
-        )
+        self.rating_checkbox.setChecked(rating and supports_ratings)
         self.rating_checkbox.setEnabled(
             have_rating_column(self.plugin_action) and supports_ratings
         )
 
         series = cfg.plugin_prefs.MetadataOptions.series
-        self.series_checkbox.setCheckState(
-            Qt.CheckState.Checked
-            if series
-            and self.plugin_action.device
+        self.series_checkbox.setChecked(
+            series
+            and self.plugin_action.device is not None
             and self.plugin_action.device.supports_series
-            else Qt.CheckState.Unchecked
         )
         self.series_checkbox.setEnabled(
             self.plugin_action.device is not None
@@ -913,26 +881,20 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         )
 
         subtitle = cfg.plugin_prefs.MetadataOptions.subtitle
-        self.subtitle_checkbox.setCheckState(
-            Qt.CheckState.Checked if subtitle else Qt.CheckState.Unchecked
-        )
+        self.subtitle_checkbox.setChecked(subtitle)
         self.subtitle_checkbox_clicked(subtitle)
 
         subtitle_template = cfg.plugin_prefs.MetadataOptions.subtitleTemplate
         self.subtitle_template_edit.template = subtitle_template
 
         reading_direction = cfg.plugin_prefs.MetadataOptions.set_reading_direction
-        self.reading_direction_checkbox.setCheckState(
-            Qt.CheckState.Checked if reading_direction else Qt.CheckState.Unchecked
-        )
+        self.reading_direction_checkbox.setChecked(reading_direction)
         self.reading_direction_checkbox_clicked(reading_direction)
         reading_direction = cfg.plugin_prefs.MetadataOptions.reading_direction
         self.reading_direction_combo.select_text(reading_direction)
 
         date_added = cfg.plugin_prefs.MetadataOptions.set_sync_date
-        self.date_added_checkbox.setCheckState(
-            Qt.CheckState.Checked if date_added else Qt.CheckState.Unchecked
-        )
+        self.date_added_checkbox.setChecked(date_added)
         date_added_column = cfg.plugin_prefs.MetadataOptions.sync_date_library_date
         self.date_added_column_combo.populate_combo(
             self.get_date_columns(DATE_COLUMNS),
@@ -943,20 +905,14 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         self.date_added_checkbox_clicked(date_added)
 
         use_plugboard = cfg.plugin_prefs.MetadataOptions.usePlugboard
-        self.use_plugboard_checkbox.setCheckState(
-            Qt.CheckState.Checked if use_plugboard else Qt.CheckState.Unchecked
-        )
+        self.use_plugboard_checkbox.setChecked(use_plugboard)
         self.use_plugboard_checkbox_clicked()
 
         update_kepubs = cfg.plugin_prefs.MetadataOptions.update_KoboEpubs
-        self.update_kepubs_checkbox.setCheckState(
-            Qt.CheckState.Checked if update_kepubs else Qt.CheckState.Unchecked
-        )
+        self.update_kepubs_checkbox.setChecked(update_kepubs)
 
         language = cfg.plugin_prefs.MetadataOptions.language
-        self.language_checkbox.setCheckState(
-            Qt.CheckState.Checked if language else Qt.CheckState.Unchecked
-        )
+        self.language_checkbox.setChecked(language)
 
         # Cause our dialog size to be restored from prefs or created on first usage
         self.resize_dialog()
@@ -1102,49 +1058,27 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
 
     def ok_clicked(self) -> None:
         new_prefs = cfg.MetadataOptionsConfig()
-        new_prefs.title = self.title_checkbox.checkState() == Qt.CheckState.Checked
-        new_prefs.titleSort = (
-            self.title_sort_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        new_prefs.author = self.author_checkbox.checkState() == Qt.CheckState.Checked
-        new_prefs.authourSort = (
-            self.author_sort_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        new_prefs.description = (
-            self.description_checkbox.checkState() == Qt.CheckState.Checked
-        )
+        new_prefs.title = self.title_checkbox.isChecked()
+        new_prefs.titleSort = self.title_sort_checkbox.isChecked()
+        new_prefs.author = self.author_checkbox.isChecked()
+        new_prefs.authourSort = self.author_sort_checkbox.isChecked()
+        new_prefs.description = self.description_checkbox.isChecked()
         new_prefs.descriptionUseTemplate = (
-            self.description_use_template_checkbox.checkState() == Qt.CheckState.Checked
+            self.description_use_template_checkbox.isChecked()
         )
         new_prefs.descriptionTemplate = self.description_template_edit.template
-        new_prefs.publisher = (
-            self.publisher_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        new_prefs.published_date = (
-            self.published_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        new_prefs.isbn = self.isbn_checkbox.checkState() == Qt.CheckState.Checked
-        new_prefs.rating = self.rating_checkbox.checkState() == Qt.CheckState.Checked
-        new_prefs.series = self.series_checkbox.checkState() == Qt.CheckState.Checked
-        new_prefs.usePlugboard = (
-            self.use_plugboard_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        new_prefs.language = (
-            self.language_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        new_prefs.update_KoboEpubs = (
-            self.update_kepubs_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        new_prefs.subtitle = (
-            self.subtitle_checkbox.checkState() == Qt.CheckState.Checked
-        )
+        new_prefs.publisher = self.publisher_checkbox.isChecked()
+        new_prefs.published_date = self.published_checkbox.isChecked()
+        new_prefs.isbn = self.isbn_checkbox.isChecked()
+        new_prefs.rating = self.rating_checkbox.isChecked()
+        new_prefs.series = self.series_checkbox.isChecked()
+        new_prefs.usePlugboard = self.use_plugboard_checkbox.isChecked()
+        new_prefs.language = self.language_checkbox.isChecked()
+        new_prefs.update_KoboEpubs = self.update_kepubs_checkbox.isChecked()
+        new_prefs.subtitle = self.subtitle_checkbox.isChecked()
         new_prefs.subtitleTemplate = self.subtitle_template_edit.template
-        new_prefs.set_reading_direction = (
-            self.reading_direction_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        new_prefs.set_sync_date = (
-            self.date_added_checkbox.checkState() == Qt.CheckState.Checked
-        )
+        new_prefs.set_reading_direction = self.reading_direction_checkbox.isChecked()
+        new_prefs.set_sync_date = self.date_added_checkbox.isChecked()
 
         if (
             new_prefs.descriptionUseTemplate
@@ -1180,8 +1114,7 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
                 )
                 return
             new_prefs.resetPosition = (
-                self.readingStatusGroupBox.reset_position_checkbox.checkState()
-                == Qt.CheckState.Checked
+                self.readingStatusGroupBox.reset_position_checkbox.isChecked()
             )
 
         # Only if the user has checked at least one option will we continue
@@ -1202,7 +1135,7 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
     def update_title_sort_checkbox(self):
         self.title_sort_checkbox.setEnabled(
             self.title_checkbox.isChecked()
-            and self.use_plugboard_checkbox.checkState() != Qt.CheckState.Checked
+            and not self.use_plugboard_checkbox.isChecked()
         )
         if self.title_sort_checkbox.isEnabled():
             self.title_sort_checkbox.setToolTip(None)
@@ -1212,7 +1145,7 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
     def update_author_sort_checkbox(self):
         self.author_sort_checkbox.setEnabled(
             self.author_checkbox.isChecked()
-            and self.use_plugboard_checkbox.checkState() != Qt.CheckState.Checked
+            and not self.use_plugboard_checkbox.isChecked()
         )
         if self.author_sort_checkbox.isEnabled():
             self.author_sort_checkbox.setToolTip(None)
@@ -1225,9 +1158,7 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
 
     def description_use_template_checkbox_clicked(self, checked: bool):
         self.description_template_edit.setEnabled(
-            checked
-            and self.description_use_template_checkbox.checkState()
-            == Qt.CheckState.Checked
+            checked and self.description_use_template_checkbox.isChecked()
         )
 
     def subtitle_checkbox_clicked(self, checked: bool):
@@ -1282,14 +1213,10 @@ class GetShelvesFromDeviceDialog(SizePersistedDialog):
         self.initialize_controls()
 
         all_books = cfg.plugin_prefs.getShelvesOptionStore.allBooks
-        self.all_books_checkbox.setCheckState(
-            Qt.CheckState.Checked if all_books else Qt.CheckState.Unchecked
-        )
+        self.all_books_checkbox.setChecked(all_books)
 
         replace_shelves = cfg.plugin_prefs.getShelvesOptionStore.replaceShelves
-        self.replace_shelves_checkbox.setCheckState(
-            Qt.CheckState.Checked if replace_shelves else Qt.CheckState.Unchecked
-        )
+        self.replace_shelves_checkbox.setChecked(replace_shelves)
 
         self.library_config = cfg.get_library_config(self.plugin_action.gui.current_db)
         shelf_column = self.library_config.shelvesColumn
@@ -1368,12 +1295,8 @@ class GetShelvesFromDeviceDialog(SizePersistedDialog):
 
     def ok_clicked(self) -> None:
         with cfg.plugin_prefs.getShelvesOptionStore as options:
-            options.allBooks = (
-                self.all_books_checkbox.checkState() == Qt.CheckState.Checked
-            )
-            options.replaceShelves = (
-                self.replace_shelves_checkbox.checkState() == Qt.CheckState.Checked
-            )
+            options.allBooks = self.all_books_checkbox.isChecked()
+            options.replaceShelves = self.replace_shelves_checkbox.isChecked()
 
         shelves_column = self.shelf_column_combo.get_selected_column()
         if not shelves_column:
@@ -1416,37 +1339,19 @@ class BookmarkOptionsDialog(SizePersistedDialog):
             self.store_radiobutton.click()
         else:
             self.restore_radiobutton.click()
-        self.status_to_reading_checkbox.setCheckState(
-            Qt.CheckState.Checked if options.readingStatus else Qt.CheckState.Unchecked
-        )
-        self.date_to_now_checkbox.setCheckState(
-            Qt.CheckState.Checked if options.setDateToNow else Qt.CheckState.Unchecked
-        )
-        self.set_rating_checkbox.setCheckState(
-            Qt.CheckState.Checked
-            if options.rating
+        self.status_to_reading_checkbox.setChecked(options.readingStatus)
+        self.date_to_now_checkbox.setChecked(options.setDateToNow)
+        self.set_rating_checkbox.setChecked(
+            options.rating
             and self.plugin_action.device is not None
             and self.plugin_action.device.supports_ratings
-            else Qt.CheckState.Unchecked
         )
 
-        self.clear_if_unread_checkbox.setCheckState(
-            Qt.CheckState.Checked if options.clearIfUnread else Qt.CheckState.Unchecked
-        )
-        self.store_if_more_recent_checkbox.setCheckState(
-            Qt.CheckState.Checked
-            if options.storeIfMoreRecent
-            else Qt.CheckState.Unchecked
-        )
-        self.do_not_store_if_reopened_checkbox.setCheckState(
-            Qt.CheckState.Checked
-            if options.doNotStoreIfReopened
-            else Qt.CheckState.Unchecked
-        )
+        self.clear_if_unread_checkbox.setChecked(options.clearIfUnread)
+        self.store_if_more_recent_checkbox.setChecked(options.storeIfMoreRecent)
+        self.do_not_store_if_reopened_checkbox.setChecked(options.doNotStoreIfReopened)
         self.do_not_store_if_reopened_checkbox_clicked(options.doNotStoreIfReopened)
-        self.background_checkbox.setCheckState(
-            Qt.CheckState.Checked if options.backgroundJob else Qt.CheckState.Unchecked
-        )
+        self.background_checkbox.setChecked(options.backgroundJob)
 
         # Cause our dialog size to be restored from prefs or created on first usage
         self.resize_dialog()
@@ -1565,28 +1470,15 @@ class BookmarkOptionsDialog(SizePersistedDialog):
         self.profile_name = profile_name
         with cfg.plugin_prefs.BookmarkOptions as options:
             options.storeBookmarks = self.store_radiobutton.isChecked()
-            options.readingStatus = (
-                self.status_to_reading_checkbox.checkState() == Qt.CheckState.Checked
-            )
-            options.setDateToNow = (
-                self.date_to_now_checkbox.checkState() == Qt.CheckState.Checked
-            )
-            options.rating = (
-                self.set_rating_checkbox.checkState() == Qt.CheckState.Checked
-            )
-            options.clearIfUnread = (
-                self.clear_if_unread_checkbox.checkState() == Qt.CheckState.Checked
-            )
-            options.storeIfMoreRecent = (
-                self.store_if_more_recent_checkbox.checkState() == Qt.CheckState.Checked
-            )
+            options.readingStatus = self.status_to_reading_checkbox.isChecked()
+            options.setDateToNow = self.date_to_now_checkbox.isChecked()
+            options.rating = self.set_rating_checkbox.isChecked()
+            options.clearIfUnread = self.clear_if_unread_checkbox.isChecked()
+            options.storeIfMoreRecent = self.store_if_more_recent_checkbox.isChecked()
             options.doNotStoreIfReopened = (
-                self.do_not_store_if_reopened_checkbox.checkState()
-                == Qt.CheckState.Checked
+                self.do_not_store_if_reopened_checkbox.isChecked()
             )
-            options.backgroundJob = (
-                self.background_checkbox.checkState() == Qt.CheckState.Checked
-            )
+            options.backgroundJob = self.background_checkbox.isChecked()
             if options.doNotStoreIfReopened:
                 options.clearIfUnread = False
         self.accept()
@@ -1670,8 +1562,7 @@ class ChangeReadingStatusOptionsDialog(SizePersistedDialog):
                 )
                 return
             self.options.resetPosition = (
-                self.readingStatusGroupBox.reset_position_checkbox.checkState()
-                == Qt.CheckState.Checked
+                self.readingStatusGroupBox.reset_position_checkbox.isChecked()
             )
 
         # Only if the user has checked at least one option will we continue
@@ -1886,15 +1777,9 @@ class CoverUploadOptionsDialog(SizePersistedDialog):
 
         # Set some default values from last time dialog was used.
         blackandwhite = options.blackandwhite
-        self.blackandwhite_checkbox.setCheckState(
-            Qt.CheckState.Checked if blackandwhite else Qt.CheckState.Unchecked
-        )
+        self.blackandwhite_checkbox.setChecked(blackandwhite)
         self.blackandwhite_checkbox_clicked(blackandwhite)
-        self.ditheredcovers_checkbox.setCheckState(
-            Qt.CheckState.Checked
-            if options.dithered_covers
-            else Qt.CheckState.Unchecked
-        )
+        self.ditheredcovers_checkbox.setChecked(options.dithered_covers)
 
         assert self.plugin_action.device is not None
         # Hide options if the driver doesn't have the extended options.
@@ -1914,23 +1799,15 @@ class CoverUploadOptionsDialog(SizePersistedDialog):
         )
 
         letterbox = options.letterbox
-        self.letterbox_checkbox.setCheckState(
-            Qt.CheckState.Checked if letterbox else Qt.CheckState.Unchecked
-        )
+        self.letterbox_checkbox.setChecked(letterbox)
         self.letterbox_checkbox_clicked(letterbox)
         keep_cover_aspect = options.keep_cover_aspect
-        self.keep_cover_aspect_checkbox.setCheckState(
-            Qt.CheckState.Checked if keep_cover_aspect else Qt.CheckState.Unchecked
-        )
+        self.keep_cover_aspect_checkbox.setChecked(keep_cover_aspect)
         self.keep_cover_aspect_checkbox_clicked(keep_cover_aspect)
         letterbox_color = options.letterbox_color
         self.letterbox_colorbutton.color = letterbox_color
-        self.pngcovers_checkbox.setCheckState(
-            Qt.CheckState.Checked if options.png_covers else Qt.CheckState.Unchecked
-        )
-        self.kepub_covers_checkbox.setCheckState(
-            Qt.CheckState.Checked if options.kepub_covers else Qt.CheckState.Unchecked
-        )
+        self.pngcovers_checkbox.setChecked(options.png_covers)
+        self.kepub_covers_checkbox.setChecked(options.kepub_covers)
 
         # Cause our dialog size to be restored from prefs or created on first usage
         self.resize_dialog()
@@ -1991,51 +1868,36 @@ class CoverUploadOptionsDialog(SizePersistedDialog):
 
     def ok_clicked(self):
         with cfg.plugin_prefs.coverUpload as options:
-            options.blackandwhite = (
-                self.blackandwhite_checkbox.checkState() == Qt.CheckState.Checked
-            )
-            options.dithered_covers = (
-                self.ditheredcovers_checkbox.checkState() == Qt.CheckState.Checked
-            )
-            options.png_covers = (
-                self.pngcovers_checkbox.checkState() == Qt.CheckState.Checked
-            )
-            options.keep_cover_aspect = (
-                self.keep_cover_aspect_checkbox.checkState() == Qt.CheckState.Checked
-            )
-            options.letterbox = (
-                self.letterbox_checkbox.checkState() == Qt.CheckState.Checked
-            )
+            options.blackandwhite = self.blackandwhite_checkbox.isChecked()
+            options.dithered_covers = self.ditheredcovers_checkbox.isChecked()
+            options.png_covers = self.pngcovers_checkbox.isChecked()
+            options.keep_cover_aspect = self.keep_cover_aspect_checkbox.isChecked()
+            options.letterbox = self.letterbox_checkbox.isChecked()
             if self.driver_supports_cover_letterbox_colors:
                 options.letterbox_color = cast("str", self.letterbox_colorbutton.color)
-            options.kepub_covers = (
-                self.kepub_covers_checkbox.checkState() == Qt.CheckState.Checked
-            )
+            options.kepub_covers = self.kepub_covers_checkbox.isChecked()
 
         self.accept()
 
     def blackandwhite_checkbox_clicked(self, checked: bool):
         self.ditheredcovers_checkbox.setEnabled(
-            checked
-            and self.blackandwhite_checkbox.checkState() == Qt.CheckState.Checked
+            checked and self.blackandwhite_checkbox.isChecked()
         )
         self.pngcovers_checkbox.setEnabled(
-            checked
-            and self.blackandwhite_checkbox.checkState() == Qt.CheckState.Checked
+            checked and self.blackandwhite_checkbox.isChecked()
         )
 
     def keep_cover_aspect_checkbox_clicked(self, checked: bool):
         self.letterbox_checkbox.setEnabled(
-            checked
-            and self.keep_cover_aspect_checkbox.checkState() == Qt.CheckState.Checked
+            checked and self.keep_cover_aspect_checkbox.isChecked()
         )
         self.letterbox_colorbutton.setEnabled(
-            checked and self.letterbox_checkbox.checkState() == Qt.CheckState.Checked
+            checked and self.letterbox_checkbox.isChecked()
         )
 
     def letterbox_checkbox_clicked(self, checked: bool):
         self.letterbox_colorbutton.setEnabled(
-            checked and self.letterbox_checkbox.checkState() == Qt.CheckState.Checked
+            checked and self.letterbox_checkbox.isChecked()
         )
 
 
@@ -2050,14 +1912,8 @@ class RemoveCoverOptionsDialog(SizePersistedDialog):
         self.initialize_controls()
 
         options = cfg.plugin_prefs.removeCovers
-        self.remove_fullsize_covers_checkbox.setCheckState(
-            Qt.CheckState.Checked
-            if options.remove_fullsize_covers
-            else Qt.CheckState.Unchecked
-        )
-        self.kepub_covers_checkbox.setCheckState(
-            Qt.CheckState.Checked if options.kepub_covers else Qt.CheckState.Unchecked
-        )
+        self.remove_fullsize_covers_checkbox.setChecked(options.remove_fullsize_covers)
+        self.kepub_covers_checkbox.setChecked(options.kepub_covers)
 
         # Cause our dialog size to be restored from prefs or created on first usage
         self.resize_dialog()
@@ -2105,12 +1961,9 @@ class RemoveCoverOptionsDialog(SizePersistedDialog):
     def ok_clicked(self):
         with cfg.plugin_prefs.removeCovers as options:
             options.remove_fullsize_covers = (
-                self.remove_fullsize_covers_checkbox.checkState()
-                == Qt.CheckState.Checked
+                self.remove_fullsize_covers_checkbox.isChecked()
             )
-            options.kepub_covers = (
-                self.kepub_covers_checkbox.checkState() == Qt.CheckState.Checked
-            )
+            options.kepub_covers = self.kepub_covers_checkbox.isChecked()
         self.accept()
 
 
@@ -2197,10 +2050,8 @@ class CleanImagesDirOptionsDialog(SizePersistedDialog):
 
         self.initialize_controls()
 
-        self.delete_extra_covers_checkbox.setCheckState(
-            Qt.CheckState.Checked
-            if cfg.plugin_prefs.cleanImagesDir.delete_extra_covers
-            else Qt.CheckState.Unchecked
+        self.delete_extra_covers_checkbox.setChecked(
+            cfg.plugin_prefs.cleanImagesDir.delete_extra_covers
         )
 
         # Cause our dialog size to be restored from prefs or created on first usage
@@ -2241,7 +2092,7 @@ class CleanImagesDirOptionsDialog(SizePersistedDialog):
 
     def ok_clicked(self):
         cfg.plugin_prefs.cleanImagesDir.delete_extra_covers = (
-            self.delete_extra_covers_checkbox.checkState() == Qt.CheckState.Checked
+            self.delete_extra_covers_checkbox.isChecked()
         )
         self.accept()
 
@@ -3385,11 +3236,10 @@ class ShowReadingPositionChangesDialog(SizePersistedDialog):
     def _ok_clicked(self):
         library_config = cfg.get_library_config(self.plugin_action.gui.current_db)
         library_config.readingPositionChangesStore.selectBooksInLibrary = (
-            self.select_books_checkbox.checkState() == Qt.CheckState.Checked
+            self.select_books_checkbox.isChecked()
         )
         library_config.readingPositionChangesStore.updeateGoodreadsProgress = (
-            self.update_goodreads_progress_checkbox.checkState()
-            == Qt.CheckState.Checked
+            self.update_goodreads_progress_checkbox.isChecked()
         )
         cfg.set_library_config(self.plugin_action.gui.current_db, library_config)
 
@@ -3633,15 +3483,13 @@ class FixDuplicateShelvesDialog(SizePersistedDialog):
         have_options = (
             self.keep_newest_radiobutton.isChecked()
             or self.keep_oldest_radiobutton.isChecked()
-            or self.purge_checkbox.checkState() == Qt.CheckState.Checked
+            or self.purge_checkbox.isChecked()
         )
         # Only if the user has checked at least one option will we continue
         if have_options:
             with cfg.plugin_prefs.fixDuplicatesOptionsStore as options:
                 options.keepNewestShelf = self.keep_newest_radiobutton.isChecked()
-                options.purgeShelves = (
-                    self.purge_checkbox.checkState() == Qt.CheckState.Checked
-                )
+                options.purgeShelves = self.purge_checkbox.isChecked()
 
             debug("options=%s" % options)
             self.accept()
@@ -4039,7 +3887,7 @@ class ReadingStatusGroupBox(QGroupBox):
         self.reset_position_checkbox.setEnabled(checked)
 
     def readingStatusIsChecked(self):
-        return self.reading_status_checkbox.checkState() == Qt.CheckState.Checked
+        return self.reading_status_checkbox.isChecked()
 
     def readingStatus(self):
         readingStatus = -1

@@ -19,7 +19,7 @@ from calibre.utils.ipc.server import Server
 from calibre.utils.zipfile import ZipFile
 
 from . import config as cfg
-from .common_utils import (
+from .utils import (
     BOOKMARK_SEPARATOR,
     MIMETYPE_KOBO,
     DeviceDatabaseConnection,

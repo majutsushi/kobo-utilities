@@ -67,7 +67,7 @@ from qt.core import (
 
 from . import config as cfg
 from .book import SeriesBook
-from .common_utils import (
+from .utils import (
     CheckableTableWidgetItem,
     CustomColumnComboBox,
     DateTableWidgetItem,

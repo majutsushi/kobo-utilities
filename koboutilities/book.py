@@ -12,7 +12,7 @@ from calibre.ebooks.metadata import fmt_sidx
 from calibre.ebooks.metadata.book.base import Metadata
 from calibre.utils.date import format_date
 
-from .common_utils import debug
+from .utils import debug
 
 if TYPE_CHECKING:
     import datetime as dt

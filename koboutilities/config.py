@@ -40,7 +40,7 @@ from qt.core import (
     QWidget,
 )
 
-from .common_utils import (
+from .utils import (
     CheckableTableWidgetItem,
     CustomColumnComboBox,
     ImageTitleLayout,

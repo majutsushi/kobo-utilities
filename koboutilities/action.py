@@ -72,18 +72,6 @@ from qt.core import (
 from . import ActionKoboUtilities
 from . import config as cfg
 from .book import SeriesBook
-from .common_utils import (
-    BOOKMARK_SEPARATOR,
-    MIMETYPE_KOBO,
-    DeviceDatabaseConnection,
-    ProgressBar,
-    check_device_database,
-    convert_kobo_date,
-    create_menu_action_unique,
-    debug,
-    get_icon,
-    set_plugin_icon_resources,
-)
 from .dialogs import (
     AboutDialog,
     BackupAnnotationsOptionsDialog,
@@ -106,6 +94,18 @@ from .dialogs import (
     ShowReadingPositionChangesDialog,
     UpdateBooksToCDialog,
     UpdateMetadataOptionsDialog,
+)
+from .utils import (
+    BOOKMARK_SEPARATOR,
+    MIMETYPE_KOBO,
+    DeviceDatabaseConnection,
+    ProgressBar,
+    check_device_database,
+    convert_kobo_date,
+    create_menu_action_unique,
+    debug,
+    get_icon,
+    set_plugin_icon_resources,
 )
 
 if TYPE_CHECKING:

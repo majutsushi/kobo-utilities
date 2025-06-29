@@ -831,7 +831,7 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         self.title_checkbox.setCheckState(
             Qt.CheckState.Checked if title else Qt.CheckState.Unchecked
         )
-        self.title_checkbox_clicked(title)
+        self.update_title_sort_checkbox()
 
         title_sort = cfg.plugin_prefs.MetadataOptions.titleSort
         self.title_sort_checkbox.setCheckState(
@@ -847,7 +847,7 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         self.author_sort_checkbox.setCheckState(
             Qt.CheckState.Checked if author_sort else Qt.CheckState.Unchecked
         )
-        self.author_checkbox_clicked(author)
+        self.update_author_sort_checkbox()
 
         description = cfg.plugin_prefs.MetadataOptions.description
         self.description_checkbox.setCheckState(
@@ -946,7 +946,7 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         self.use_plugboard_checkbox.setCheckState(
             Qt.CheckState.Checked if use_plugboard else Qt.CheckState.Unchecked
         )
-        self.use_plugboard_checkbox_clicked(use_plugboard)
+        self.use_plugboard_checkbox_clicked()
 
         update_kepubs = cfg.plugin_prefs.MetadataOptions.update_KoboEpubs
         self.update_kepubs_checkbox.setCheckState(
@@ -978,13 +978,13 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         widget_line = 0
         self.title_checkbox = QCheckBox(_("Title"), self)
         options_layout.addWidget(self.title_checkbox, widget_line, 0, 1, 1)
-        self.title_checkbox.clicked.connect(self.title_checkbox_clicked)
+        self.title_checkbox.clicked.connect(self.update_title_sort_checkbox)
         self.title_sort_checkbox = QCheckBox(_("Use 'Title Sort'"), self)
         options_layout.addWidget(self.title_sort_checkbox, widget_line, 1, 1, 1)
 
         self.author_checkbox = QCheckBox(_("Author"), self)
         options_layout.addWidget(self.author_checkbox, widget_line, 2, 1, 1)
-        self.author_checkbox.clicked.connect(self.author_checkbox_clicked)
+        self.author_checkbox.clicked.connect(self.update_author_sort_checkbox)
         self.author_sort_checkbox = QCheckBox(_("Use 'Author Sort'"), self)
         options_layout.addWidget(self.author_sort_checkbox, widget_line, 3, 1, 1)
 
@@ -1199,17 +1199,25 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
             show_copy_button=False,
         )
 
-    def title_checkbox_clicked(self, checked: bool):
+    def update_title_sort_checkbox(self):
         self.title_sort_checkbox.setEnabled(
-            checked
+            self.title_checkbox.isChecked()
             and self.use_plugboard_checkbox.checkState() != Qt.CheckState.Checked
         )
+        if self.title_sort_checkbox.isEnabled():
+            self.title_sort_checkbox.setToolTip(None)
+        else:
+            self.title_sort_checkbox.setToolTip("Not used when plugboard is enabled")
 
-    def author_checkbox_clicked(self, checked: bool):
+    def update_author_sort_checkbox(self):
         self.author_sort_checkbox.setEnabled(
-            checked
+            self.author_checkbox.isChecked()
             and self.use_plugboard_checkbox.checkState() != Qt.CheckState.Checked
         )
+        if self.author_sort_checkbox.isEnabled():
+            self.author_sort_checkbox.setToolTip(None)
+        else:
+            self.author_sort_checkbox.setToolTip("Not used when plugboard is enabled")
 
     def description_checkbox_clicked(self, checked: bool):
         self.description_use_template_checkbox.setEnabled(checked)
@@ -1231,13 +1239,9 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
     def reading_direction_checkbox_clicked(self, checked: bool):
         self.reading_direction_combo.setEnabled(checked)
 
-    def use_plugboard_checkbox_clicked(self, checked: bool):
-        self.title_sort_checkbox.setEnabled(
-            not checked and self.title_checkbox.checkState() == Qt.CheckState.Checked
-        )
-        self.author_sort_checkbox.setEnabled(
-            not checked and self.author_checkbox.checkState() == Qt.CheckState.Checked
-        )
+    def use_plugboard_checkbox_clicked(self):
+        self.update_title_sort_checkbox()
+        self.update_author_sort_checkbox()
 
     def get_date_columns(
         self, column_names: list[str] = DATE_COLUMNS

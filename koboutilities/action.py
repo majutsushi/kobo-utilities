@@ -2597,6 +2597,8 @@ class KoboUtilitiesAction(InterfaceAction):
             is_db_copied = False
         debug("db_path:", db_path)
 
+        timestamp_string = getattr(device, "TIMESTAMP_STRING", "%Y-%m-%dT%H:%M:%SZ")
+
         kobo_device = KoboDevice(
             device,
             isinstance(device, KOBOTOUCH),
@@ -2615,6 +2617,7 @@ class KoboUtilitiesAction(InterfaceAction):
             db_path,
             device_db_path,
             is_db_copied,
+            timestamp_string,
         )
         debug("kobo_device:", kobo_device)
         return kobo_device
@@ -4243,7 +4246,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
                         if options.published_date:
                             pubdate_string = strftime(
-                                self.device_timestamp_string, newmi.pubdate
+                                self.device.timestamp_string, newmi.pubdate
                             )
                             if result["DateCreated"] != pubdate_string:
                                 set_clause_columns.append("DateCreated=?")
@@ -4310,7 +4313,7 @@ class KoboUtilitiesAction(InterfaceAction):
                                 rating_values.append(rating)
                                 rating_values.append(
                                     strftime(
-                                        self.device_timestamp_string, time.gmtime()
+                                        self.device.timestamp_string, time.gmtime()
                                     )
                                 )
                                 rating_values.append(contentID)
@@ -4497,7 +4500,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
                             if new_timestamp is not None:
                                 synctime_string = strftime(
-                                    self.device_timestamp_string, new_timestamp
+                                    self.device.timestamp_string, new_timestamp
                                 )
                                 if result["___SyncTime"] != synctime_string:
                                     set_clause_columns.append("___SyncTime=?")
@@ -5313,7 +5316,7 @@ class KoboUtilitiesAction(InterfaceAction):
                         last_read = None
                         if options.setDateToNow:
                             last_read = strftime(
-                                self.device_timestamp_string, time.gmtime()
+                                self.device.timestamp_string, time.gmtime()
                             )
                             debug("setting to now - last_read= ", last_read)
                         elif last_read_column:
@@ -5322,7 +5325,7 @@ class KoboUtilitiesAction(InterfaceAction):
                             last_read = metadata["#value#"]
                             if last_read is not None:
                                 last_read = last_read.strftime(
-                                    self.device_timestamp_string
+                                    self.device.timestamp_string
                                 )
                             debug("setting from library - last_read= ", last_read)
                         debug("last_read= ", last_read)
@@ -5365,7 +5368,7 @@ class KoboUtilitiesAction(InterfaceAction):
                             else:
                                 rating_values.append(
                                     strftime(
-                                        self.device_timestamp_string, time.gmtime()
+                                        self.device.timestamp_string, time.gmtime()
                                     )
                                 )
 
@@ -5607,19 +5610,6 @@ class KoboUtilitiesAction(InterfaceAction):
 
         return book_options
 
-    @property
-    def device_timestamp_string(self):
-        if not self.timestamp_string:
-            if (
-                self.device is not None
-                and isinstance(self.device.driver, KOBOTOUCH)
-                and "TIMESTAMP_STRING" in dir(self.device)
-            ):
-                self.timestamp_string = self.device.driver.TIMESTAMP_STRING
-            else:
-                self.timestamp_string = "%Y-%m-%dT%H:%M:%SZ"
-        return self.timestamp_string
-
     def _set_reader_fonts(
         self,
         contentIDs: list[str],
@@ -5627,6 +5617,7 @@ class KoboUtilitiesAction(InterfaceAction):
         delete: bool = False,
     ):
         debug("start")
+        assert self.device is not None
         updated_fonts = 0
         added_fonts = 0
         deleted_fonts = 0
@@ -5678,7 +5669,7 @@ class KoboUtilitiesAction(InterfaceAction):
             )
             add_values = (
                 self.CONTENTTYPE,
-                time.strftime(self.device_timestamp_string, time.gmtime()),
+                time.strftime(self.device.timestamp_string, time.gmtime()),
                 font_face,
                 font_size,
                 justification,
@@ -5699,7 +5690,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 "AND ContentId = ?"
             )
             update_values = (
-                time.strftime(self.device_timestamp_string, time.gmtime()),
+                time.strftime(self.device.timestamp_string, time.gmtime()),
                 font_face,
                 font_size,
                 justification,
@@ -6871,3 +6862,4 @@ class KoboDevice:
     db_path: str
     device_db_path: str
     is_db_copied: bool
+    timestamp_string: str

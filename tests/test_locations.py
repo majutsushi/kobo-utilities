@@ -177,12 +177,6 @@ class DeviceDb:
     new_callable=mock.PropertyMock,
     return_value=(4, 41, 23145),
 )
-@mock.patch.object(
-    KoboUtilitiesAction,
-    "device_timestamp_string",
-    new_callable=mock.PropertyMock,
-    return_value=TIMESTAMP_STRING,
-)
 class TestLocations(unittest.TestCase):
     def setUp(self):
         self.plugin = KoboUtilitiesAction(None, None)
@@ -204,14 +198,14 @@ class TestLocations(unittest.TestCase):
             db_path="/kobo.sqlite",
             device_db_path="/kobo.sqlite",
             is_db_copied=False,
+            timestamp_string=TIMESTAMP_STRING,
         )
         self.plugin.log = default_log  # type: ignore[reportAttributeAccessIssue]
         self.queue = Queue()
         self.maxDiff = None
 
-    def test_store_bookmarks(self, fwversion: tuple[int, int, int], timestamp: str):
+    def test_store_bookmarks(self, fwversion: tuple[int, int, int]):
         del fwversion
-        del timestamp
         book1 = TestBook(
             title="Title 1",
             authors=["Author 1"],
@@ -333,11 +327,8 @@ class TestLocations(unittest.TestCase):
         self.assertEqual(stored_locations[book2.calibre_id]["TimeSpentReading"], 450)
         self.assertEqual(stored_locations[book2.calibre_id]["RestOfBookEstimate"], 250)
 
-    def test_restore_current_bookmark(
-        self, fwversion: tuple[int, int, int], timestamp: str
-    ):
+    def test_restore_current_bookmark(self, fwversion: tuple[int, int, int]):
         del fwversion
-        del timestamp
         book1 = TestBook(
             title="Title A",
             authors=["Author A"],

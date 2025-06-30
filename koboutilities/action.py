@@ -31,7 +31,6 @@ from typing import (
     cast,
 )
 
-import apsw
 from calibre import strftime
 from calibre.constants import DEBUG
 from calibre.constants import numeric_version as calibre_version
@@ -43,7 +42,6 @@ from calibre.ebooks.metadata.book.base import Metadata
 from calibre.ebooks.oeb.polish.container import EpubContainer
 from calibre.ebooks.oeb.polish.errors import DRMError
 from calibre.gui2 import (
-    FileDialog,
     error_dialog,
     info_dialog,
     open_local_file,
@@ -60,7 +58,6 @@ from calibre.utils.icu import sort_key
 from calibre.utils.logging import default_log
 from qt.core import (
     QAction,
-    QFileDialog,
     QIcon,
     QMenu,
     QModelIndex,
@@ -75,13 +72,11 @@ from .book import SeriesBook
 from .dialogs import (
     AboutDialog,
     BackupAnnotationsOptionsDialog,
-    BlockAnalyticsOptionsDialog,
     BookmarkOptionsDialog,
     ChangeReadingStatusOptionsDialog,
     CleanImagesDirOptionsDialog,
     CleanImagesDirProgressDialog,
     CoverUploadOptionsDialog,
-    FixDuplicateShelvesDialog,
     GetShelvesFromDeviceDialog,
     ManageSeriesDeviceDialog,
     ReaderOptionsDialog,
@@ -95,12 +90,12 @@ from .dialogs import (
     UpdateBooksToCDialog,
     UpdateMetadataOptionsDialog,
 )
+from .features import analytics, database, duplicateshelves
 from .utils import (
     BOOKMARK_SEPARATOR,
     MIMETYPE_KOBO,
     DeviceDatabaseConnection,
     ProgressBar,
-    check_device_database,
     convert_kobo_date,
     create_menu_action_unique,
     debug,
@@ -379,6 +374,14 @@ class KoboUtilitiesAction(InterfaceAction):
         self.rebuild_menus()
 
     def rebuild_menus(self) -> None:
+        def menu_wrapper(func: Callable[[KoboDevice, ui.Main], None]):
+            def wrapper():
+                if self.device is None:
+                    raise AssertionError(_("No device connected."))
+                func(self.device, self.gui)
+
+            return wrapper
+
         with self.menus_lock:
             # Show the config dialog
             # The config dialog can also be shown from within
@@ -595,7 +598,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 _("Block analytics events"),
                 unique_name="Block analytics events",
                 shortcut_name=_("Block analytics events"),
-                triggered=self.block_analytics,
+                triggered=menu_wrapper(analytics.block_analytics),
                 is_library_action=True,
                 is_device_action=True,
                 is_supported=device is not None and device.is_kobotouch,
@@ -606,7 +609,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 _("Fix duplicate collections"),
                 unique_name="Fix duplicate collections",
                 shortcut_name=_("Fix duplicate collections"),
-                triggered=self.fix_duplicate_shelves,
+                triggered=menu_wrapper(duplicateshelves.fix_duplicate_shelves),
                 is_library_action=True,
                 is_device_action=True,
                 is_supported=device is not None and device.is_kobotouch,
@@ -617,7 +620,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="Check the device database",
                 shortcut_name=_("Check the device database"),
                 image="ok.png",
-                triggered=self.check_device_database,
+                triggered=menu_wrapper(database.check_device_database),
                 is_library_action=True,
                 is_device_action=True,
                 is_supported=device is not None and not device.is_db_copied,
@@ -629,7 +632,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="Compress the device database",
                 shortcut_name=_("Compress the device database"),
                 image="images/vise.png",
-                triggered=self.vacuum_device_database,
+                triggered=menu_wrapper(database.vacuum_device_database),
                 is_library_action=True,
                 is_device_action=True,
                 is_supported=device is not None and not device.is_db_copied,
@@ -641,7 +644,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="Back up device database",
                 shortcut_name=_("Back up device database"),
                 image="images/databases.png",
-                triggered=self.backup_device_database,
+                triggered=menu_wrapper(database.backup_device_database),
                 is_library_action=True,
                 is_device_action=True,
             )
@@ -1572,36 +1575,6 @@ class KoboUtilitiesAction(InterfaceAction):
         debug("using fetch_queries:", fetch_queries)
         return fetch_queries
 
-    def backup_device_database(self) -> None:
-        self.device = self.get_device()
-        if self.device is None:
-            error_dialog(
-                self.gui,
-                _("Cannot back up the device database."),
-                _("No device connected."),
-                show=True,
-            )
-            return
-
-        fd = FileDialog(
-            parent=self.gui,
-            name="Kobo Utilities plugin:choose backup destination",
-            title=_("Choose backup destination"),
-            filters=[(_("SQLite database"), ["sqlite"])],
-            add_all_files_filter=False,
-            mode=QFileDialog.FileMode.AnyFile,
-        )
-        if not fd.accepted:
-            return
-        backup_file = fd.get_files()[0]
-
-        if not backup_file:
-            return
-
-        debug("backup file selected=", backup_file)
-        source_file = self.device.db_path
-        shutil.copyfile(source_file, backup_file)
-
     def backup_annotation_files(self) -> None:
         current_view = self.gui.current_view()
         if (
@@ -1789,44 +1762,6 @@ class KoboUtilitiesAction(InterfaceAction):
         dlg = ShowBooksNotInDeviceDatabaseDialog(self.gui, books_not_in_database)
         dlg.show()
 
-    def fix_duplicate_shelves(self) -> None:
-        self.device = self.get_device()
-        if self.device is None:
-            error_dialog(
-                self.gui,
-                _("Cannot fix the duplicate collections in the device library."),
-                _("No device connected."),
-                show=True,
-            )
-            return
-
-        shelves = self._get_shelf_count()
-        dlg = FixDuplicateShelvesDialog(self.gui, self, shelves)
-        dlg.exec()
-        if dlg.result() != dlg.DialogCode.Accepted:
-            debug("dialog cancelled")
-            return
-
-        options = cfg.plugin_prefs.fixDuplicatesOptionsStore
-        debug(f"about to fix shelves - options={options}")
-
-        starting_shelves, shelves_removed, finished_shelves = (
-            self._remove_duplicate_shelves(shelves, options)
-        )
-        result_message = (
-            _("Update summary:")
-            + "\n\t"
-            + _(
-                "Starting number of collections={0}\n\tCollections removed={1}\n\tTotal collections={2}"
-            ).format(starting_shelves, shelves_removed, finished_shelves)
-        )
-        info_dialog(
-            self.gui,
-            _("Kobo Utilities") + " - " + _("Duplicate collections fixed"),
-            result_message,
-            show=True,
-        )
-
     def set_related_books(self) -> None:
         debug("start")
         self.device = self.get_device()
@@ -1976,100 +1911,6 @@ class KoboUtilitiesAction(InterfaceAction):
         info_dialog(
             self.gui,
             _("Kobo Utilities") + " - " + _("Get collections from device"),
-            result_message,
-            show=True,
-        )
-
-    def check_device_database(self) -> None:
-        self.device = self.get_device()
-        if self.device is None:
-            error_dialog(
-                self.gui,
-                _("Cannot check Kobo device database."),
-                _("No device connected."),
-                show=True,
-            )
-            return
-
-        check_result = self._check_device_database()
-
-        check_result = (
-            _(
-                "Result of running 'PRAGMA integrity_check' on database on the Kobo device:\n\n"
-            )
-            + check_result
-        )
-
-        d = ViewLog(
-            "Kobo Utilities - Device Database Check", check_result, parent=self.gui
-        )
-        d.setWindowIcon(self.qaction.icon())
-        d.exec()
-
-    def block_analytics(self) -> None:
-        # Some background info:
-        # https://www.mobileread.com/forums/showpost.php?p=3934039&postcount=44
-        debug("start")
-        self.device = self.get_device()
-        if self.device is None:
-            error_dialog(
-                self.gui,
-                _("Cannot block analytics events."),
-                _("No device connected."),
-                show=True,
-            )
-            return
-
-        dlg = BlockAnalyticsOptionsDialog(self.gui, self)
-        dlg.exec()
-        if dlg.result() != dlg.DialogCode.Accepted:
-            return
-
-        block_analytics_result = self._block_analytics(dlg.createAnalyticsEventsTrigger)
-        if block_analytics_result:
-            info_dialog(
-                self.gui,
-                _("Kobo Utilities") + " - " + _("Block analytics events"),
-                block_analytics_result,
-                show=True,
-            )
-        else:
-            result_message = _("Failed to block analytics events.")
-            d = ViewLog(
-                _("Kobo Utilities") + " - " + _("Block analytics events"),
-                result_message,
-                parent=self.gui,
-            )
-            d.setWindowIcon(self.qaction.icon())
-            d.exec()
-
-    def vacuum_device_database(self) -> None:
-        debug("start")
-        self.device = self.get_device()
-        if self.device is None:
-            error_dialog(
-                self.gui,
-                _("Cannot compress Kobo device database."),
-                _("No device connected."),
-                show=True,
-            )
-            return
-
-        uncompressed_db_size = os.path.getsize(self.device.db_path)
-
-        connection = self.device_database_connection()
-        connection.execute("VACUUM")
-
-        compressed_db_size = os.path.getsize(self.device.db_path)
-        result_message = _(
-            "The database on the device has been compressed.\n\tOriginal size = {0}MB\n\tCompressed size = {1}MB"
-        ).format(
-            "%.3f" % (uncompressed_db_size / 1024 / 1024),
-            "%.3f" % (compressed_db_size / 1024 / 1024),
-        )
-        info_dialog(
-            self.gui,
-            _("Kobo Utilities") + " - " + _("Compress device database"),
             result_message,
             show=True,
         )
@@ -3696,33 +3537,6 @@ class KoboUtilitiesAction(InterfaceAction):
 
         return not_on_device_books
 
-    def _get_shelf_count(self) -> list[list[Any]]:
-        connection = self.device_database_connection()
-        shelves = []
-
-        shelves_query = (
-            "SELECT Name, MIN(CreationDate), MAX(CreationDate), COUNT(*), MAX(Id) "
-            "FROM Shelf "
-            "WHERE _IsDeleted = 'false' "
-            "GROUP BY Name"
-        )
-
-        cursor = connection.cursor()
-        cursor.execute(shelves_query)
-        for i, row in enumerate(cursor):
-            debug("row:", i, row[0], row[1], row[2], row[3], row[4])
-            shelves.append(
-                [
-                    row[0],
-                    convert_kobo_date(row[1]),
-                    convert_kobo_date(row[2]),
-                    int(row[3]),
-                    row[4],
-                ]
-            )
-
-        return shelves
-
     def _get_related_books_count(self, related_category: int) -> list[dict[str, Any]]:
         debug("order_shelf_type:", related_category)
         connection = self.device_database_connection()
@@ -3864,146 +3678,6 @@ class KoboUtilitiesAction(InterfaceAction):
 
         progressbar.hide()
         debug("end")
-
-    def _remove_duplicate_shelves(
-        self, shelves: list[list[Any]], options: cfg.FixDuplicatesOptionsStoreConfig
-    ):
-        debug("total shelves=%d: options=%s" % (len(shelves), options))
-        starting_shelves = 0
-        shelves_removed = 0
-        finished_shelves = 0
-        progressbar = ProgressBar(
-            parent=self.gui, window_title=_("Duplicate collections in device database")
-        )
-        total_shelves = len(shelves)
-        progressbar.show_with_maximum(total_shelves)
-        progressbar.left_align_label()
-
-        shelves_update_timestamp = (
-            "UPDATE Shelf "
-            "SET _IsDeleted = 'true', "
-            "LastModified = ? "
-            "WHERE _IsSynced = 'true' "
-            "AND Name = ? "
-            "AND CreationDate <> ?"
-        )
-        shelves_update_id = (
-            "UPDATE Shelf "
-            "SET _IsDeleted = 'true', "
-            "LastModified = ? "
-            "WHERE _IsSynced = 'true' "
-            "AND Name = ? "
-            "AND id <> ?"
-        )
-
-        shelves_delete_timestamp = (
-            "DELETE FROM Shelf "
-            "WHERE _IsSynced = 'false' "
-            "AND Name = ? "
-            "AND CreationDate <> ? "
-            "AND _IsDeleted = 'true'"
-        )
-        shelves_delete_id = (
-            "DELETE FROM Shelf "
-            "WHERE _IsSynced = 'false' "
-            "AND Name = ? "
-            "AND id <> ?"
-            "AND _IsDeleted = 'true'"
-        )
-
-        shelves_purge = "DELETE FROM Shelf WHERE _IsDeleted = 'true'"
-
-        purge_shelves = options.purgeShelves
-        keep_newest = options.keepNewestShelf
-
-        with self.device_database_connection() as connection:
-            cursor = connection.cursor()
-            for shelf in shelves:
-                starting_shelves += shelf[3]
-                finished_shelves += 1
-                progressbar.set_label(
-                    _("Removing duplicates of collection {}").format(shelf[0])
-                )
-                progressbar.increment()
-
-                if shelf[3] > 1:
-                    debug(
-                        "shelf: %s, '%s', '%s', '%s', '%s'"
-                        % (shelf[0], shelf[1], shelf[2], shelf[3], shelf[4])
-                    )
-                    timestamp = shelf[2] if keep_newest else shelf[1]
-                    shelf_id = shelf[4] if shelf[1] == shelf[2] else None
-                    shelves_values = (
-                        shelf[0],
-                        timestamp.strftime(self.device_timestamp_string),
-                    )
-
-                    if shelf_id:
-                        shelves_update_query = shelves_update_id
-                        shelves_delete_query = shelves_delete_id
-                        shelves_update_values = (
-                            strftime(self.device_timestamp_string, time.gmtime()),
-                            shelf[0],
-                            shelf_id,
-                        )
-                        shelves_delete_values = (shelf[0], shelf_id)
-                    else:
-                        shelves_update_query = shelves_update_timestamp
-                        shelves_delete_query = shelves_delete_timestamp
-                        shelves_update_values = (
-                            strftime(self.device_timestamp_string, time.gmtime()),
-                            shelf[0],
-                            timestamp.strftime(self.device_timestamp_string),
-                        )
-                        shelves_delete_values = shelves_values
-                    debug("marking as deleted:", shelves_update_values)
-                    debug("shelves_update_query:", shelves_update_query)
-                    debug("shelves_delete_query:", shelves_delete_query)
-                    debug("shelves_delete_values:", shelves_delete_values)
-                    cursor.execute(shelves_update_query, shelves_update_values)
-                    cursor.execute(shelves_delete_query, shelves_delete_values)
-                    shelves_removed += shelf[3] - 1
-
-            if purge_shelves:
-                debug("purging all shelves marked as deleted")
-                cursor.execute(shelves_purge)
-
-        progressbar.hide()
-        return starting_shelves, shelves_removed, finished_shelves
-
-    def _check_device_database(self):
-        assert self.device is not None
-        return check_device_database(self.device.db_path)
-
-    def _block_analytics(self, create_trigger: bool):
-        connection = self.device_database_connection()
-        block_result = "The trigger on the AnalyticsEvents table has been removed."
-
-        cursor = connection.cursor()
-
-        cursor.execute("DROP TRIGGER IF EXISTS BlockAnalyticsEvents")
-        # Delete the Extended drvier version if it is there.
-        cursor.execute("DROP TRIGGER IF EXISTS KTE_BlockAnalyticsEvents")
-
-        if create_trigger:
-            try:
-                cursor.execute("DELETE FROM AnalyticsEvents")
-                debug("creating trigger.")
-                trigger_query = (
-                    "CREATE TRIGGER IF NOT EXISTS BlockAnalyticsEvents "
-                    "AFTER INSERT ON AnalyticsEvents "
-                    "BEGIN "
-                    "DELETE FROM AnalyticsEvents; "
-                    "END"
-                )
-                cursor.execute(trigger_query)
-            except apsw.SQLError as e:
-                debug("exception=", e)
-                block_result = None
-            else:
-                block_result = "AnalyticsEvents have been blocked in the database."
-
-        return block_result
 
     def generate_metadata_query(self):
         assert self.device is not None

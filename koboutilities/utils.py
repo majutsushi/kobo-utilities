@@ -54,7 +54,7 @@ if TYPE_CHECKING:
 
     from calibre.gui2.dialogs.message_box import MessageBox
 
-    from .action import KoboUtilitiesAction
+    from .action import KoboDevice, KoboUtilitiesAction
     from .config import ConfigDictWrapper, ConfigWidget, ProfileConfig
 
 MIMETYPE_KOBO = "application/x-kobo-epub+zip"
@@ -268,6 +268,17 @@ class DeviceDatabaseConnection(apsw.Connection):
             if self.__lock is not None:
                 self.__lock.release()
         return suppress_exception
+
+
+def device_database_connection(
+    device: KoboDevice, use_row_factory: bool = False
+) -> DeviceDatabaseConnection:
+    return DeviceDatabaseConnection(
+        device.db_path,
+        device.device_db_path,
+        device.is_db_copied,
+        use_row_factory,
+    )
 
 
 def check_device_database(database_path: str):

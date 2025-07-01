@@ -65,7 +65,7 @@ from qt.core import (
 
 from . import config as cfg
 from .book import SeriesBook
-from .constants import GUI_NAME
+from .constants import BOOK_CONTENTTYPE, GUI_NAME
 from .utils import (
     CheckableTableWidgetItem,
     CustomColumnComboBox,
@@ -201,9 +201,7 @@ class ReadLocationsProgressDialog(QProgressDialog):
                 cast("int", book.calibre_id)
             )
             book.contentIDs = [
-                self.plugin_action.contentid_from_path(
-                    path, self.plugin_action.CONTENTTYPE
-                )
+                self.plugin_action.contentid_from_path(path, BOOK_CONTENTTYPE)
                 for path in device_book_paths
             ]
             if len(book.contentIDs):
@@ -359,9 +357,7 @@ class RemoveAnnotationsProgressDialog(QProgressDialog):
                         cast("int", book.calibre_id)
                     )
                     contentIDs = [
-                        self.plugin_action.contentid_from_path(
-                            path, self.plugin_action.CONTENTTYPE
-                        )
+                        self.plugin_action.contentid_from_path(path, BOOK_CONTENTTYPE)
                         for path in device_book_paths
                     ]
                 debug("device_book_paths:", device_book_paths)

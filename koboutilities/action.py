@@ -68,7 +68,7 @@ from qt.core import (
 from . import ActionKoboUtilities
 from . import config as cfg
 from .book import SeriesBook
-from .constants import GUI_NAME
+from .constants import BOOK_CONTENTTYPE, GUI_NAME
 from .dialogs import (
     AboutDialog,
     BackupAnnotationsOptionsDialog,
@@ -252,7 +252,6 @@ class KoboUtilitiesAction(InterfaceAction):
     action_type = "current"
 
     timestamp_string = None
-    CONTENTTYPE = 6
 
     plugin_device_connection_changed = pyqtSignal(object)
     plugin_device_metadata_available = pyqtSignal()
@@ -1020,7 +1019,7 @@ class KoboUtilitiesAction(InterfaceAction):
             debug("device_book_paths:", device_book_paths)
             book.paths = device_book_paths
             book.contentIDs = [
-                self.contentid_from_path(path, self.CONTENTTYPE)
+                self.contentid_from_path(path, BOOK_CONTENTTYPE)
                 for path in device_book_paths
             ]
         progressbar.hide()
@@ -1175,7 +1174,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 x.path for x in onDevice_book_paths[cast("int", book.calibre_id)]
             ]
             book.contentIDs = [
-                self.contentid_from_path(path, self.CONTENTTYPE)
+                self.contentid_from_path(path, BOOK_CONTENTTYPE)
                 for path in device_book_paths
             ]
             if len(book.contentIDs) > 0:
@@ -1368,7 +1367,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 )
                 book.paths = device_book_paths
                 book.contentIDs = [
-                    self.contentid_from_path(path, self.CONTENTTYPE)
+                    self.contentid_from_path(path, BOOK_CONTENTTYPE)
                     for path in device_book_paths
                 ]
 
@@ -1423,7 +1422,7 @@ class KoboUtilitiesAction(InterfaceAction):
             debug("device_book_paths:", device_book_paths)
             book.paths = device_book_paths
             book.contentIDs = [
-                self.contentid_from_path(path, self.CONTENTTYPE)
+                self.contentid_from_path(path, BOOK_CONTENTTYPE)
                 for path in device_book_paths
             ]
 
@@ -1496,7 +1495,7 @@ class KoboUtilitiesAction(InterfaceAction):
             debug("device_book_paths:", device_book_paths)
             book.paths = device_book_paths
             book.contentIDs = [
-                self.contentid_from_path(path, self.CONTENTTYPE)
+                self.contentid_from_path(path, BOOK_CONTENTTYPE)
                 for path in device_book_paths
             ]
 
@@ -1775,7 +1774,7 @@ class KoboUtilitiesAction(InterfaceAction):
             debug("device_book_paths:", device_book_paths)
             book.paths = device_book_paths
             book.contentIDs = [
-                self.contentid_from_path(path, self.CONTENTTYPE)
+                self.contentid_from_path(path, BOOK_CONTENTTYPE)
                 for path in device_book_paths
             ]
 
@@ -3267,7 +3266,7 @@ class KoboUtilitiesAction(InterfaceAction):
                     path = device.driver._main_prefix
 
                 query_values = (
-                    self.CONTENTTYPE,
+                    BOOK_CONTENTTYPE,
                     contentID,
                 )
                 cursor.execute(imageId_query, query_values)
@@ -3351,7 +3350,7 @@ class KoboUtilitiesAction(InterfaceAction):
                     path = device.driver._main_prefix
 
                 query_values = (
-                    self.CONTENTTYPE,
+                    BOOK_CONTENTTYPE,
                     contentID,
                 )
                 cursor.execute(imageId_query, query_values)
@@ -3391,7 +3390,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
         for book in books:
             if not book.contentID:
-                book.contentID = self.contentid_from_path(book.path, self.CONTENTTYPE)  # pyright: ignore[reportAttributeAccessIssue]
+                book.contentID = self.contentid_from_path(book.path, BOOK_CONTENTTYPE)  # pyright: ignore[reportAttributeAccessIssue]
 
             query_values = (book.contentID,)
             cursor.execute(imageId_query, query_values)
@@ -3677,7 +3676,7 @@ class KoboUtilitiesAction(InterfaceAction):
                     debug("searching for contentId='%s'" % (contentID))
                     if not contentID:
                         contentID = self.contentid_from_path(
-                            book.path, self.CONTENTTYPE
+                            book.path, BOOK_CONTENTTYPE
                         )
                     debug("options.update_KoboEpubs=", options.update_KoboEpubs)
                     debug("contentID.startswith('file')=", contentID.startswith("file"))

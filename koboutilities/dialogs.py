@@ -8,7 +8,6 @@ __docformat__ = "restructuredtext en"
 
 import datetime as dt
 import re
-from configparser import ConfigParser
 from functools import partial
 from types import MappingProxyType
 from typing import (
@@ -19,7 +18,6 @@ from typing import (
 )
 from urllib.parse import quote_plus
 
-from calibre.devices.kobo.driver import KOBO
 from calibre.ebooks.metadata import authors_to_string
 from calibre.gui2 import choose_dir, error_dialog, open_url, question_dialog, ui
 from calibre.gui2.complete2 import EditWithComplete
@@ -80,6 +78,7 @@ from .utils import (
     convert_kobo_date,
     debug,
     get_icon,
+    is_device_view,
 )
 
 if TYPE_CHECKING:
@@ -89,102 +88,6 @@ if TYPE_CHECKING:
     from .action import KoboUtilitiesAction
 
 # Checked with FW2.5.2
-LINE_SPACINGS = [1.3, 1.35, 1.4, 1.6, 1.775, 1.9, 2, 2.2, 3]
-LINE_SPACINGS_020901 = [
-    1,
-    1.05,
-    1.07,
-    1.1,
-    1.2,
-    1.4,
-    1.5,
-    1.7,
-    1.8,
-    2,
-    2.2,
-    2.4,
-    2.6,
-    2.8,
-    3,
-]
-LINE_SPACINGS_030200 = [
-    1,
-    1.05,
-    1.07,
-    1.1,
-    1.2,
-    1.35,
-    1.5,
-    1.7,
-    1.8,
-    2,
-    2.2,
-    2.4,
-    2.6,
-    2.8,
-    3,
-]
-KOBO_FONTS = {
-    (0, 0, 0): {  # Format is: Display name, setting name
-        "Document Default": "default",
-        "Amasis": "Amasis",
-        "Avenir": "Avenir Next",
-        "Caecilia": "Caecilia",
-        "Georgia": "Georgia",
-        "Gill Sans": "Gill Sans",
-        "Kobo Nickel": "Kobo Nickel",
-        "Malabar": "Malabar",
-        "Rockwell": "Rockwell",
-        "Gothic": "A-OTF Gothic MB101 Pr6N",
-        "Ryumin": "A-OTF Ryumin Pr6N",
-        "OpenDyslexic": "OpenDyslexic",
-    },
-    (3, 19, 0): {  # Format is: Display name, setting name
-        "Document Default": "default",
-        "Amasis": "Amasis",
-        "Avenir": "Avenir Next",
-        "Caecilia": "Caecilia",
-        "Georgia": "Georgia",
-        "Gill Sans": "Gill Sans",
-        "Kobo Nickel": "Kobo Nickel",
-        "Malabar": "Malabar",
-        "Rockwell": "Rockwell",
-        "Kobo Tsukushi Mincho": "KBJ-TsukuMin Pr6N RB",
-        "Kobo UD Kakugo": "KBJ-UDKakugo Pr6N M",
-        "OpenDyslexic": "OpenDyslexic",
-    },
-    (4, 13, 12638): {  # Format is: Display name, setting name
-        "Document Default": "default",
-        "Amasis": "Amasis",
-        "Avenir": "Avenir Next",
-        "Caecilia": "Caecilia",
-        "Georgia": "Georgia",
-        "Gill Sans": "Gill Sans",
-        "Kobo Nickel": "Kobo Nickel",
-        "Malabar": "Malabar",
-        "Rockwell": "Rockwell",
-        "AR UDJingxihei": "AR UDJingxihei",
-        "Kobo Tsukushi Mincho": "KBJ-TsukuMin Pr6N RB",
-        "Kobo UD Kakugo": "KBJ-UDKakugo Pr6N M",
-        "OpenDyslexic": "OpenDyslexic",
-    },
-    (4, 34, 20097): {  # Format is: Display name, setting name
-        "Document Default": "default",
-        "Amasis": "Amasis",
-        "Avenir": "Avenir Next",
-        "Caecilia": "Caecilia",
-        "Georgia": "Georgia",
-        "Gill Sans": "Gill Sans",
-        "Kobo Nickel": "Kobo Nickel",
-        "Malabar": "Malabar",
-        "AR UDJingxihei": "AR UDJingxihei",
-        "Kobo Tsukushi Mincho": "KBJ-TsukuMin Pr6N RB",
-        "Kobo UD Kakugo": "KBJ-UDKakugo Pr6N M",
-        "OpenDyslexic": "OpenDyslexic",
-        "Rakuten Serif": "Rakuten Serif",
-        "Rakuten Sans": "Rakuten Sans",
-    },
-}
 
 DIALOG_NAME = "Kobo Utilities"
 
@@ -438,7 +341,7 @@ class RemoveAnnotationsProgressDialog(QProgressDialog):
             self.setLabelText(_("Preparing the list of books ..."))
             self.setValue(1)
 
-            if self.plugin_action.isDeviceView():
+            if is_device_view(self.gui):
                 self.books = self.plugin_action._get_books_for_selected()
             else:
                 onDeviceIds = self.plugin_action._get_selected_ids()
@@ -448,7 +351,7 @@ class RemoveAnnotationsProgressDialog(QProgressDialog):
             self.setRange(0, len(self.books))
 
             for i, book in enumerate(self.books, start=1):
-                if self.plugin_action.isDeviceView():
+                if is_device_view(self.gui):
                     device_book_paths = [book.path]
                     contentIDs = [book.contentID]
                 else:
@@ -477,338 +380,6 @@ class RemoveAnnotationsProgressDialog(QProgressDialog):
 
         # Queue a job to process these ePub books
         self.queue(self.options, self.books_to_scan)
-
-
-class ReaderOptionsDialog(SizePersistedDialog):
-    def __init__(
-        self,
-        parent: QWidget,
-        plugin_action: KoboUtilitiesAction,
-        contentID: str | None,
-    ):
-        SizePersistedDialog.__init__(
-            self, parent, "kobo utilities plugin:reader font settings dialog"
-        )
-        self.plugin_action = plugin_action
-        self.help_anchor = "SetReaderFonts"
-
-        debug(
-            "self.plugin_action.device_fwversion=", self.plugin_action.device_fwversion
-        )
-        self.line_spacings = LINE_SPACINGS
-        device_fwversion = self.plugin_action.device_fwversion
-        if device_fwversion is not None:
-            if device_fwversion >= (3, 2, 0):
-                self.line_spacings = LINE_SPACINGS_030200
-            elif device_fwversion >= (2, 9, 1):
-                self.line_spacings = LINE_SPACINGS_020901
-
-        self.font_list = self.get_font_list()
-        self.initialize_controls(contentID)
-
-        # Set some default values from last time dialog was used.
-        options = cfg.plugin_prefs.ReadingOptions
-        self.change_settings(options)
-        debug("options", options)
-        if options.lockMargins:
-            self.lock_margins_checkbox.click()
-        if options.updateConfigFile:
-            self.update_config_file_checkbox.setChecked(True)
-        if options.doNotUpdateIfSet:
-            self.do_not_update_if_set_checkbox.setChecked(True)
-        self.get_book_settings_pushbutton.setEnabled(contentID is not None)
-
-        # Cause our dialog size to be restored from prefs or created on first usage
-        self.resize_dialog()
-
-    def initialize_controls(self, contentID: str | None):
-        self.setWindowTitle(DIALOG_NAME)
-        layout = QVBoxLayout(self)
-        self.setLayout(layout)
-        title_layout = ImageTitleLayout(
-            self, "images/icon.png", _("Kobo eReader font settings")
-        )
-        layout.addLayout(title_layout)
-
-        options_group = QGroupBox(_("Reader font settings"), self)
-        layout.addWidget(options_group)
-        options_layout = QGridLayout()
-        options_group.setLayout(options_layout)
-
-        options_layout.addWidget(QLabel(_("Font face")), 0, 0, 1, 1)
-        self.font_choice = FontChoiceComboBox(self, self.font_list)
-        options_layout.addWidget(self.font_choice, 0, 1, 1, 4)
-        options_layout.addWidget(QLabel(_("Font size")), 1, 0, 1, 1)
-        self.font_size_spin = QSpinBox(self)
-        self.font_size_spin.setMinimum(12)
-        self.font_size_spin.setMaximum(58)
-        self.font_size_spin.setToolTip(
-            _("Font size to use when reading. The device default is about 22.")
-        )
-        options_layout.addWidget(self.font_size_spin, 1, 1, 1, 1)
-
-        options_layout.addWidget(QLabel(_("Line spacing")), 2, 0, 1, 1)
-        self.line_spacing_spin = QSpinBox(self)
-        self.line_spacing_spin.setMinimum(0)
-        self.line_spacing_spin.setMaximum(len(self.line_spacings) - 1)
-        options_layout.addWidget(self.line_spacing_spin, 2, 1, 1, 1)
-        self.line_spacing_spin.setToolTip(
-            _(
-                "The line spacing number is how many times the right arrow is pressed on the device."
-            )
-        )
-        self.line_spacing_spin.valueChanged.connect(self.line_spacing_spin_changed)
-
-        self.custom_line_spacing_checkbox = QCheckBox(_("Custom setting"), self)
-        options_layout.addWidget(self.custom_line_spacing_checkbox, 2, 2, 1, 1)
-        self.custom_line_spacing_checkbox.setToolTip(
-            _(
-                "If you want to try a line spacing other than the Kobo specified, check this and enter a number."
-            )
-        )
-        self.custom_line_spacing_checkbox.clicked.connect(
-            self.custom_line_spacing_checkbox_clicked
-        )
-
-        self.custom_line_spacing_edit = QLineEdit(self)
-        self.custom_line_spacing_edit.setEnabled(False)
-        options_layout.addWidget(self.custom_line_spacing_edit, 2, 3, 1, 2)
-        self.custom_line_spacing_edit.setToolTip(
-            _(
-                "Kobo use from 1.3 to 4.0. Any number can be entered, but whether the device will use it, is another matter."
-            )
-        )
-
-        options_layout.addWidget(QLabel(_("Left margins")), 3, 0, 1, 1)
-        self.left_margins_spin = QSpinBox(self)
-        self.left_margins_spin.setMinimum(0)
-        self.left_margins_spin.setMaximum(16)
-        self.left_margins_spin.setToolTip(
-            _(
-                "Margins on the device are set in multiples of two, but single steps work."
-            )
-        )
-        options_layout.addWidget(self.left_margins_spin, 3, 1, 1, 1)
-        self.left_margins_spin.valueChanged.connect(self.left_margins_spin_changed)
-
-        self.lock_margins_checkbox = QCheckBox(_("Lock margins"), self)
-        options_layout.addWidget(self.lock_margins_checkbox, 3, 2, 1, 1)
-        self.lock_margins_checkbox.setToolTip(
-            _(
-                "Lock the left and right margins to the same value. Changing the left margin will also set the right margin."
-            )
-        )
-        self.lock_margins_checkbox.clicked.connect(self.lock_margins_checkbox_clicked)
-
-        options_layout.addWidget(QLabel(_("Right margins")), 3, 3, 1, 1)
-        self.right_margins_spin = QSpinBox(self)
-        self.right_margins_spin.setMinimum(0)
-        self.right_margins_spin.setMaximum(16)
-        self.right_margins_spin.setToolTip(
-            _(
-                "Margins on the device are set in multiples of three, but single steps work."
-            )
-        )
-        options_layout.addWidget(self.right_margins_spin, 3, 4, 1, 1)
-
-        options_layout.addWidget(QLabel(_("Justification")), 5, 0, 1, 1)
-        self.justification_choice = JustificationChoiceComboBox(self)
-        options_layout.addWidget(self.justification_choice, 5, 1, 1, 1)
-
-        self.update_config_file_checkbox = QCheckBox(_("Update config file"), self)
-        options_layout.addWidget(self.update_config_file_checkbox, 5, 2, 1, 1)
-        self.update_config_file_checkbox.setToolTip(
-            _(
-                "Update the 'Kobo eReader.conf' file with the new settings. These will be used when opening new books or books that do not have stored settings."
-            )
-        )
-
-        self.do_not_update_if_set_checkbox = QCheckBox(_("Do not update if set"), self)
-        options_layout.addWidget(self.do_not_update_if_set_checkbox, 5, 3, 1, 2)
-        self.do_not_update_if_set_checkbox.setToolTip(
-            _("Do not upate the font settings if it is already set for the book.")
-        )
-
-        layout.addStretch(1)
-
-        button_layout = QHBoxLayout(self)
-        layout.addLayout(button_layout)
-        self.get_device_settings_pushbutton = QPushButton(
-            _("&Get configuration from device"), self
-        )
-        button_layout.addWidget(self.get_device_settings_pushbutton)
-        self.get_device_settings_pushbutton.setToolTip(
-            _("Read the device configuration file to get the current default settings.")
-        )
-        self.get_device_settings_pushbutton.clicked.connect(self.get_device_settings)
-
-        self.get_book_settings_pushbutton = QPushButton(
-            _("&Get settings from device"), self
-        )
-        button_layout.addWidget(self.get_book_settings_pushbutton)
-        self.get_book_settings_pushbutton.setToolTip(
-            _("Fetches the current for the selected book from the device.")
-        )
-        if contentID is not None:
-            self.get_book_settings_pushbutton.clicked.connect(
-                partial(self.get_book_settings, contentID)
-            )
-
-        # Dialog buttons
-        button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        )
-        button_box.accepted.connect(self.ok_clicked)
-        button_box.rejected.connect(self.reject)
-        button_layout.addWidget(button_box)
-
-    def ok_clicked(self):
-        with cfg.plugin_prefs.ReadingOptions as options:
-            options.readingFontFamily = self.font_list[
-                self.font_choice.currentText().strip()
-            ]
-            options.readingAlignment = self.justification_choice.currentText().strip()
-            options.readingFontSize = self.font_size_spin.value()
-            if self.custom_line_spacing_is_checked():
-                options.readingLineHeight = float(self.custom_line_spacing_edit.text())
-                debug("custom - readingLineHeight=", options.readingLineHeight)
-            else:
-                options.readingLineHeight = self.line_spacings[
-                    self.line_spacing_spin.value()
-                ]
-                debug("spin - readingLineHeight=", options.readingLineHeight)
-            options.readingLeftMargin = self.left_margins_spin.value()
-            options.readingRightMargin = self.right_margins_spin.value()
-            options.lockMargins = self.lock_margins_checkbox_is_checked()
-            options.updateConfigFile = self.update_config_file_checkbox.isChecked()
-            options.doNotUpdateIfSet = self.do_not_update_if_set_checkbox.isChecked()
-
-        self.accept()
-
-    def custom_line_spacing_checkbox_clicked(self, checked: bool):
-        self.line_spacing_spin.setEnabled(not checked)
-        self.custom_line_spacing_edit.setEnabled(checked)
-        if not self.custom_line_spacing_is_checked():
-            self.line_spacing_spin_changed(None)
-
-    def lock_margins_checkbox_clicked(self, checked: bool):
-        self.right_margins_spin.setEnabled(not checked)
-        if checked:  # not self.custom_line_spacing_is_checked():
-            self.right_margins_spin.setProperty(
-                "value", int(str(self.left_margins_spin.value()))
-            )
-
-    def line_spacing_spin_changed(self, checked: bool | None):
-        del checked
-        self.custom_line_spacing_edit.setText(
-            str(self.line_spacings[int(str(self.line_spacing_spin.value()))])
-        )
-
-    def left_margins_spin_changed(self, checked: bool):
-        del checked
-        if self.lock_margins_checkbox_is_checked():
-            self.right_margins_spin.setProperty(
-                "value", int(str(self.left_margins_spin.value()))
-            )
-
-    def custom_line_spacing_is_checked(self):
-        return self.custom_line_spacing_checkbox.isChecked()
-
-    def lock_margins_checkbox_is_checked(self):
-        return self.lock_margins_checkbox.isChecked()
-
-    def get_device_settings(self):
-        koboConfig = ConfigParser(allow_no_value=True)
-        device = cast("ui.Main", self.parent()).device_manager.connected_device
-        assert isinstance(device, KOBO), (
-            f"device is of an unexpected type: {type(device)}"
-        )
-        device_path = device._main_prefix
-        debug("device_path=", device_path)
-        assert device_path is not None
-        normalized_path = device.normalize_path(
-            device_path + ".kobo/Kobo/Kobo eReader.conf"
-        )
-        assert normalized_path is not None
-        koboConfig.read(normalized_path)
-
-        device_settings = cfg.ReadingOptionsConfig()
-        if koboConfig.has_option("Reading", cfg.KEY_READING_FONT_FAMILY):
-            device_settings.readingFontFamily = koboConfig.get(
-                "Reading", cfg.KEY_READING_FONT_FAMILY
-            )
-        if koboConfig.has_option("Reading", cfg.KEY_READING_ALIGNMENT):
-            device_settings.readingAlignment = koboConfig.get(
-                "Reading", cfg.KEY_READING_ALIGNMENT
-            )
-        if koboConfig.has_option("Reading", cfg.KEY_READING_FONT_SIZE):
-            device_settings.readingFontSize = int(
-                koboConfig.get("Reading", cfg.KEY_READING_FONT_SIZE)
-            )
-        if koboConfig.has_option("Reading", cfg.KEY_READING_LINE_HEIGHT):
-            device_settings.readingLineHeight = float(
-                koboConfig.get("Reading", cfg.KEY_READING_LINE_HEIGHT)
-            )
-        if koboConfig.has_option("Reading", cfg.KEY_READING_LEFT_MARGIN):
-            device_settings.readingLeftMargin = int(
-                koboConfig.get("Reading", cfg.KEY_READING_LEFT_MARGIN)
-            )
-        if koboConfig.has_option("Reading", cfg.KEY_READING_RIGHT_MARGIN):
-            device_settings.readingRightMargin = int(
-                koboConfig.get("Reading", cfg.KEY_READING_RIGHT_MARGIN)
-            )
-
-        self.change_settings(device_settings)
-
-    def change_settings(self, reader_settings: cfg.ReadingOptionsConfig):
-        font_face = reader_settings.readingFontFamily
-        debug("font_face=", font_face)
-        self.font_choice.select_text(font_face)
-
-        justification = reader_settings.readingAlignment
-        self.justification_choice.select_text(justification)
-
-        font_size = reader_settings.readingFontSize
-        self.font_size_spin.setProperty("value", font_size)
-
-        line_spacing = reader_settings.readingLineHeight
-        debug("line_spacing='%s'" % line_spacing)
-        if line_spacing in self.line_spacings:
-            line_spacing_index = self.line_spacings.index(line_spacing)
-            debug("line_spacing_index=", line_spacing_index)
-            self.custom_line_spacing_checkbox.setChecked(True)
-        else:
-            self.custom_line_spacing_checkbox.setChecked(False)
-            debug("line_spacing_index not found")
-            line_spacing_index = 0
-        self.custom_line_spacing_checkbox.click()
-        self.custom_line_spacing_edit.setText(str(line_spacing))
-        self.line_spacing_spin.setProperty("value", line_spacing_index)
-
-        left_margins = reader_settings.readingLeftMargin
-        self.left_margins_spin.setProperty("value", left_margins)
-        right_margins = reader_settings.readingRightMargin
-        self.right_margins_spin.setProperty("value", right_margins)
-
-    def get_book_settings(self, contentID: str):
-        book_options = self.plugin_action.fetch_book_fonts(contentID)
-
-        if book_options is not None:
-            self.change_settings(book_options)
-
-    def get_font_list(self):
-        font_list = KOBO_FONTS[(0, 0, 0)]
-        for fw_version, fw_font_list in sorted(KOBO_FONTS.items()):
-            debug("fw_version=", fw_version)
-            device_fwversion = self.plugin_action.device_fwversion
-            if device_fwversion is not None and fw_version <= device_fwversion:
-                debug("found version?=", fw_version)
-                font_list = fw_font_list
-            else:
-                break
-        debug("font_list=", font_list)
-
-        return font_list
 
 
 class UpdateMetadataOptionsDialog(SizePersistedDialog):
@@ -3553,33 +3124,6 @@ class SetRelatedBooksDialog(SizePersistedDialog):
 
     def get_related_types(self):
         return self.related_types_table.get_shelves()
-
-
-class FontChoiceComboBox(QComboBox):
-    def __init__(self, parent: QWidget, font_list: dict[str, str]):
-        QComboBox.__init__(self, parent)
-        for name, font in sorted(font_list.items()):
-            self.addItem(name, font)
-
-    def select_text(self, selected_text: str):
-        idx = self.findData(selected_text)
-        if idx != -1:
-            self.setCurrentIndex(idx)
-        else:
-            self.setCurrentIndex(0)
-
-
-class JustificationChoiceComboBox(QComboBox):
-    def __init__(self, parent: QWidget):
-        QComboBox.__init__(self, parent)
-        self.addItems(["Off", "Left", "Justify"])
-
-    def select_text(self, selected_text: str):
-        idx = self.findText(selected_text)
-        if idx != -1:
-            self.setCurrentIndex(idx)
-        else:
-            self.setCurrentIndex(0)
 
 
 class ReadingDirectionChoiceComboBox(QComboBox):

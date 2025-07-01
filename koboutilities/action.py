@@ -17,7 +17,6 @@ import shutil
 import threading
 import time
 from collections import OrderedDict, defaultdict
-from configparser import ConfigParser
 from functools import partial
 from typing import (
     TYPE_CHECKING,
@@ -79,7 +78,6 @@ from .dialogs import (
     CoverUploadOptionsDialog,
     GetShelvesFromDeviceDialog,
     ManageSeriesDeviceDialog,
-    ReaderOptionsDialog,
     ReadLocationsProgressDialog,
     RemoveAnnotationsOptionsDialog,
     RemoveAnnotationsProgressDialog,
@@ -90,7 +88,7 @@ from .dialogs import (
     UpdateBooksToCDialog,
     UpdateMetadataOptionsDialog,
 )
-from .features import analytics, database, duplicateshelves
+from .features import analytics, database, duplicateshelves, reader
 from .utils import (
     BOOKMARK_SEPARATOR,
     MIMETYPE_KOBO,
@@ -99,7 +97,9 @@ from .utils import (
     convert_kobo_date,
     create_menu_action_unique,
     debug,
+    get_contentIDs_from_id,
     get_icon,
+    is_device_view,
     set_plugin_icon_resources,
 )
 
@@ -410,7 +410,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="Set reader font for selected books",
                 shortcut_name=_("Set reader font for selected books"),
                 image="embed-fonts.png",
-                triggered=self.set_reader_fonts,
+                triggered=menu_wrapper(reader.set_reader_fonts),
                 is_library_action=True,
                 is_device_action=True,
                 is_supported=device is not None and device.is_kobotouch,
@@ -421,7 +421,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 _("&Remove reader font for selected books"),
                 unique_name="Remove reader font for selected books",
                 shortcut_name=_("Remove reader font for selected books"),
-                triggered=self.remove_reader_fonts,
+                triggered=menu_wrapper(reader.remove_reader_fonts),
                 is_library_action=True,
                 is_device_action=True,
                 is_supported=device is not None and device.is_kobotouch,
@@ -782,10 +782,10 @@ class KoboUtilitiesAction(InterfaceAction):
         elif self.device is not None and not is_supported:
             tooltip = not_supported_reason
             enabled = False
-        elif self.isDeviceView() and not is_device_action:
+        elif is_device_view(self.gui) and not is_device_action:
             tooltip = _("Only supported in library view")
             enabled = False
-        elif not self.isDeviceView() and not is_library_action:
+        elif not is_device_view(self.gui) and not is_library_action:
             tooltip = _("Only supported in device view")
             enabled = False
         else:
@@ -821,7 +821,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
         self.device = self.get_device()
 
-        if self.isDeviceView():
+        if is_device_view(self.gui):
             assert self.device is not None
             if self.device.supports_series:
                 button_action = cfg.plugin_prefs.commonOptionsStore.buttonActionDevice
@@ -851,25 +851,6 @@ class KoboUtilitiesAction(InterfaceAction):
                         e,
                     )
                     self.show_configuration()
-
-    def isDeviceView(self):
-        view = self.gui.current_view()
-        return isinstance(view, DeviceBooksView)
-
-    def _get_contentIDs_for_selected(self) -> list[str]:
-        view = self.gui.current_view()
-        if view is None:
-            return []
-        if self.isDeviceView():
-            rows = view.selectionModel().selectedRows()
-            books = [view.model().db[view.model().map[r.row()]] for r in rows]
-            contentIDs = [book.contentID for book in books]
-        else:
-            book_ids: list[int] = view.get_selected_ids()
-            contentIDs = self.get_contentIDs_for_books(book_ids)
-            debug("contentIDs=", contentIDs)
-
-        return contentIDs
 
     @property
     def device_driver_name(self) -> str:
@@ -1001,105 +982,6 @@ class KoboUtilitiesAction(InterfaceAction):
                 debug("calibre needs to be restarted, do not open configuration")
                 return True
         return False
-
-    def set_reader_fonts(self) -> None:
-        current_view = self.gui.current_view()
-        if (
-            current_view is None
-            or len(current_view.selectionModel().selectedRows()) == 0
-        ):
-            return
-        self.device = self.get_device()
-        if self.device is None:
-            error_dialog(
-                self.gui,
-                _("Cannot set reader font settings."),
-                _("No device connected."),
-                show=True,
-            )
-            return
-
-        contentIDs = self._get_contentIDs_for_selected()
-
-        debug("contentIDs", contentIDs)
-
-        if len(contentIDs) == 0:
-            return
-
-        dlg = ReaderOptionsDialog(
-            self.gui, self, contentIDs[0] if len(contentIDs) == 1 else None
-        )
-        dlg.exec()
-        if dlg.result() != dlg.DialogCode.Accepted:
-            return
-
-        options = cfg.plugin_prefs.ReadingOptions
-        if options.updateConfigFile:
-            self._update_config_reader_settings(options)
-
-        updated_fonts, added_fonts, _deleted_fonts, count_books = (
-            self._set_reader_fonts(contentIDs, options)
-        )
-        result_message = (
-            _("Change summary:")
-            + "\n\t"
-            + _(
-                "Font settings updated={0}\n\tFont settings added={1}\n\tTotal books={2}"
-            ).format(updated_fonts, added_fonts, count_books)
-        )
-        info_dialog(
-            self.gui,
-            _("Kobo Utilities") + " - " + _("Device library updated"),
-            result_message,
-            show=True,
-        )
-
-    def remove_reader_fonts(self) -> None:
-        current_view = self.gui.current_view()
-        if (
-            current_view is None
-            or len(current_view.selectionModel().selectedRows()) == 0
-        ):
-            return
-        self.device = self.get_device()
-        if self.device is None:
-            error_dialog(
-                self.gui,
-                _("Cannot remove reader font settings"),
-                _("No device connected."),
-                show=True,
-            )
-            return
-
-        contentIDs = self._get_contentIDs_for_selected()
-
-        if len(contentIDs) == 0:
-            return
-
-        mb = question_dialog(
-            self.gui,
-            _("Remove reader settings"),
-            _("Do you want to remove the reader settings for the selected books?"),
-            show_copy_button=False,
-        )
-        if not mb:
-            return
-
-        options = cfg.plugin_prefs.ReadingOptions
-        _updated_fonts, _added_fonts, deleted_fonts, _count_books = (
-            self._set_reader_fonts(contentIDs, options, delete=True)
-        )
-        result_message = (
-            _("Change summary:")
-            + "\n\t"
-            + _("Font settings deleted={0}").format(deleted_fonts)
-        )
-        info_dialog(
-            self.gui,
-            _("Kobo Utilities") + " - " + _("Device library updated"),
-            result_message,
-            show=True,
-        )
 
     def update_metadata(self) -> None:
         current_view = self.gui.current_view()
@@ -2283,14 +2165,6 @@ class KoboUtilitiesAction(InterfaceAction):
                 )
         return ContentID.replace("\\", "/")
 
-    def get_contentIDs_for_books(self, book_ids: list[int]) -> list[str]:
-        contentIDs = []
-        for book_id in book_ids:
-            contentIDs_for_book = self.get_contentIDs_from_id(book_id)
-            debug("contentIDs", contentIDs_for_book)
-            contentIDs.extend(contentIDs_for_book)
-        return contentIDs
-
     def _get_books_for_selected(self) -> list[Book]:
         view: DeviceBooksView | BooksView | None = self.gui.current_view()  # pyright: ignore[reportGeneralTypeIssues]
         if view is None:
@@ -2493,15 +2367,6 @@ class KoboUtilitiesAction(InterfaceAction):
         assert self.device is not None
         card = "carda" if contentID.startswith("file:///mnt/sd/") else "main"
         return self.device.driver.path_from_contentid(contentID, "6", mimetype, card)
-
-    def get_contentIDs_from_id(self, book_id: int) -> list[str | None]:
-        debug("book_id=", book_id)
-        paths = []
-        for x in ("memory", "card_a"):
-            x = getattr(self.gui, x + "_view").model()
-            paths += x.paths_for_db_ids({book_id}, as_map=True)[book_id]
-        debug("paths=", paths)
-        return [r.contentID for r in paths]
 
     def device_database_connection(
         self, use_row_factory: bool = False
@@ -3385,7 +3250,7 @@ class KoboUtilitiesAction(InterfaceAction):
             contentIDs = (
                 [book.contentID]
                 if book.contentID is not None
-                else self.get_contentIDs_from_id(cast("int", book.calibre_id))
+                else get_contentIDs_from_id(cast("int", book.calibre_id), self.gui)
             )
             debug("contentIDs=", contentIDs)
             for contentID in contentIDs:
@@ -3470,7 +3335,7 @@ class KoboUtilitiesAction(InterfaceAction):
             contentIDs = (
                 [book.contentID]
                 if book.contentID is not None
-                else self.get_contentIDs_from_id(cast("int", book.calibre_id))
+                else get_contentIDs_from_id(cast("int", book.calibre_id), self.gui)
             )
             debug("contentIDs=", contentIDs)
             for contentID in contentIDs:
@@ -5245,221 +5110,6 @@ class KoboUtilitiesAction(InterfaceAction):
         progressbar.hide()
 
         return (books_with_shelves, books_without_shelves, count_books)
-
-    def fetch_book_fonts(self, contentID: str) -> cfg.ReadingOptionsConfig | None:
-        debug("start")
-        connection = self.device_database_connection()
-        book_options = cfg.ReadingOptionsConfig()
-
-        fetch_query = (
-            "SELECT  "
-            '"ReadingFontFamily", '
-            '"ReadingFontSize", '
-            '"ReadingAlignment", '
-            '"ReadingLineHeight", '
-            '"ReadingLeftMargin", '
-            '"ReadingRightMargin"  '
-            "FROM content_settings "
-            "WHERE ContentType = ? "
-            "AND ContentId = ?"
-        )
-        fetch_values = (
-            self.CONTENTTYPE,
-            contentID,
-        )
-
-        cursor = connection.cursor()
-        cursor.execute(fetch_query, fetch_values)
-        try:
-            result = next(cursor)
-        except StopIteration:
-            return None
-
-        book_options.readingFontFamily = result[0]
-        book_options.readingFontSize = result[1]
-        book_options.readingAlignment = result[2].title() if result[2] else "Off"
-        book_options.readingLineHeight = result[3]
-        book_options.readingLeftMargin = result[4]
-        book_options.readingRightMargin = result[5]
-
-        return book_options
-
-    def _set_reader_fonts(
-        self,
-        contentIDs: list[str],
-        options: cfg.ReadingOptionsConfig,
-        delete: bool = False,
-    ):
-        debug("start")
-        assert self.device is not None
-        updated_fonts = 0
-        added_fonts = 0
-        deleted_fonts = 0
-        count_books = 0
-
-        debug("connected to device database")
-
-        test_query = (
-            "SELECT 1 "
-            "FROM content_settings "
-            "WHERE ContentType = ? "
-            "AND ContentId = ?"
-        )  # fmt: skip
-        delete_query = (
-            "DELETE "
-            "FROM content_settings "
-            "WHERE ContentType = ? "
-            "AND ContentId = ?"
-        )  # fmt: skip
-
-        add_query = None
-        add_values = ()
-        update_query = None
-        update_values = ()
-        if not delete:
-            font_face = options.readingFontFamily
-            justification = options.readingAlignment.lower()
-            justification = (
-                None if justification == "Off" or justification == "" else justification
-            )
-            font_size = options.readingFontSize
-            line_spacing = options.readingLineHeight
-            left_margins = options.readingLeftMargin
-            right_margins = options.readingRightMargin
-
-            add_query = (
-                "INSERT INTO content_settings ( "
-                '"ContentType", '
-                '"DateModified", '
-                '"ReadingFontFamily", '
-                '"ReadingFontSize", '
-                '"ReadingAlignment", '
-                '"ReadingLineHeight", '
-                '"ReadingLeftMargin", '
-                '"ReadingRightMargin", '
-                '"ContentID" '
-                ") "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-            )
-            add_values = (
-                self.CONTENTTYPE,
-                time.strftime(self.device.timestamp_string, time.gmtime()),
-                font_face,
-                font_size,
-                justification,
-                line_spacing,
-                left_margins,
-                right_margins,
-            )
-            update_query = (
-                "UPDATE content_settings "
-                'SET "DateModified" = ?, '
-                '"ReadingFontFamily" = ?, '
-                '"ReadingFontSize" = ?, '
-                '"ReadingAlignment" = ?, '
-                '"ReadingLineHeight" = ?, '
-                '"ReadingLeftMargin" = ?, '
-                '"ReadingRightMargin" = ? '
-                "WHERE ContentType = ?  "
-                "AND ContentId = ?"
-            )
-            update_values = (
-                time.strftime(self.device.timestamp_string, time.gmtime()),
-                font_face,
-                font_size,
-                justification,
-                line_spacing,
-                left_margins,
-                right_margins,
-                self.CONTENTTYPE,
-            )
-
-        with self.device_database_connection() as connection:
-            cursor = connection.cursor()
-            for contentID in contentIDs:
-                test_values = (self.CONTENTTYPE, contentID)
-                if delete:
-                    debug(f"Deleting settings for '{contentID}'")
-                    cursor.execute(delete_query, test_values)
-                    deleted_fonts += 1
-                elif update_query is not None and add_query is not None:
-                    cursor.execute(test_query, test_values)
-                    try:
-                        result = next(cursor)
-                        debug("found existing row:", result)
-                        if not options.doNotUpdateIfSet:
-                            debug(
-                                f"Updating settings for '{contentID}' with values: {update_values}"
-                            )
-                            cursor.execute(update_query, (*update_values, contentID))
-                            updated_fonts += 1
-                    except StopIteration:
-                        debug(
-                            f"Adding settings for '{contentID}' with values: {add_values}"
-                        )
-                        cursor.execute(add_query, (*add_values, contentID))
-                        added_fonts += 1
-                count_books += 1
-
-        return updated_fonts, added_fonts, deleted_fonts, count_books
-
-    def get_config_file(self) -> tuple[ConfigParser, str]:
-        assert self.device is not None
-        assert self.device.driver._main_prefix is not None
-        config_file_path = self.device.driver.normalize_path(
-            self.device.driver._main_prefix + ".kobo/Kobo/Kobo eReader.conf"
-        )
-        assert config_file_path is not None
-        koboConfig = ConfigParser(allow_no_value=True)
-        koboConfig.optionxform = str  # type: ignore[reportAttributeAccessIssue]
-        debug("config_file_path=", config_file_path)
-        try:
-            koboConfig.read(config_file_path)
-        except Exception as e:
-            debug("exception=", e)
-            raise
-
-        return koboConfig, config_file_path
-
-    def _update_config_reader_settings(self, options: cfg.ReadingOptionsConfig):
-        config_section_reading = "Reading"
-
-        koboConfig, config_file_path = self.get_config_file()
-
-        if not koboConfig.has_section(config_section_reading):
-            koboConfig.add_section(config_section_reading)
-
-        koboConfig.set(
-            config_section_reading,
-            cfg.KEY_READING_FONT_FAMILY,
-            options.readingFontFamily,
-        )
-        koboConfig.set(
-            config_section_reading, cfg.KEY_READING_ALIGNMENT, options.readingAlignment
-        )
-        koboConfig.set(
-            config_section_reading,
-            cfg.KEY_READING_FONT_SIZE,
-            "%g" % options.readingFontSize,
-        )
-        koboConfig.set(
-            config_section_reading,
-            cfg.KEY_READING_LINE_HEIGHT,
-            "%g" % options.readingLineHeight,
-        )
-        koboConfig.set(
-            config_section_reading,
-            cfg.KEY_READING_LEFT_MARGIN,
-            "%g" % options.readingLeftMargin,
-        )
-        koboConfig.set(
-            config_section_reading,
-            cfg.KEY_READING_RIGHT_MARGIN,
-            "%g" % options.readingRightMargin,
-        )
-
-        with open(config_file_path, "w") as config_file:
-            koboConfig.write(config_file)
 
     def _backup_annotation_files(self, books: list[Book], dest_path: str):
         annotations_found = 0

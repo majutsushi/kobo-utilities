@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from calibre.gui2.library.views import DeviceBooksView
+
 __license__ = "GPL v3"
 __copyright__ = "2011, Grant Drake <grant.drake@gmail.com>, 2012-2022 updates by David Forrester <davidfor@internode.on.net>"
 __docformat__ = "restructuredtext en"
@@ -339,6 +341,20 @@ def convert_kobo_date(kobo_date: str | None) -> datetime | None:
                         converted_date = datetime.now(tz=local_tz)
                         debug(f"datetime.now() - kobo_date={kobo_date}'")
     return converted_date
+
+
+def is_device_view(gui: ui.Main) -> bool:
+    return isinstance(gui.current_view(), DeviceBooksView)
+
+
+def get_contentIDs_from_id(book_id: int, gui: ui.Main) -> list[str | None]:
+    debug("book_id=", book_id)
+    paths = []
+    for x in ("memory", "card_a"):
+        x = getattr(gui, x + "_view").model()
+        paths += x.paths_for_db_ids({book_id}, as_map=True)[book_id]
+    debug("paths=", paths)
+    return [r.contentID for r in paths]
 
 
 class ImageTitleLayout(QHBoxLayout):

@@ -8,7 +8,7 @@ from calibre.gui2.dialogs.message_box import ViewLog
 from qt.core import QDialogButtonBox, QGridLayout, QGroupBox, QRadioButton, QVBoxLayout
 
 from .. import utils
-from ..dialogs import DIALOG_NAME
+from ..constants import GUI_NAME
 from ..utils import ImageTitleLayout, SizePersistedDialog, debug
 
 if TYPE_CHECKING:
@@ -90,7 +90,7 @@ class BlockAnalyticsOptionsDialog(SizePersistedDialog):
         self.resize_dialog()
 
     def initialize_controls(self):
-        self.setWindowTitle(DIALOG_NAME)
+        self.setWindowTitle(GUI_NAME)
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(self, "images/icon.png", _("Block analytics"))

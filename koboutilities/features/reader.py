@@ -24,8 +24,7 @@ from qt.core import (
 
 from .. import config as cfg
 from .. import utils
-from ..constants import BOOK_CONTENTTYPE
-from ..dialogs import DIALOG_NAME
+from ..constants import BOOK_CONTENTTYPE, GUI_NAME
 from ..utils import ImageTitleLayout, SizePersistedDialog, debug
 
 if TYPE_CHECKING:
@@ -248,7 +247,7 @@ class ReaderOptionsDialog(SizePersistedDialog):
         self.resize_dialog()
 
     def initialize_controls(self, contentID: str | None):
-        self.setWindowTitle(DIALOG_NAME)
+        self.setWindowTitle(GUI_NAME)
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(

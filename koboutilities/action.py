@@ -68,6 +68,7 @@ from qt.core import (
 from . import ActionKoboUtilities
 from . import config as cfg
 from .book import SeriesBook
+from .constants import GUI_NAME
 from .dialogs import (
     AboutDialog,
     BackupAnnotationsOptionsDialog,
@@ -245,7 +246,7 @@ class KoboUtilitiesAction(InterfaceAction):
     qaction: QAction
 
     name = "KoboUtilities"
-    giu_name = _("Kobo Utilities")
+    giu_name = GUI_NAME
     # Create our top-level menu/toolbar action (text, icon_path, tooltip, keyboard shortcut)
     action_spec = (name, None, ActionKoboUtilities.description, ())
     action_type = "current"

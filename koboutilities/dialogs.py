@@ -65,6 +65,7 @@ from qt.core import (
 
 from . import config as cfg
 from .book import SeriesBook
+from .constants import GUI_NAME
 from .utils import (
     CheckableTableWidgetItem,
     CustomColumnComboBox,
@@ -89,7 +90,6 @@ if TYPE_CHECKING:
 
 # Checked with FW2.5.2
 
-DIALOG_NAME = "Kobo Utilities"
 
 READING_DIRECTIONS = {
     _("Default"): "default",
@@ -489,7 +489,7 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         self.resize_dialog()
 
     def initialize_controls(self):
-        self.setWindowTitle(DIALOG_NAME)
+        self.setWindowTitle(GUI_NAME)
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
@@ -799,7 +799,7 @@ class GetShelvesFromDeviceDialog(SizePersistedDialog):
         self.resize_dialog()
 
     def initialize_controls(self):
-        self.setWindowTitle(DIALOG_NAME)
+        self.setWindowTitle(GUI_NAME)
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
@@ -928,7 +928,7 @@ class BookmarkOptionsDialog(SizePersistedDialog):
         self.resize_dialog()
 
     def initialize_controls(self):
-        self.setWindowTitle(DIALOG_NAME)
+        self.setWindowTitle(GUI_NAME)
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
@@ -1096,7 +1096,7 @@ class ChangeReadingStatusOptionsDialog(SizePersistedDialog):
         self.resize_dialog()
 
     def initialize_controls(self):
-        self.setWindowTitle(DIALOG_NAME)
+        self.setWindowTitle(GUI_NAME)
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
@@ -1169,7 +1169,7 @@ class BackupAnnotationsOptionsDialog(SizePersistedDialog):
         self.resize_dialog()
 
     def initialize_controls(self):
-        self.setWindowTitle(DIALOG_NAME)
+        self.setWindowTitle(GUI_NAME)
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
@@ -1253,7 +1253,7 @@ class RemoveAnnotationsOptionsDialog(SizePersistedDialog):
         self.resize_dialog()
 
     def initialize_controls(self):
-        self.setWindowTitle(DIALOG_NAME)
+        self.setWindowTitle(GUI_NAME)
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
@@ -1384,7 +1384,7 @@ class CoverUploadOptionsDialog(SizePersistedDialog):
         self.resize_dialog()
 
     def initialize_controls(self):
-        self.setWindowTitle(DIALOG_NAME)
+        self.setWindowTitle(GUI_NAME)
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(self, "default_cover.png", _("Upload covers"))
@@ -1490,7 +1490,7 @@ class RemoveCoverOptionsDialog(SizePersistedDialog):
         self.resize_dialog()
 
     def initialize_controls(self):
-        self.setWindowTitle(DIALOG_NAME)
+        self.setWindowTitle(GUI_NAME)
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(self, "default_cover.png", _("Remove covers"))
@@ -1556,7 +1556,7 @@ class CleanImagesDirOptionsDialog(SizePersistedDialog):
         self.resize_dialog()
 
     def initialize_controls(self):
-        self.setWindowTitle(DIALOG_NAME)
+        self.setWindowTitle(GUI_NAME)
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
@@ -3004,7 +3004,7 @@ class SetRelatedBooksDialog(SizePersistedDialog):
         self.resize_dialog()
 
     def initialize_controls(self):
-        self.setWindowTitle(DIALOG_NAME)
+        self.setWindowTitle(GUI_NAME)
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
@@ -3263,7 +3263,7 @@ class UpdateBooksToCDialog(SizePersistedDialog):
         )
         self.plugin_action = plugin_action
 
-        self.setWindowTitle(DIALOG_NAME)
+        self.setWindowTitle(GUI_NAME)
 
         layout = QVBoxLayout(self)
         self.setLayout(layout)
@@ -3739,7 +3739,7 @@ class AboutDialog(QDialog):
         self.label.setOpenExternalLinks(True)
         self.label.setWordWrap(True)
         self.label.setTextFormat(Qt.TextFormat.MarkdownText)
-        self.setWindowTitle(_("About {}").format(DIALOG_NAME))
+        self.setWindowTitle(_("About {}").format(GUI_NAME))
         self.setWindowIcon(icon)
         self.l.addWidget(self.logo, 0, 0)
         self.l.addWidget(self.label, 0, 1)

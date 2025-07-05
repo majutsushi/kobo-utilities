@@ -25,7 +25,7 @@ from qt.core import (
 from .. import config as cfg
 from .. import utils
 from ..constants import BOOK_CONTENTTYPE, GUI_NAME
-from ..utils import ImageTitleLayout, SizePersistedDialog, debug
+from ..utils import Dispatcher, ImageTitleLayout, SizePersistedDialog, debug
 
 if TYPE_CHECKING:
     from calibre.gui2 import ui
@@ -130,7 +130,8 @@ KOBO_FONTS = {
 }
 
 
-def set_reader_fonts(device: KoboDevice, gui: ui.Main) -> None:
+def set_reader_fonts(device: KoboDevice, gui: ui.Main, dispatcher: Dispatcher) -> None:
+    del dispatcher
     current_view = gui.current_view()
     if current_view is None or len(current_view.selectionModel().selectedRows()) == 0:
         return
@@ -171,7 +172,10 @@ def set_reader_fonts(device: KoboDevice, gui: ui.Main) -> None:
     )
 
 
-def remove_reader_fonts(device: KoboDevice, gui: ui.Main) -> None:
+def remove_reader_fonts(
+    device: KoboDevice, gui: ui.Main, dispatcher: Dispatcher
+) -> None:
+    del dispatcher
     current_view = gui.current_view()
     if current_view is None or len(current_view.selectionModel().selectedRows()) == 0:
         return

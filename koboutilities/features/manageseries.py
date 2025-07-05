@@ -45,6 +45,7 @@ from ..dialogs import AuthorsTableWidgetItem
 from ..features import metadata
 from ..utils import (
     DateTableWidgetItem,
+    Dispatcher,
     ImageTitleLayout,
     ProgressBar,
     ReadOnlyTableWidgetItem,
@@ -61,7 +62,10 @@ if TYPE_CHECKING:
     from ..action import KoboDevice
 
 
-def manage_series_on_device(device: KoboDevice, gui: ui.Main) -> None:
+def manage_series_on_device(
+    device: KoboDevice, gui: ui.Main, dispatcher: Dispatcher
+) -> None:
+    del dispatcher
     current_view = gui.current_view()
     if current_view is None or len(current_view.selectionModel().selectedRows()) == 0:
         return

@@ -26,6 +26,7 @@ from .. import config as cfg
 from .. import utils
 from ..utils import (
     DateTableWidgetItem,
+    Dispatcher,
     ImageTitleLayout,
     ProgressBar,
     RatingTableWidgetItem,
@@ -37,7 +38,10 @@ if TYPE_CHECKING:
     from ..action import KoboDevice
 
 
-def fix_duplicate_shelves(device: KoboDevice, gui: ui.Main) -> None:
+def fix_duplicate_shelves(
+    device: KoboDevice, gui: ui.Main, dispatcher: Dispatcher
+) -> None:
+    del dispatcher
     shelves = _get_shelf_count(device)
     dlg = FixDuplicateShelvesDialog(gui, shelves)
     dlg.exec()

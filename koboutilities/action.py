@@ -27,12 +27,9 @@ from typing import (
     cast,
 )
 
-from calibre import strftime
 from calibre.constants import numeric_version as calibre_version
-from calibre.devices.kobo.books import Book
 from calibre.devices.kobo.driver import KOBO, KOBOTOUCH
 from calibre.ebooks.metadata import authors_to_string
-from calibre.ebooks.metadata.book.base import Metadata
 from calibre.ebooks.oeb.polish.container import EpubContainer
 from calibre.ebooks.oeb.polish.errors import DRMError
 from calibre.gui2 import (
@@ -64,50 +61,47 @@ from .constants import BOOK_CONTENTTYPE, GUI_NAME
 from .dialogs import (
     AboutDialog,
     BackupAnnotationsOptionsDialog,
-    BookmarkOptionsDialog,
     CleanImagesDirOptionsDialog,
     CleanImagesDirProgressDialog,
     CoverUploadOptionsDialog,
     GetShelvesFromDeviceDialog,
-    ReadLocationsProgressDialog,
     RemoveAnnotationsOptionsDialog,
     RemoveAnnotationsProgressDialog,
     RemoveCoverOptionsDialog,
     SetRelatedBooksDialog,
     ShowBooksNotInDeviceDatabaseDialog,
-    ShowReadingPositionChangesDialog,
     UpdateBooksToCDialog,
 )
 from .features import (
     analytics,
     database,
     duplicateshelves,
+    locations,
     manageseries,
     metadata,
     reader,
     readingstatus,
 )
 from .utils import (
-    BOOKMARK_SEPARATOR,
-    MIMETYPE_KOBO,
     DeviceDatabaseConnection,
+    Dispatcher,
     ProgressBar,
     contentid_from_path,
     convert_calibre_ids_to_books,
-    convert_kobo_date,
     create_menu_action_unique,
     debug,
     get_books_for_selected,
-    get_books_from_ids,
     get_contentIDs_from_id,
     get_device_paths_from_id,
     get_icon,
+    get_selected_ids,
     is_device_view,
     set_plugin_icon_resources,
 )
 
 if TYPE_CHECKING:
     from calibre.db.legacy import LibraryDatabase
+    from calibre.devices.kobo.books import Book
     from calibre.ebooks.oeb.polish.toc import TOC
 
 PLUGIN_ICONS = [
@@ -127,114 +121,6 @@ PLUGIN_ICONS = [
     "images/vise.png",
 ]
 
-EPUB_FETCH_QUERY = (
-    "SELECT c1.ChapterIDBookmarked, "
-    "c2.adobe_location, "
-    "c1.ReadStatus, "
-    "c1.___PercentRead, "
-    "c1.Attribution, "
-    "c1.DateLastRead, "
-    "c1.Title, "
-    "c1.MimeType, "
-    "r.rating, "
-    "c1.contentId, "
-    "c1.TimeSpentReading, "
-    "c1.RestOfBookEstimate "
-    "FROM content c1 LEFT OUTER JOIN content c2 ON c1.ChapterIDBookmarked = c2.ContentID "
-    "LEFT OUTER JOIN ratings r ON c1.ContentID = r.ContentID "
-    "WHERE c1.ContentID = ?"
-)
-
-EPUB_FETCH_QUERY_NORATING = (
-    "SELECT c1.ChapterIDBookmarked, "
-    "c2.adobe_location, "
-    "c1.ReadStatus, "
-    "c1.___PercentRead, "
-    "c1.Attribution, "
-    "c1.DateLastRead, "
-    "c1.Title, "
-    "c1.MimeType, "
-    "NULL as rating, "
-    "c1.contentId, "
-    "FROM content c1 LEFT OUTER JOIN content c2 ON c1.ChapterIDBookmarked = c2.ContentID "
-    "WHERE c1.ContentID = ?"
-)
-
-EPUB_FETCH_QUERY_NOTIMESPENT = (
-    "SELECT c1.ChapterIDBookmarked, "
-    "c2.adobe_location, "
-    "c1.ReadStatus, "
-    "c1.___PercentRead, "
-    "c1.Attribution, "
-    "c1.DateLastRead, "
-    "c1.Title, "
-    "c1.MimeType, "
-    "r.rating, "
-    "c1.contentId "
-    "FROM content c1 LEFT OUTER JOIN content c2 ON c1.ChapterIDBookmarked = c2.ContentID "
-    "LEFT OUTER JOIN ratings r ON c1.ContentID = r.ContentID "
-    "WHERE c1.ContentID = ?"
-)
-
-KEPUB_FETCH_QUERY = (
-    "SELECT c1.ChapterIDBookmarked, "
-    "c1.adobe_location, "
-    "c1.ReadStatus, "
-    "c1.___PercentRead, "
-    "c1.Attribution, "
-    "c1.DateLastRead, "
-    "c1.Title, "
-    "c1.MimeType, "
-    "r.rating, "
-    "c1.contentId, "
-    "c1.TimeSpentReading, "
-    "c1.RestOfBookEstimate "
-    "FROM content c1 LEFT OUTER JOIN ratings r ON c1.ContentID = r.ContentID "
-    "WHERE c1.ContentID = ?"
-)
-
-KEPUB_FETCH_QUERY_NORATING = (
-    "SELECT c1.ChapterIDBookmarked, "
-    "c1.adobe_location, "
-    "c1.ReadStatus, "
-    "c1.___PercentRead, "
-    "c1.Attribution, "
-    "c1.DateLastRead, "
-    "c1.Title, "
-    "c1.MimeType, "
-    "NULL as rating, "
-    "c1.contentId, "
-    "FROM content c1 "
-    "WHERE c1.ContentID = ?"
-)
-
-KEPUB_FETCH_QUERY_NOTIMESPENT = (
-    "SELECT c1.ChapterIDBookmarked, "
-    "c1.adobe_location, "
-    "c1.ReadStatus, "
-    "c1.___PercentRead, "
-    "c1.Attribution, "
-    "c1.DateLastRead, "
-    "c1.Title, "
-    "c1.MimeType, "
-    "r.rating, "
-    "c1.contentId "
-    "FROM content c1 LEFT OUTER JOIN ratings r ON c1.ContentID = r.ContentID "
-    "WHERE c1.ContentID = ?"
-)
-
-# Dictionary of Reading status fetch queries
-# Key is earliest firmware version that supports this query.
-FETCH_QUERIES: dict[tuple[int, int, int], cfg.FetchQueries] = {}
-FETCH_QUERIES[(0, 0, 0)] = cfg.FetchQueries(
-    KEPUB_FETCH_QUERY_NORATING, EPUB_FETCH_QUERY_NORATING
-)
-FETCH_QUERIES[(1, 9, 17)] = cfg.FetchQueries(
-    KEPUB_FETCH_QUERY_NOTIMESPENT, EPUB_FETCH_QUERY_NOTIMESPENT
-)
-FETCH_QUERIES[(4, 0, 7523)] = cfg.FetchQueries(KEPUB_FETCH_QUERY, EPUB_FETCH_QUERY)
-# With 4.17.13651, epub location is stored in the same way a for kepubs.
-FETCH_QUERIES[(4, 17, 13651)] = cfg.FetchQueries(KEPUB_FETCH_QUERY, KEPUB_FETCH_QUERY)
 
 KOBO_ROOT_DIR_NAME = ".kobo"
 KOBO_EPOCH_CONF_NAME = "epoch.conf"
@@ -309,7 +195,15 @@ class KoboUtilitiesAction(InterfaceAction):
             and self.device.profile.storeOptionsStore.storeOnConnect
         ):
             debug("About to do auto store")
-            QTimer.singleShot(1000, self.auto_store_current_bookmark)
+            QTimer.singleShot(
+                1000,
+                partial(
+                    locations.auto_store_current_bookmark,
+                    self.device,
+                    self.gui,
+                    cast("Dispatcher", self.Dispatcher),
+                ),
+            )
 
     def set_toolbar_button_tooltip(self):
         text = ActionKoboUtilities.description
@@ -370,16 +264,20 @@ class KoboUtilitiesAction(InterfaceAction):
 
             if profile and profile.storeOptionsStore.storeOnConnect:
                 debug("About to start auto store")
-                self.auto_store_current_bookmark()
+                locations.auto_store_current_bookmark(
+                    self.device, self.gui, cast("Dispatcher", self.Dispatcher)
+                )
 
         self.rebuild_menus()
 
     def rebuild_menus(self) -> None:
-        def menu_wrapper(func: Callable[[KoboDevice, ui.Main], None]):
+        def menu_wrapper(
+            func: Callable[[KoboDevice, ui.Main, Dispatcher], None],
+        ):
             def wrapper():
                 if self.device is None:
                     raise AssertionError(_("No device connected."))
-                func(self.device, self.gui)
+                func(self.device, self.gui, cast("Dispatcher", self.Dispatcher))
 
             return wrapper
 
@@ -465,7 +363,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="Store/restore reading positions",
                 shortcut_name=_("Store/restore reading positions"),
                 image="bookmarks.png",
-                triggered=self.handle_bookmarks,
+                triggered=menu_wrapper(locations.handle_bookmarks),
                 is_library_action=True,
             )
 
@@ -831,7 +729,9 @@ class KoboUtilitiesAction(InterfaceAction):
                 else:
                     self.menu_actions[button_action].trigger()
             else:
-                readingstatus.change_reading_status(self.device, self.gui)
+                readingstatus.change_reading_status(
+                    self.device, self.gui, cast("Dispatcher", self.Dispatcher)
+                )
         else:
             button_action = cfg.plugin_prefs.commonOptionsStore.buttonActionLibrary
             if button_action == "":
@@ -984,193 +884,6 @@ class KoboUtilitiesAction(InterfaceAction):
                 return True
         return False
 
-    def handle_bookmarks(self) -> None:
-        current_view = self.gui.current_view()
-        if (
-            current_view is None
-            or len(current_view.selectionModel().selectedRows()) == 0
-        ):
-            return
-        self.device = self.get_device()
-        if self.device is None:
-            error_dialog(
-                self.gui,
-                _("Cannot store or restore current reading position."),
-                _("No device connected."),
-                show=True,
-            )
-            return
-
-        selectedIDs = self._get_selected_ids()
-
-        if len(selectedIDs) == 0:
-            return
-
-        dlg = BookmarkOptionsDialog(self.gui, self)
-        dlg.exec()
-        if dlg.result() != dlg.DialogCode.Accepted:
-            return
-        profile_name = dlg.profile_name
-        # We know that this cannot be none if the dialog succeeded
-        assert profile_name is not None
-
-        if cfg.plugin_prefs.BookmarkOptions.storeBookmarks:
-            self.store_current_bookmark(profile_name)
-        else:
-            self.restore_current_bookmark(profile_name)
-
-    def auto_store_current_bookmark(self):
-        debug("start")
-        self.device = self.get_device()
-        assert self.device is not None
-
-        library_db = self.gui.current_db
-
-        fetch_queries = self._get_fetch_query_for_firmware_version(
-            cast("Tuple[int, int, int]", self.device_fwversion)
-        )
-        assert fetch_queries is not None
-        profile = self.device.profile
-        custom_columns = cfg.get_column_names(self.gui, self.device)
-
-        bookmark_options = cfg.BookmarkOptionsConfig()
-        bookmark_options.backgroundJob = True
-        bookmark_options.clearIfUnread = False
-        bookmark_options.storeBookmarks = True
-
-        profile_name = None
-        prompt_to_store = False
-        if profile is not None:
-            profile_name = profile.profileName
-            prompt_to_store = profile.storeOptionsStore.promptToStore
-            bookmark_options.storeIfMoreRecent = (
-                profile.storeOptionsStore.storeIfMoreRecent
-            )
-            bookmark_options.doNotStoreIfReopened = (
-                profile.storeOptionsStore.doNotStoreIfReopened
-            )
-        options = cfg.ReadLocationsJobOptions(
-            bookmark_options,
-            self.device.epub_location_like_kepub,
-            fetch_queries,
-            self.device.db_path,
-            self.device.device_db_path,
-            self.device.is_db_copied,
-            profile_name,
-            custom_columns,
-            self.device.supports_ratings,
-            allOnDevice=True,
-            prompt_to_store=prompt_to_store,
-        )
-
-        kobo_chapteridbookmarked_column = custom_columns.current_location
-        kobo_percentRead_column = custom_columns.percent_read
-        rating_column = custom_columns.rating
-        last_read_column = custom_columns.last_read
-        time_spent_reading_column = custom_columns.time_spent_reading
-        rest_of_book_estimate_column = custom_columns.rest_of_book_estimate
-
-        if options.bookmark_options.doNotStoreIfReopened:
-            search_condition = f"and ({kobo_percentRead_column}:false or {kobo_percentRead_column}:<100)"
-        else:
-            search_condition = ""
-
-        progressbar = ProgressBar(
-            parent=self.gui,
-            window_title=_("Queuing books for storing reading position"),
-        )
-        progressbar.set_label(_("Getting list of books"))
-        progressbar.show_with_maximum(0)
-
-        search_condition = f"ondevice:True {search_condition}"
-        debug("search_condition=", search_condition)
-        onDeviceIds = set(
-            library_db.search_getting_ids(
-                search_condition, None, sort_results=False, use_virtual_library=False
-            )
-        )
-        debug("onDeviceIds:", len(onDeviceIds))
-        onDevice_book_paths = get_books_from_ids(onDeviceIds, self.gui)
-        debug("onDevice_book_paths:", len(onDevice_book_paths))
-
-        books = convert_calibre_ids_to_books(library_db, onDeviceIds)
-        progressbar.show_with_maximum(len(books))
-        progressbar.set_label(_("Queuing books"))
-        books_to_scan = []
-
-        for book in books:
-            progressbar.increment()
-            device_book_paths = [
-                x.path for x in onDevice_book_paths[cast("int", book.calibre_id)]
-            ]
-            book.contentIDs = [
-                contentid_from_path(self.device, path, BOOK_CONTENTTYPE)
-                for path in device_book_paths
-            ]
-            if len(book.contentIDs) > 0:
-                title = book.title
-                progressbar.set_label(_("Queueing {}").format(title))
-                authors = authors_to_string(book.authors)
-                current_chapterid = None
-                current_percentRead = None
-                current_rating = None
-                current_last_read = None
-                current_time_spent_reading = None
-                current_rest_of_book_estimate = None
-                if kobo_chapteridbookmarked_column is not None:
-                    metadata = book.get_user_metadata(
-                        kobo_chapteridbookmarked_column, False
-                    )
-                    assert metadata is not None
-                    current_chapterid = metadata["#value#"]
-                if kobo_percentRead_column is not None:
-                    metadata = book.get_user_metadata(kobo_percentRead_column, False)
-                    assert metadata is not None
-                    current_percentRead = metadata["#value#"]
-                if rating_column is not None:
-                    if rating_column == "rating":
-                        current_rating = book.rating
-                    else:
-                        metadata = book.get_user_metadata(rating_column, False)
-                        assert metadata is not None
-                        current_rating = metadata["#value#"]
-                if last_read_column is not None:
-                    metadata = book.get_user_metadata(last_read_column, False)
-                    assert metadata is not None
-                    current_last_read = metadata["#value#"]
-                if time_spent_reading_column is not None:
-                    metadata = book.get_user_metadata(time_spent_reading_column, False)
-                    assert metadata is not None
-                    current_time_spent_reading = metadata["#value#"]
-                if rest_of_book_estimate_column is not None:
-                    metadata = book.get_user_metadata(
-                        rest_of_book_estimate_column, False
-                    )
-                    assert metadata is not None
-                    current_rest_of_book_estimate = metadata["#value#"]
-
-                books_to_scan.append(
-                    (
-                        book.calibre_id,
-                        book.contentIDs,
-                        title,
-                        authors,
-                        current_chapterid,
-                        current_percentRead,
-                        current_rating,
-                        current_last_read,
-                        current_time_spent_reading,
-                        current_rest_of_book_estimate,
-                    )
-                )
-
-        if len(books_to_scan) > 0:
-            self._store_queue_job(options, books_to_scan)
-
-        progressbar.hide()
-
-        debug("Finish")
-
     def set_time_on_device(self):
         debug("start")
         now = calendar.timegm(time.gmtime())
@@ -1230,161 +943,6 @@ class KoboUtilitiesAction(InterfaceAction):
         self._device_database_backup(job_options)
         debug("end")
 
-    def store_current_bookmark(self, profile_name: str) -> None:
-        current_view = self.gui.current_view()
-        if (
-            current_view is None
-            or len(current_view.selectionModel().selectedRows()) == 0
-        ):
-            return
-        self.device = self.get_device()
-        if self.device is None:
-            error_dialog(
-                self.gui,
-                _("Cannot update metadata in device library."),
-                _("No device connected."),
-                show=True,
-            )
-            return
-
-        fetch_queries = self._get_fetch_query_for_firmware_version(
-            cast("Tuple[int, int, int]", self.device_fwversion)
-        )
-        if fetch_queries is None:
-            error_dialog(
-                self.gui,
-                _("Cannot update metadata in device library."),
-                _("No fetch queries found for firmware version."),
-                show=True,
-            )
-            return
-
-        options = cfg.ReadLocationsJobOptions(
-            cfg.plugin_prefs.BookmarkOptions,
-            self.device.epub_location_like_kepub,
-            fetch_queries,
-            self.device.db_path,
-            self.device.device_db_path,
-            self.device.is_db_copied,
-            profile_name,
-            None,
-            self.device.supports_ratings,
-            allOnDevice=False,
-            prompt_to_store=True,
-        )
-        debug("options:", options)
-
-        if cfg.plugin_prefs.BookmarkOptions.backgroundJob:
-            ReadLocationsProgressDialog(
-                self.gui,
-                options,
-                self._store_queue_job,
-                current_view.model().db,
-                plugin_action=self,
-            )
-        else:
-            selectedIDs = self._get_selected_ids()
-
-            if len(selectedIDs) == 0:
-                return
-            debug("selectedIDs:", selectedIDs)
-            books = convert_calibre_ids_to_books(current_view.model().db, selectedIDs)
-            for book in books:
-                device_book_paths = get_device_paths_from_id(
-                    cast("int", book.calibre_id), self.gui
-                )
-                book.paths = device_book_paths
-                book.contentIDs = [
-                    contentid_from_path(self.device, path, BOOK_CONTENTTYPE)
-                    for path in device_book_paths
-                ]
-
-            reading_locations_updated, books_without_reading_locations, count_books = (
-                self._store_current_bookmark(books, options)
-            )
-            result_message = (
-                _("Update summary:")
-                + "\n\t"
-                + _(
-                    "Reading locations updated={0}\n\tBooks with no reading location={1}\n\tTotal books checked={2}"
-                ).format(
-                    reading_locations_updated,
-                    books_without_reading_locations,
-                    count_books,
-                )
-            )
-            info_dialog(
-                self.gui,
-                _("Kobo Utilities") + " - " + _("Library updated"),
-                result_message,
-                show=True,
-            )
-
-    def restore_current_bookmark(self, profile_name: str) -> None:
-        current_view = self.gui.current_view()
-        if (
-            current_view is None
-            or len(current_view.selectionModel().selectedRows()) == 0
-        ):
-            return
-        self.device = self.get_device()
-        if self.device is None:
-            error_dialog(
-                self.gui,
-                _("Cannot set bookmark in device library."),
-                _("No device connected."),
-                show=True,
-            )
-            return
-
-        selectedIDs = self._get_selected_ids()
-
-        if len(selectedIDs) == 0:
-            return
-        debug("selectedIDs:", selectedIDs)
-        books = convert_calibre_ids_to_books(current_view.model().db, selectedIDs)
-        for book in books:
-            device_book_paths = get_device_paths_from_id(
-                cast("int", book.calibre_id), self.gui
-            )
-            debug("device_book_paths:", device_book_paths)
-            book.paths = device_book_paths
-            book.contentIDs = [
-                contentid_from_path(self.device, path, BOOK_CONTENTTYPE)
-                for path in device_book_paths
-            ]
-
-        updated_books, not_on_device_books, count_books = (
-            self._restore_current_bookmark(
-                books, cfg.plugin_prefs.BookmarkOptions, profile_name
-            )
-        )
-        result_message = (
-            _("Update summary:")
-            + "\n\t"
-            + _(
-                "Books updated={0}\n\tBooks not on device={1}\n\tTotal books={2}"
-            ).format(updated_books, not_on_device_books, count_books)
-        )
-        info_dialog(
-            self.gui,
-            _("Kobo Utilities") + " - " + _("Device library updated"),
-            result_message,
-            show=True,
-        )
-
-    def _get_fetch_query_for_firmware_version(
-        self, current_firmware_version: tuple[int, int, int]
-    ) -> cfg.FetchQueries | None:
-        fetch_queries = None
-        for fw_version in sorted(FETCH_QUERIES.keys()):
-            if current_firmware_version < fw_version:
-                break
-            fetch_queries = FETCH_QUERIES[fw_version]
-
-        debug("using fetch_queries:", fetch_queries)
-        return fetch_queries
-
     def backup_annotation_files(self) -> None:
         current_view = self.gui.current_view()
         if (
@@ -1403,7 +961,7 @@ class KoboUtilitiesAction(InterfaceAction):
             )
             return
 
-        selectedIDs = self._get_selected_ids()
+        selectedIDs = get_selected_ids(self.gui)
 
         if len(selectedIDs) == 0:
             return
@@ -1627,7 +1185,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 )
             )
         else:
-            selectedIDs = self._get_selected_ids()
+            selectedIDs = get_selected_ids(self.gui)
 
         if len(selectedIDs) == 0:
             return
@@ -1683,7 +1241,7 @@ class KoboUtilitiesAction(InterfaceAction):
             )
             return
 
-        selectedIDs = self._get_selected_ids()
+        selectedIDs = get_selected_ids(self.gui)
 
         if len(selectedIDs) == 0:
             return
@@ -1734,7 +1292,7 @@ class KoboUtilitiesAction(InterfaceAction):
         debug("self.device.path", self.device.path)
 
         if self.gui.stack.currentIndex() == 0:
-            selectedIDs = self._get_selected_ids()
+            selectedIDs = get_selected_ids(self.gui)
             books = convert_calibre_ids_to_books(current_view.model().db, selectedIDs)
         else:
             books = get_books_for_selected(self.gui)
@@ -1781,7 +1339,7 @@ class KoboUtilitiesAction(InterfaceAction):
         debug("self.device.path", self.device.path)
 
         if self.gui.stack.currentIndex() == 0:
-            selectedIDs = self._get_selected_ids()
+            selectedIDs = get_selected_ids(self.gui)
             books = convert_calibre_ids_to_books(current_view.model().db, selectedIDs)
 
         else:
@@ -1866,16 +1424,6 @@ class KoboUtilitiesAction(InterfaceAction):
             return
 
         self._getAnnotationForSelected()
-
-    def _get_selected_ids(self) -> list[int]:
-        current_view = self.gui.current_view()
-        if current_view is None:
-            return []
-        rows: list[QModelIndex] = current_view.selectionModel().selectedRows()
-        if not rows or len(rows) == 0:
-            return []
-        debug("self.gui.current_view().model()", current_view.model())
-        return list(map(current_view.model().id, rows))
 
     def get_device_path(self) -> str:
         debug("BEGIN Get Device Path")
@@ -2037,87 +1585,6 @@ class KoboUtilitiesAction(InterfaceAction):
             use_row_factory,
         )
 
-    def _store_queue_job(
-        self,
-        options: cfg.ReadLocationsJobOptions,
-        books_to_modify: list[tuple[Any]],
-    ):
-        debug("Start")
-        cpus = 1  # self.gui.device_manager.server.pool_size
-        from .jobs import do_read_locations
-
-        args = [books_to_modify, options, cpus]
-        desc = _("Storing reading positions for {0} books").format(len(books_to_modify))
-        self.gui.device_manager.create_job(
-            do_read_locations,
-            self.Dispatcher(self._read_completed),
-            description=desc,
-            args=args,
-        )
-        self.gui.status_bar.show_message(self.giu_name + " - " + desc, 3000)
-
-    def _read_completed(self, job: DeviceJob):
-        if job.failed:
-            self.gui.job_exception(
-                job, dialog_title=_("Failed to get reading positions")
-            )
-            return
-        modified_epubs_map: dict[int, dict[str, Any]]
-        options: cfg.ReadLocationsJobOptions
-        modified_epubs_map, options = job.result
-        debug("options", options)
-
-        update_count = len(modified_epubs_map) if modified_epubs_map else 0
-        if update_count == 0:
-            self.gui.status_bar.show_message(
-                _("Kobo Utilities")
-                + " - "
-                + _("Storing reading positions completed - No changes found"),
-                3000,
-            )
-        else:
-            goodreads_sync_plugin = None
-            if options.prompt_to_store:
-                profile_name = options.profile_name
-                db = self.gui.current_db
-
-                if "Goodreads Sync" in self.gui.iactions:
-                    goodreads_sync_plugin = self.gui.iactions["Goodreads Sync"]
-
-                dlg = ShowReadingPositionChangesDialog(
-                    self.gui,
-                    self,
-                    modified_epubs_map,
-                    db,
-                    profile_name,
-                    goodreads_sync_plugin is not None,
-                )
-                dlg.exec()
-                if dlg.result() != dlg.DialogCode.Accepted:
-                    debug("dialog cancelled")
-                    return
-                modified_epubs_map = dlg.reading_locations
-            self._update_database_columns(modified_epubs_map)
-
-            if options.prompt_to_store:
-                library_config = cfg.get_library_config(self.gui.current_db)
-                if (
-                    library_config.readingPositionChangesStore.selectBooksInLibrary
-                    or library_config.readingPositionChangesStore.updeateGoodreadsProgress
-                ):
-                    self.gui.library_view.select_rows(list(modified_epubs_map.keys()))
-                if (
-                    goodreads_sync_plugin
-                    and library_config.readingPositionChangesStore.updeateGoodreadsProgress
-                ):
-                    debug(
-                        "goodreads_sync_plugin.users.keys()=",
-                        list(goodreads_sync_plugin.users.keys()),
-                    )
-                    goodreads_sync_plugin.update_reading_progress(
-                        "progress", sorted(goodreads_sync_plugin.users.keys())[0]
-                    )
-
     def _device_database_backup(self, backup_options: cfg.DatabaseBackupJobOptions):
         debug("Start")
 
@@ -2253,404 +1720,6 @@ class KoboUtilitiesAction(InterfaceAction):
             show_copy_button=True,
             show=True,
             det_msg=details,
-        )
-
-    def validate_profile(self, profile_name: str):
-        columns_config = None
-        if profile_name:
-            profile = cfg.get_profile_info(self.gui.current_db, profile_name)
-            columns_config = profile.customColumnOptions
-        elif self.device is not None and self.device.profile is not None:
-            columns_config = self.device.profile.customColumnOptions
-
-        if columns_config is None:
-            return "{0}\n\n{1}".format(
-                _('Profile "{0}" does not exist.').format(profile_name),
-                _("Select another profile to proceed."),
-            )
-
-        custom_cols = self.gui.current_db.field_metadata.custom_field_metadata(
-            include_composites=False
-        )
-
-        def check_column_name(column_name: str | None):
-            return (
-                None
-                if column_name is None or len(column_name.strip()) == 0
-                else column_name
-            )
-
-        def check_column_exists(column_name: str | None):
-            return column_name is not None and column_name in custom_cols
-
-        debug("columns_config:", columns_config)
-        kobo_chapteridbookmarked_column = columns_config.currentReadingLocationColumn
-        kobo_percentRead_column = columns_config.percentReadColumn
-        rating_column = columns_config.ratingColumn
-        last_read_column = columns_config.lastReadColumn
-
-        kobo_chapteridbookmarked_column = check_column_name(
-            kobo_chapteridbookmarked_column
-        )
-        kobo_percentRead_column = check_column_name(kobo_percentRead_column)
-        rating_column = check_column_name(rating_column)
-        last_read_column = check_column_name(last_read_column)
-
-        if (
-            kobo_chapteridbookmarked_column is None
-            and kobo_percentRead_column is None
-            and rating_column is None
-            and last_read_column is None
-        ):
-            return "{0} {1}\n\n{2}".format(
-                _('Profile "{0}" is invalid.').format(profile_name),
-                _("It has no columns to store the reading status."),
-                _("Select another profile to proceed."),
-            )
-
-        kobo_chapteridbookmarked_column_exists = check_column_exists(
-            kobo_chapteridbookmarked_column
-        )
-        kobo_percentRead_column_exists = check_column_exists(kobo_percentRead_column)
-        if rating_column is not None:
-            rating_column_exists = rating_column == "rating" or check_column_exists(
-                rating_column
-            )
-        else:
-            rating_column_exists = False
-        last_read_column_exists = check_column_exists(last_read_column)
-
-        invalid_columns = []
-        if (
-            kobo_chapteridbookmarked_column is not None
-            and not kobo_chapteridbookmarked_column_exists
-        ):
-            invalid_columns.append(kobo_chapteridbookmarked_column)
-        if kobo_percentRead_column is not None and not kobo_percentRead_column_exists:
-            invalid_columns.append(kobo_percentRead_column)
-        if rating_column is not None and not rating_column_exists:
-            invalid_columns.append(rating_column)
-        if last_read_column is not None and not last_read_column_exists:
-            invalid_columns.append(last_read_column)
-
-        if len(invalid_columns) > 0:
-            invalid_columns_string = ", ".join(
-                [f'"{invalid_column}"' for invalid_column in invalid_columns]
-            )
-            invalid_columns_msg = (
-                _("The column {0} does not exist.")
-                if len(invalid_columns) == 1
-                else _("The columns {0} do not exist.")
-            )
-            return "{0} {1}\n\n{2}".format(
-                _('Profile "{0}" is invalid.').format(profile_name),
-                invalid_columns_msg.format(invalid_columns_string),
-                _("Select another profile to proceed."),
-            )
-
-        return None
-
-    def _update_database_columns(self, reading_locations: dict[int, dict[str, Any]]):
-        assert self.device is not None
-        debug("reading_locations=", reading_locations)
-        debug("start number of reading_locations= %d" % (len(reading_locations)))
-        progressbar = ProgressBar(
-            parent=self.gui, window_title=_("Storing reading positions"), on_top=True
-        )
-        total_books = len(reading_locations)
-        progressbar.show_with_maximum(total_books)
-
-        library_db = self.gui.current_db
-
-        def value_changed(old_value: object | None, new_value: object | None):
-            return bool(
-                (old_value is not None and new_value is None)
-                or (old_value is None and new_value is not None)
-                or old_value != new_value
-            )
-
-        custom_columns = cfg.get_column_names(self.gui, self.device)
-        kobo_chapteridbookmarked_column_name = custom_columns.current_location
-        kobo_percentRead_column_name = custom_columns.percent_read
-        rating_column_name = custom_columns.rating
-        last_read_column_name = custom_columns.last_read
-        time_spent_reading_column_name = custom_columns.time_spent_reading
-        rest_of_book_estimate_column_name = custom_columns.rest_of_book_estimate
-
-        if kobo_chapteridbookmarked_column_name is not None:
-            debug(
-                "kobo_chapteridbookmarked_column_name=",
-                kobo_chapteridbookmarked_column_name,
-            )
-            kobo_chapteridbookmarked_col_label = library_db.field_metadata.key_to_label(
-                kobo_chapteridbookmarked_column_name
-            )
-            debug(
-                "kobo_chapteridbookmarked_col_label=",
-                kobo_chapteridbookmarked_col_label,
-            )
-
-        debug(
-            "kobo_chapteridbookmarked_column_name=",
-            kobo_chapteridbookmarked_column_name,
-        )
-        debug(
-            "_update_database_columns - kobo_percentRead_column_name=",
-            kobo_percentRead_column_name,
-        )
-        debug("rating_column_name=", rating_column_name)
-        debug("last_read_column_name=", last_read_column_name)
-        debug("time_spent_reading_column_name=", time_spent_reading_column_name)
-        debug("rest_of_book_estimate_column_name=", rest_of_book_estimate_column_name)
-        # At this point we want to re-use code in edit_metadata to go ahead and
-        # apply the changes. So we will create empty Metadata objects so only
-        # the custom column field gets updated
-        id_map = {}
-        id_map_percentRead = {}
-        id_map_chapteridbookmarked = {}
-        id_map_rating = {}
-        id_map_last_read = {}
-        id_map_time_spent_reading = {}
-        id_map_rest_of_book_estimate = {}
-        for book_id, reading_location in list(reading_locations.items()):
-            mi = Metadata(_("Unknown"))
-            book_mi = library_db.get_metadata(
-                book_id, index_is_id=True, get_cover=False
-            )
-            book = Book("", "lpath", title=book_mi.title, other=book_mi)
-            progressbar.set_label(_("Updating {}").format(book_mi.title))
-            progressbar.increment()
-
-            kobo_chapteridbookmarked = None
-            kobo_adobe_location = None
-            kobo_percentRead = None
-            last_read = None
-            time_spent_reading = None
-            rest_of_book_estimate = None
-            debug("reading_location=", reading_location)
-            if (
-                reading_location["MimeType"] == MIMETYPE_KOBO
-                or self.device.epub_location_like_kepub
-            ):
-                kobo_chapteridbookmarked = reading_location["ChapterIDBookmarked"]
-                kobo_adobe_location = None
-            else:
-                kobo_chapteridbookmarked = (
-                    reading_location["ChapterIDBookmarked"][
-                        len(reading_location["ContentID"]) + 1 :
-                    ]
-                    if reading_location["ChapterIDBookmarked"]
-                    else None
-                )
-                kobo_adobe_location = reading_location["adobe_location"]
-
-            if reading_location["ReadStatus"] == 1:
-                kobo_percentRead = reading_location["___PercentRead"]
-            elif reading_location["ReadStatus"] == 2:
-                kobo_percentRead = 100
-
-            if reading_location["Rating"]:
-                kobo_rating = reading_location["Rating"] * 2
-            else:
-                kobo_rating = 0
-
-            if reading_location["DateLastRead"]:
-                last_read = convert_kobo_date(reading_location["DateLastRead"])
-
-            if reading_location["TimeSpentReading"]:
-                time_spent_reading = reading_location["TimeSpentReading"]
-
-            if reading_location["RestOfBookEstimate"]:
-                rest_of_book_estimate = reading_location["RestOfBookEstimate"]
-
-            book_updated = False
-            if last_read_column_name is not None:
-                last_read_metadata = book.get_user_metadata(last_read_column_name, True)
-                assert last_read_metadata is not None
-                current_last_read = last_read_metadata["#value#"]
-                debug(
-                    "book.get_user_metadata(last_read_column_name, True)['#value#']=",
-                    current_last_read,
-                )
-                debug("setting mi.last_read=", last_read)
-                debug("current_last_read == last_read=", current_last_read == last_read)
-
-                if value_changed(current_last_read, last_read):
-                    id_map_last_read[book_id] = last_read
-                    book_updated = True
-                else:
-                    book_updated = book_updated or False
-
-            if kobo_chapteridbookmarked_column_name is not None:
-                debug("kobo_chapteridbookmarked='%s'" % (kobo_chapteridbookmarked))
-                debug("kobo_adobe_location='%s'" % (kobo_adobe_location))
-                debug("kobo_percentRead=", kobo_percentRead)
-                if (
-                    kobo_chapteridbookmarked is not None
-                    and kobo_adobe_location is not None
-                ):
-                    new_value = (
-                        kobo_chapteridbookmarked
-                        + BOOKMARK_SEPARATOR
-                        + kobo_adobe_location
-                    )
-                elif kobo_chapteridbookmarked:
-                    new_value = kobo_chapteridbookmarked
-                else:
-                    new_value = None
-                    debug("setting bookmark column to None")
-                debug("chapterIdBookmark - on kobo=", new_value)
-                metadata = book.get_user_metadata(
-                    kobo_chapteridbookmarked_column_name, True
-                )
-                assert metadata is not None
-                old_value = metadata["#value#"]
-                debug("chapterIdBookmark - in library=", old_value)
-                debug(
-                    "chapterIdBookmark - on kobo==in library=", new_value == old_value
-                )
-
-                if value_changed(old_value, new_value):
-                    id_map_chapteridbookmarked[book_id] = new_value
-                    book_updated = True
-                else:
-                    book_updated = book_updated or False
-
-            if kobo_percentRead_column_name is not None:
-                debug("setting kobo_percentRead=", kobo_percentRead)
-                metadata = book.get_user_metadata(kobo_percentRead_column_name, True)
-                assert metadata is not None
-                current_percentRead = metadata["#value#"]
-                debug("percent read - in book=", current_percentRead)
-
-                if value_changed(current_percentRead, kobo_percentRead):
-                    id_map_percentRead[book_id] = kobo_percentRead
-                    book_updated = True
-                else:
-                    book_updated = book_updated or False
-
-            if rating_column_name is not None and kobo_rating > 0:
-                debug("setting rating_column_name=", rating_column_name)
-                if rating_column_name == "rating":
-                    current_rating = book.rating
-                    debug("rating - in book=", current_rating)
-                else:
-                    metadata = book.get_user_metadata(rating_column_name, True)
-                    assert metadata is not None
-                    current_rating = metadata["#value#"]
-                if value_changed(current_rating, kobo_rating):
-                    id_map_rating[book_id] = kobo_rating
-                    book_updated = True
-                else:
-                    book_updated = book_updated or False
-
-            if time_spent_reading_column_name is not None:
-                metadata = book.get_user_metadata(time_spent_reading_column_name, True)
-                assert metadata is not None
-                current_time_spent_reading = metadata["#value#"]
-                debug(
-                    "book.get_user_metadata(time_spent_reading_column_name, True)['#value#']=",
-                    current_time_spent_reading,
-                )
-                debug("setting mi.time_spent_reading=", time_spent_reading)
-                debug(
-                    "current_time_spent_reading == time_spent_reading=",
-                    current_time_spent_reading == time_spent_reading,
-                )
-
-                if value_changed(current_time_spent_reading, time_spent_reading):
-                    id_map_time_spent_reading[book_id] = time_spent_reading
-                    book_updated = True
-                else:
-                    book_updated = book_updated or False
-
-            if rest_of_book_estimate_column_name is not None:
-                metadata = book.get_user_metadata(
-                    rest_of_book_estimate_column_name, True
-                )
-                assert metadata is not None
-                current_rest_of_book_estimate = metadata["#value#"]
-                debug(
-                    "book.get_user_metadata(rest_of_book_estimate_column_name , True)['#value#']=",
-                    current_rest_of_book_estimate,
-                )
-                debug("setting mi.rest_of_book_estimate=", rest_of_book_estimate)
-                debug(
-                    "current_rest_of_book_estimate == rest_of_book_estimate=",
-                    current_rest_of_book_estimate == rest_of_book_estimate,
-                )
-
-                if value_changed(current_rest_of_book_estimate, rest_of_book_estimate):
-                    id_map_rest_of_book_estimate[book_id] = rest_of_book_estimate
-                    book_updated = True
-                else:
-                    book_updated = book_updated or False
-
-            id_map[book_id] = mi
-
-        if kobo_chapteridbookmarked_column_name:
-            debug(
-                "Updating metadata - for column: %s number of changes=%d"
-                % (
-                    kobo_chapteridbookmarked_column_name,
-                    len(id_map_chapteridbookmarked),
-                )
-            )
-            library_db.new_api.set_field(
-                kobo_chapteridbookmarked_column_name, id_map_chapteridbookmarked
-            )
-        if kobo_percentRead_column_name:
-            debug(
-                "Updating metadata - for column: %s number of changes=%d"
-                % (kobo_percentRead_column_name, len(id_map_percentRead))
-            )
-            library_db.new_api.set_field(
-                kobo_percentRead_column_name, id_map_percentRead
-            )
-        if rating_column_name:
-            debug(
-                "Updating metadata - for column: %s number of changes=%d"
-                % (rating_column_name, len(id_map_rating))
-            )
-            library_db.new_api.set_field(rating_column_name, id_map_rating)
-        if last_read_column_name:
-            debug(
-                "Updating metadata - for column: %s number of changes=%d"
-                % (last_read_column_name, len(id_map_last_read))
-            )
-            library_db.new_api.set_field(last_read_column_name, id_map_last_read)
-        if time_spent_reading_column_name:
-            debug(
-                "Updating metadata - for column: %s number of changes=%d"
-                % (time_spent_reading_column_name, len(id_map_time_spent_reading))
-            )
-            library_db.new_api.set_field(
-                time_spent_reading_column_name, id_map_time_spent_reading
-            )
-        if rest_of_book_estimate_column_name:
-            debug(
-                "Updating metadata - for column: %s number of changes=%d"
-                % (
-                    rest_of_book_estimate_column_name,
-                    len(id_map_rest_of_book_estimate),
-                )
-            )
-            library_db.new_api.set_field(
-                rest_of_book_estimate_column_name, id_map_rest_of_book_estimate
-            )
-
-        debug("Updating GUI - new DB engine")
-        self.gui.iactions["Edit Metadata"].refresh_gui(list(reading_locations))
-        debug("finished")
-
-        progressbar.hide()
-        self.gui.status_bar.show_message(
-            _("Kobo Utilities")
-            + " - "
-            + _("Storing reading positions completed - {0} changed.").format(
-                len(reading_locations)
-            ),
-            3000,
         )
 
     def _getAnnotationForSelected(self) -> None:
@@ -3153,770 +2222,6 @@ class KoboUtilitiesAction(InterfaceAction):
 
         progressbar.hide()
         debug("end")
-
-    def _store_current_bookmark(
-        self, books: list[Book], options: cfg.ReadLocationsJobOptions
-    ):
-        assert self.device is not None
-
-        reading_locations_updated = 0
-        books_without_reading_locations = 0
-        count_books = 0
-
-        def value_changed(old_value: object | None, new_value: object | None):
-            return (
-                (old_value is not None and new_value is None)
-                or (old_value is None and new_value is not None)
-                or old_value != new_value
-            )
-
-        debug("profile_name=", options.profile_name)
-        clear_if_unread = options.bookmark_options.clearIfUnread
-        store_if_more_recent = options.bookmark_options.storeIfMoreRecent
-        do_not_store_if_reopened = options.bookmark_options.doNotStoreIfReopened
-
-        connection = self.device_database_connection(use_row_factory=True)
-        progressbar = ProgressBar(
-            parent=self.gui, window_title=_("Storing reading positions"), on_top=True
-        )
-        progressbar.show_with_maximum(len(books))
-
-        library_db = self.gui.current_db
-        custom_columns = cfg.get_column_names(
-            self.gui, self.device, options.profile_name
-        )
-        kobo_chapteridbookmarked_column_name = custom_columns.current_location
-        kobo_percentRead_column_name = custom_columns.percent_read
-        rating_column_name = custom_columns.rating
-        last_read_column_name = custom_columns.last_read
-        time_spent_reading_column_name = custom_columns.time_spent_reading
-        rest_of_book_estimate_column_name = custom_columns.rest_of_book_estimate
-
-        debug(
-            "kobo_chapteridbookmarked_column_name=",
-            kobo_chapteridbookmarked_column_name,
-        )
-        debug("kobo_percentRead_column_name=", kobo_percentRead_column_name)
-        debug("rating_column_name=", rating_column_name)
-        debug("last_read_column_name=", last_read_column_name)
-        debug("time_spent_reading_column_name=", time_spent_reading_column_name)
-        debug("rest_of_book_estimate_column_name=", rest_of_book_estimate_column_name)
-
-        rating_col_label = None
-        if rating_column_name is not None:
-            if rating_column_name != "rating":
-                rating_col_label = (
-                    library_db.field_metadata.key_to_label(rating_column_name)
-                    if rating_column_name
-                    else ""
-                )
-            debug("rating_col_label=", rating_col_label)
-
-        id_map = {}
-        id_map_percentRead = {}
-        id_map_chapteridbookmarked = {}
-        id_map_rating = {}
-        id_map_last_read = {}
-        id_map_time_spent_reading = {}
-        id_map_rest_of_book_estimate = {}
-
-        debug("Starting to look at selected books...")
-        cursor = connection.cursor()
-        for book in books:
-            count_books += 1
-            mi = Metadata("Unknown")
-            debug("Looking at book: %s" % book.title)
-            progressbar.set_label(_("Checking {}").format(book.title))
-            progressbar.increment()
-            book_updated = False
-
-            if len(cast("List[str]", book.contentIDs)) == 0:
-                books_without_reading_locations += 1
-                continue
-
-            for contentID in cast("List[str]", book.contentIDs):
-                debug("contentId='%s'" % (contentID))
-                fetch_values = (contentID,)
-                assert self.device_fwversion is not None
-                fetch_queries = self._get_fetch_query_for_firmware_version(
-                    self.device_fwversion
-                )
-                assert fetch_queries is not None
-                if contentID.endswith(".kepub.epub"):
-                    fetch_query = fetch_queries.kepub
-                else:
-                    fetch_query = fetch_queries.epub
-                debug("fetch_query='%s'" % (fetch_query))
-                cursor.execute(fetch_query, fetch_values)
-                try:
-                    result = next(cursor)
-                except StopIteration:
-                    result = None
-
-                kobo_chapteridbookmarked = None
-                kobo_adobe_location = None
-                kobo_percentRead = None
-                last_read = None
-                time_spent_reading = None
-                rest_of_book_estimate = None
-
-                if result is not None:
-                    debug("result=", result)
-                    if result["ReadStatus"] == 0:
-                        if clear_if_unread:
-                            kobo_chapteridbookmarked = None
-                            kobo_adobe_location = None
-                            kobo_percentRead = None
-                            last_read = None
-                            kobo_rating = 0
-                            time_spent_reading = None
-                            rest_of_book_estimate = None
-                        else:
-                            books_without_reading_locations += 1
-                            continue
-                    else:
-                        if result["DateLastRead"]:
-                            debug("result['DateLastRead']=", result["DateLastRead"])
-                            last_read = convert_kobo_date(result["DateLastRead"])
-                            debug("last_read=", last_read)
-
-                        if last_read_column_name is not None and store_if_more_recent:
-                            metadata = book.get_user_metadata(
-                                last_read_column_name, True
-                            )
-                            assert metadata is not None
-                            current_last_read = metadata["#value#"]
-                            debug(
-                                "book.get_user_metadata(last_read_column_name, True)['#value#']=",
-                                current_last_read,
-                            )
-                            debug("setting mi.last_read=", last_read)
-                            if current_last_read is not None and last_read is not None:
-                                debug(
-                                    "store_if_more_recent - current_last_read < last_read=",
-                                    current_last_read < last_read,
-                                )
-                                if current_last_read >= last_read:
-                                    continue
-                            elif current_last_read is not None and last_read is None:
-                                continue
-
-                        if (
-                            kobo_percentRead_column_name is not None
-                            and do_not_store_if_reopened
-                        ):
-                            metadata = book.get_user_metadata(
-                                kobo_percentRead_column_name, True
-                            )
-                            assert metadata is not None
-                            current_percentRead = metadata["#value#"]
-                            debug(
-                                "do_not_store_if_reopened - current_percentRead=",
-                                current_percentRead,
-                            )
-                            if (
-                                current_percentRead is not None
-                                and current_percentRead >= 100
-                            ):
-                                continue
-
-                        if (
-                            result["MimeType"] == MIMETYPE_KOBO
-                            or self.device.epub_location_like_kepub
-                        ):
-                            kobo_chapteridbookmarked = result["ChapterIDBookmarked"]
-                            kobo_adobe_location = None
-                        else:
-                            kobo_chapteridbookmarked = (
-                                result["ChapterIDBookmarked"][len(contentID) + 1 :]
-                                if result["ChapterIDBookmarked"]
-                                else None
-                            )
-                            kobo_adobe_location = result["adobe_location"]
-
-                        if result["ReadStatus"] == 1:
-                            kobo_percentRead = result["___PercentRead"]
-                        elif result["ReadStatus"] == 2:
-                            kobo_percentRead = 100
-
-                        kobo_rating = result["Rating"] * 2 if result["Rating"] else 0
-
-                        time_spent_reading = result.get("TimeSpentReading")
-                        rest_of_book_estimate = result.get("RestOfBookEstimate")
-
-                else:
-                    books_without_reading_locations += 1
-                    continue
-
-                debug("kobo_chapteridbookmarked='%s'" % (kobo_chapteridbookmarked))
-                debug("kobo_adobe_location='%s'" % (kobo_adobe_location))
-                debug("kobo_percentRead=", kobo_percentRead)
-                debug("time_spent_reading='%s'" % (time_spent_reading))
-                debug("rest_of_book_estimate='%s'" % (rest_of_book_estimate))
-
-                if last_read_column_name is not None:
-                    metadata = book.get_user_metadata(last_read_column_name, True)
-                    assert metadata is not None
-                    current_last_read = metadata["#value#"]
-                    debug(
-                        "book.get_user_metadata(last_read_column_name, True)['#value#']=",
-                        current_last_read,
-                    )
-                    debug("setting mi.last_read=", last_read)
-                    debug(
-                        "current_last_read == last_read=",
-                        current_last_read == last_read,
-                    )
-
-                    if value_changed(current_last_read, last_read):
-                        id_map_last_read[book.calibre_id] = last_read
-                        book_updated = True
-                    else:
-                        book_updated = book_updated or False
-
-                if kobo_chapteridbookmarked_column_name is not None:
-                    if (
-                        kobo_chapteridbookmarked is not None
-                        and kobo_adobe_location is not None
-                    ):
-                        new_value = (
-                            kobo_chapteridbookmarked
-                            + BOOKMARK_SEPARATOR
-                            + kobo_adobe_location
-                        )
-                    elif kobo_chapteridbookmarked:
-                        new_value = kobo_chapteridbookmarked
-                    else:
-                        new_value = None
-                        debug("setting bookmark column to None")
-                    debug("chapterIdBookmark - on kobo=", new_value)
-                    metadata = book.get_user_metadata(
-                        kobo_chapteridbookmarked_column_name, True
-                    )
-                    assert metadata is not None
-                    old_value = metadata["#value#"]
-                    debug("chapterIdBookmark - in library=", old_value)
-                    debug(
-                        "chapterIdBookmark - on kobo==in library=",
-                        new_value == old_value,
-                    )
-
-                    if value_changed(old_value, new_value):
-                        id_map_chapteridbookmarked[book.calibre_id] = new_value
-                        book_updated = True
-                    else:
-                        book_updated = book_updated or False
-
-                if kobo_percentRead_column_name is not None:
-                    debug("setting kobo_percentRead=", kobo_percentRead)
-                    metadata = book.get_user_metadata(
-                        kobo_percentRead_column_name, True
-                    )
-                    assert metadata is not None
-                    current_percentRead = metadata["#value#"]
-                    debug("percent read - in book=", current_percentRead)
-
-                    if value_changed(current_percentRead, kobo_percentRead):
-                        id_map_percentRead[book.calibre_id] = kobo_percentRead
-                        book_updated = True
-                    else:
-                        book_updated = book_updated or False
-
-                if rating_column_name is not None and kobo_rating > 0:
-                    debug("setting rating_column_name=", rating_column_name)
-                    if rating_column_name == "rating":
-                        current_rating = book.rating
-                        debug("rating - in book=", current_rating)
-                        if current_rating != kobo_rating:
-                            library_db.set_rating(
-                                book.calibre_id, kobo_rating, commit=False
-                            )
-                    else:
-                        metadata = book.get_user_metadata(rating_column_name, True)
-                        assert metadata is not None
-                        current_rating = metadata["#value#"]
-                        if current_rating != kobo_rating:
-                            library_db.set_custom(
-                                book.calibre_id,
-                                kobo_rating,
-                                label=rating_col_label,
-                                commit=False,
-                            )
-                    if value_changed(current_rating, kobo_rating):
-                        id_map_rating[book.calibre_id] = kobo_rating
-                        book_updated = True
-                    else:
-                        book_updated = book_updated or False
-
-                if time_spent_reading_column_name is not None:
-                    debug("setting time_spent_reading=", time_spent_reading)
-                    metadata = book.get_user_metadata(
-                        time_spent_reading_column_name, True
-                    )
-                    assert metadata is not None
-                    current_time_spent_reading = metadata["#value#"]
-                    debug("time spent reading - in book=", current_time_spent_reading)
-
-                    if value_changed(current_time_spent_reading, time_spent_reading):
-                        id_map_time_spent_reading[book.calibre_id] = time_spent_reading
-                        book_updated = True
-                    else:
-                        book_updated = book_updated or False
-
-                if rest_of_book_estimate_column_name is not None:
-                    debug("setting rest_of_book_estimate=", rest_of_book_estimate)
-                    metadata = book.get_user_metadata(
-                        time_spent_reading_column_name, True
-                    )
-                    assert metadata is not None
-                    current_rest_of_book_estimate = metadata["#value#"]
-                    debug(
-                        "rest of book estimate - in book=",
-                        current_rest_of_book_estimate,
-                    )
-
-                    if value_changed(
-                        current_rest_of_book_estimate, rest_of_book_estimate
-                    ):
-                        id_map_rest_of_book_estimate[book.calibre_id] = (
-                            rest_of_book_estimate
-                        )
-                        book_updated = True
-                    else:
-                        book_updated = book_updated or False
-
-                id_map[book.calibre_id] = mi
-
-            if book_updated:
-                reading_locations_updated += 1
-
-        debug("Updating GUI - new DB engine")
-        if kobo_chapteridbookmarked_column_name and len(id_map_chapteridbookmarked) > 0:
-            debug(
-                "Updating metadata - for column: %s number of changes=%d"
-                % (
-                    kobo_chapteridbookmarked_column_name,
-                    len(id_map_chapteridbookmarked),
-                )
-            )
-            library_db.new_api.set_field(
-                kobo_chapteridbookmarked_column_name, id_map_chapteridbookmarked
-            )
-        if kobo_percentRead_column_name and len(id_map_percentRead) > 0:
-            debug(
-                "Updating metadata - for column: %s number of changes=%d"
-                % (kobo_percentRead_column_name, len(id_map_percentRead))
-            )
-            library_db.new_api.set_field(
-                kobo_percentRead_column_name, id_map_percentRead
-            )
-        if rating_column_name and len(id_map_rating) > 0:
-            debug(
-                "Updating metadata - for column: %s number of changes=%d"
-                % (rating_column_name, len(id_map_rating))
-            )
-            library_db.new_api.set_field(rating_column_name, id_map_rating)
-        if last_read_column_name and len(id_map_last_read) > 0:
-            debug(
-                "Updating metadata - for column: %s number of changes=%d"
-                % (last_read_column_name, len(id_map_last_read))
-            )
-            library_db.new_api.set_field(last_read_column_name, id_map_last_read)
-        if time_spent_reading_column_name and len(id_map_time_spent_reading) > 0:
-            debug(
-                "Updating metadata - for column: %s number of changes=%d"
-                % (time_spent_reading_column_name, len(id_map_time_spent_reading))
-            )
-            library_db.new_api.set_field(
-                time_spent_reading_column_name, id_map_time_spent_reading
-            )
-        if rest_of_book_estimate_column_name and len(id_map_rest_of_book_estimate) > 0:
-            debug(
-                "Updating metadata - for column: %s number of changes=%d"
-                % (
-                    rest_of_book_estimate_column_name,
-                    len(id_map_rest_of_book_estimate),
-                )
-            )
-            library_db.new_api.set_field(
-                rest_of_book_estimate_column_name, id_map_rest_of_book_estimate
-            )
-        self.gui.iactions["Edit Metadata"].refresh_gui(list(id_map))
-
-        progressbar.hide()
-        if len(id_map) > 0:
-            self.gui.status_bar.show_message(
-                _("Kobo Utilities")
-                + " - "
-                + _("Storing reading positions completed - {0} changed.").format(
-                    len(id_map)
-                ),
-                3000,
-            )
-
-        library_db.commit()
-
-        debug("finished")
-
-        return (reading_locations_updated, books_without_reading_locations, count_books)
-
-    def _restore_current_bookmark(
-        self,
-        books: list[Book],
-        options: cfg.BookmarkOptionsConfig,
-        profile_name: str | None,
-    ):
-        assert self.device is not None
-        updated_books = 0
-        not_on_device_books = 0
-        count_books = 0
-
-        custom_columns = cfg.get_column_names(self.gui, self.device, profile_name)
-        kobo_chapteridbookmarked_column = custom_columns.current_location
-        kobo_percentRead_column = custom_columns.percent_read
-        rating_column = custom_columns.rating
-        last_read_column = custom_columns.last_read
-        time_spent_reading_column = custom_columns.time_spent_reading
-        rest_of_book_estimate_column = custom_columns.rest_of_book_estimate
-        chapter_query = (
-            "SELECT c1.ChapterIDBookmarked, "
-            "c1.ReadStatus, "
-            "c1.___PercentRead, "
-            "c1.Attribution, "
-            "c1.DateLastRead, "
-            "c1.___SyncTime, "
-            "c1.Title, "
-            "c1.MimeType, "
-            "c1.TimeSpentReading, "
-            "c1.RestOfBookEstimate, "
-        )
-        if self.device.supports_ratings:
-            chapter_query += " r.Rating, r.DateModified "
-        else:
-            chapter_query += " NULL as Rating, NULL as DateModified "
-        chapter_query += "FROM content c1 "
-        if self.device.supports_ratings:
-            chapter_query += " left outer join ratings r on c1.ContentID = r.ContentID "
-        chapter_query += "WHERE c1.BookId IS NULL AND c1.ContentId = ?"
-        debug("chapter_query= ", chapter_query)
-
-        volume_zero_query = (
-            "SELECT contentID FROM content WHERE BookId = ? and VolumeIndex = 0"
-        )
-
-        chapter_update = (
-            "UPDATE content "
-            "SET ChapterIDBookmarked = ? "
-            "  , FirstTimeReading = ? "
-            "  , ReadStatus = ? "
-            "  , ___PercentRead = ? "
-            "  , DateLastRead = ? "
-            "  , TimeSpentReading = ? "
-            "  , RestOfBookEstimate = ? "
-            "WHERE BookID IS NULL "
-            "AND ContentID = ?"
-        )
-        location_update = (
-            "UPDATE content "
-            "SET adobe_location = ? "
-            "WHERE ContentType = 9 "
-            "AND ContentID = ?"
-        )
-        rating_update = (
-            "UPDATE ratings "
-            "SET Rating = ?, "
-            "DateModified = ? "
-            "WHERE ContentID  = ?"
-        )  # fmt: skip
-        rating_insert = (
-            "INSERT INTO ratings ("
-            "Rating, "
-            "DateModified, "
-            "ContentID "
-            ")"
-            "VALUES (?, ?, ?)"
-        )  # fmt: skip
-        rating_delete = "DELETE FROM ratings WHERE ContentID = ?"
-
-        with self.device_database_connection(use_row_factory=True) as connection:
-            cursor = connection.cursor()
-            for book in books:
-                count_books += 1
-                for contentID in cast("List[str]", book.contentIDs):
-                    chapter_values = (contentID,)
-                    cursor.execute(chapter_query, chapter_values)
-                    try:
-                        result = next(cursor)
-                    except StopIteration:
-                        result = None
-
-                    if result is not None:
-                        debug("result= ", result)
-                        chapter_update = "UPDATE content SET "
-                        chapter_set_clause = ""
-                        chapter_values = []
-                        location_update = "UPDATE content SET "
-                        location_set_clause = ""
-                        location_values = []
-                        rating_change_query = None
-                        rating_values = []
-
-                        kobo_chapteridbookmarked = None
-                        kobo_adobe_location = None
-                        kobo_percentRead = None
-                        kobo_time_spent_reading = None
-                        kobo_rest_of_book_estimate = None
-
-                        if kobo_chapteridbookmarked_column:
-                            metadata = book.get_user_metadata(
-                                kobo_chapteridbookmarked_column, True
-                            )
-                            assert metadata is not None
-                            reading_location_string = metadata["#value#"]
-                            debug("reading_location_string=", reading_location_string)
-                            if reading_location_string is not None:
-                                if result["MimeType"] == MIMETYPE_KOBO:
-                                    kobo_chapteridbookmarked = reading_location_string
-                                    kobo_adobe_location = None
-                                else:
-                                    reading_location_parts = (
-                                        reading_location_string.split(
-                                            BOOKMARK_SEPARATOR
-                                        )
-                                    )
-                                    debug(
-                                        "reading_location_parts=",
-                                        reading_location_parts,
-                                    )
-                                    debug(
-                                        "self.device.epub_location_like_kepub=",
-                                        self.device.epub_location_like_kepub,
-                                    )
-                                    if self.device.epub_location_like_kepub:
-                                        kobo_chapteridbookmarked = (
-                                            reading_location_parts[1]
-                                            if len(reading_location_parts) == 2
-                                            else reading_location_string
-                                        )
-                                        kobo_adobe_location = None
-                                    else:
-                                        if len(reading_location_parts) == 2:
-                                            kobo_chapteridbookmarked = (
-                                                contentID
-                                                + "#"
-                                                + reading_location_parts[0]
-                                            )
-                                            kobo_adobe_location = (
-                                                reading_location_parts[1]
-                                            )
-                                        else:
-                                            cursor.execute(
-                                                volume_zero_query, [contentID]
-                                            )
-                                            try:
-                                                volume_zero_result = next(cursor)
-                                                kobo_chapteridbookmarked = (
-                                                    volume_zero_result["ContentID"]
-                                                )
-                                                kobo_adobe_location = (
-                                                    reading_location_parts[0]
-                                                )
-                                            except StopIteration:
-                                                volume_zero_result = None
-
-                            if reading_location_string:
-                                chapter_values.append(kobo_chapteridbookmarked)
-                                chapter_set_clause += ", ChapterIDBookmarked  = ? "
-                                location_values.append(kobo_adobe_location)
-                                location_set_clause += ", adobe_location  = ? "
-                            else:
-                                debug(
-                                    "reading_location_string=", reading_location_string
-                                )
-
-                        if kobo_percentRead_column:
-                            metadata = book.get_user_metadata(
-                                kobo_percentRead_column, True
-                            )
-                            assert metadata is not None
-                            kobo_percentRead = metadata["#value#"]
-                            kobo_percentRead = (
-                                kobo_percentRead
-                                if kobo_percentRead
-                                else result["___PercentRead"]
-                            )
-                            chapter_values.append(kobo_percentRead)
-                            chapter_set_clause += ", ___PercentRead  = ? "
-
-                        if options.readingStatus and kobo_percentRead:
-                            debug("chapter_values= ", chapter_values)
-                            if kobo_percentRead == 100:
-                                chapter_values.append(2)
-                                debug("chapter_values= ", chapter_values)
-                            else:
-                                chapter_values.append(1)
-                                debug("chapter_values= ", chapter_values)
-                            chapter_set_clause += ", ReadStatus  = ? "
-                            chapter_values.append("false")
-                            chapter_set_clause += ", FirstTimeReading = ? "
-
-                        last_read = None
-                        if options.setDateToNow:
-                            last_read = strftime(
-                                self.device.timestamp_string, time.gmtime()
-                            )
-                            debug("setting to now - last_read= ", last_read)
-                        elif last_read_column:
-                            metadata = book.get_user_metadata(last_read_column, True)
-                            assert metadata is not None
-                            last_read = metadata["#value#"]
-                            if last_read is not None:
-                                last_read = last_read.strftime(
-                                    self.device.timestamp_string
-                                )
-                            debug("setting from library - last_read= ", last_read)
-                        debug("last_read= ", last_read)
-                        debug("result['___SyncTime']= ", result["___SyncTime"])
-                        if last_read is not None:
-                            chapter_values.append(last_read)
-                            chapter_set_clause += ", DateLastRead  = ? "
-                            # Somewhere the "Recent" sort changed from only using the ___SyncTime if DateLastRead was null,
-                            # Now it uses the MAX(___SyncTime, DateLastRead). Need to set ___SyncTime if it is after DateLastRead
-                            # to correctly maintain sort order.
-                            if (
-                                self.device_fwversion is not None
-                                and self.device_fwversion >= (4, 1, 0)
-                                and last_read < result["___SyncTime"]
-                            ):
-                                debug("setting ___SyncTime to same as DateLastRead")
-                                chapter_values.append(last_read)
-                                chapter_set_clause += ", ___SyncTime  = ? "
-
-                        debug("options.rating= ", options.rating)
-                        rating = None
-                        if rating_column is not None and options.rating:
-                            if rating_column == "rating":
-                                rating = book.rating
-                            else:
-                                metadata = book.get_user_metadata(rating_column, True)
-                                assert metadata is not None
-                                rating = metadata["#value#"]
-                            assert isinstance(rating, int)
-                            rating = None if not rating or rating == 0 else rating / 2
-                            debug(
-                                "rating=",
-                                rating,
-                                " result['Rating']=",
-                                result["Rating"],
-                            )
-                            rating_values.append(rating)
-                            if last_read is not None:
-                                rating_values.append(last_read)
-                            else:
-                                rating_values.append(
-                                    strftime(
-                                        self.device.timestamp_string, time.gmtime()
-                                    )
-                                )
-
-                            rating_values.append(contentID)
-                            if rating is None:
-                                rating_change_query = rating_delete
-                                rating_values = (contentID,)
-                            elif (
-                                result["DateModified"] is None
-                            ):  # If the date modified column does not have a value, there is no rating column
-                                rating_change_query = rating_insert
-                            else:
-                                rating_change_query = rating_update
-
-                        if time_spent_reading_column:
-                            metadata = book.get_user_metadata(
-                                time_spent_reading_column, True
-                            )
-                            assert metadata is not None
-                            kobo_time_spent_reading = metadata["#value#"]
-                            kobo_time_spent_reading = (
-                                kobo_time_spent_reading
-                                if kobo_time_spent_reading is not None
-                                else 0
-                            )
-                            chapter_values.append(kobo_time_spent_reading)
-                            chapter_set_clause += ", TimeSpentReading = ? "
-
-                        if rest_of_book_estimate_column:
-                            metadata = book.get_user_metadata(
-                                rest_of_book_estimate_column, True
-                            )
-                            assert metadata is not None
-                            kobo_rest_of_book_estimate = metadata["#value#"]
-                            kobo_rest_of_book_estimate = (
-                                kobo_rest_of_book_estimate
-                                if kobo_rest_of_book_estimate is not None
-                                else 0
-                            )
-                            chapter_values.append(kobo_rest_of_book_estimate)
-                            chapter_set_clause += ", RestOfBookEstimate = ? "
-
-                        debug("found contentId='%s'" % (contentID))
-                        debug("kobo_chapteridbookmarked=", kobo_chapteridbookmarked)
-                        debug("kobo_adobe_location=", kobo_adobe_location)
-                        debug("kobo_percentRead=", kobo_percentRead)
-                        debug("rating=", rating)
-                        debug("last_read=", last_read)
-                        debug("kobo_time_spent_reading=", kobo_time_spent_reading)
-                        debug("kobo_rest_of_book_estimate=", kobo_rest_of_book_estimate)
-
-                        if len(chapter_set_clause) > 0:
-                            chapter_update += chapter_set_clause[1:]
-                            chapter_update += "WHERE ContentID = ? AND BookID IS NULL"
-                            chapter_values.append(contentID)
-                        else:
-                            debug(
-                                "no changes found to selected metadata. No changes being made."
-                            )
-                            not_on_device_books += 1
-                            continue
-
-                        debug("chapter_update=%s" % chapter_update)
-                        debug("chapter_values= ", chapter_values)
-                        try:
-                            cursor.execute(chapter_update, chapter_values)
-                            if len(location_set_clause) > 0 and not (
-                                result["MimeType"] == MIMETYPE_KOBO
-                                or self.device.epub_location_like_kepub
-                            ):
-                                location_update += location_set_clause[1:]
-                                location_update += (
-                                    " WHERE ContentID = ? AND BookID IS NOT NULL"
-                                )
-                                location_values.append(kobo_chapteridbookmarked)
-                                debug("location_update=%s" % location_update)
-                                debug("location_values= ", location_values)
-                                cursor.execute(location_update, location_values)
-                            if rating_change_query:
-                                debug("rating_change_query=%s" % rating_change_query)
-                                debug("rating_values= ", rating_values)
-                                cursor.execute(rating_change_query, rating_values)
-
-                            updated_books += 1
-                        except:
-                            debug(
-                                "    Database Exception:  Unable to set bookmark info."
-                            )
-                            raise
-                    else:
-                        debug(
-                            "no match for title='%s' contentId='%s'"
-                            % (book.title, book.contentID)
-                        )
-                        not_on_device_books += 1
-        debug(
-            "Update summary: Books updated=%d, not on device=%d, Total=%d"
-            % (updated_books, not_on_device_books, count_books)
-        )
-
-        return (updated_books, not_on_device_books, count_books)
 
     def _get_shelves_from_device(
         self,

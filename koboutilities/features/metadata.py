@@ -27,6 +27,7 @@ from ..constants import BOOK_CONTENTTYPE, GUI_NAME
 from ..dialogs import ReadingStatusGroupBox
 from ..utils import (
     CustomColumnComboBox,
+    Dispatcher,
     ImageTitleLayout,
     ProgressBar,
     SizePersistedDialog,
@@ -53,7 +54,8 @@ READING_DIRECTIONS = {
 }
 
 
-def update_metadata(device: KoboDevice, gui: ui.Main) -> None:
+def update_metadata(device: KoboDevice, gui: ui.Main, dispatcher: Dispatcher) -> None:
+    del dispatcher
     current_view = gui.current_view()
     if current_view is None or len(current_view.selectionModel().selectedRows()) == 0:
         return

@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 
 from calibre.devices.kobo.books import Book
+from calibre.gui2.device import DeviceJob
 from calibre.gui2.library.views import BooksView, DeviceBooksView
 
 __license__ = "GPL v3"
@@ -14,7 +15,7 @@ __docformat__ = "restructuredtext en"
 import inspect
 import os
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Iterable, Literal, cast
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Literal, cast
 
 import apsw
 from calibre.constants import DEBUG, iswindows
@@ -55,7 +56,6 @@ except ImportError:
     timed_print = print
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
     from types import TracebackType
 
     from calibre.db.legacy import LibraryDatabase
@@ -65,17 +65,13 @@ if TYPE_CHECKING:
     from .action import KoboDevice, KoboUtilitiesAction
     from .config import ConfigDictWrapper, ConfigWidget, ProfileConfig
 
-MIMETYPE_KOBO = "application/x-kobo-epub+zip"
-
-BOOKMARK_SEPARATOR = (
-    "|@ @|"  # Spaces are included to allow wrapping in the details panel
-)
-
 # Global definition of our plugin name. Used for common functions that require this.
 plugin_name = None
 # Global definition of our plugin resources. Used to share between the xxxAction and xxxBase
 # classes if you need any zip images to be displayed on the configuration dialog.
 plugin_icon_resources = {}
+
+Dispatcher = Callable[[Callable[[DeviceJob], None]], None]
 
 
 def debug(*args: Any):
@@ -370,7 +366,7 @@ def get_selected_ids(gui: ui.Main) -> list[int]:
     rows: list[QModelIndex] = current_view.selectionModel().selectedRows()
     if not rows or len(rows) == 0:
         return []
-    debug("self.gui.current_view().model()", current_view.model())
+    debug("gui.current_view().model()", current_view.model())
     return list(map(current_view.model().id, rows))
 
 
@@ -465,6 +461,14 @@ def contentid_from_path(device: KoboDevice, path: str, content_type: int):
                 device.driver._card_a_prefix, "file:///mnt/sd/"
             )
     return ContentID.replace("\\", "/")
+
+
+def value_changed(old_value: Any | None, new_value: Any | None) -> bool:
+    return (
+        (old_value is not None and new_value is None)
+        or (old_value is None and new_value is not None)
+        or old_value != new_value
+    )
 
 
 class ImageTitleLayout(QHBoxLayout):

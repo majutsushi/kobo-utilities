@@ -10,7 +10,13 @@ from .. import utils
 from ..constants import GUI_NAME
 from ..dialogs import ReadingStatusGroupBox
 from ..features import metadata
-from ..utils import ImageTitleLayout, ProgressBar, SizePersistedDialog, debug
+from ..utils import (
+    Dispatcher,
+    ImageTitleLayout,
+    ProgressBar,
+    SizePersistedDialog,
+    debug,
+)
 
 if TYPE_CHECKING:
     from calibre.gui2 import ui
@@ -18,7 +24,10 @@ if TYPE_CHECKING:
     from ..action import KoboDevice
 
 
-def change_reading_status(device: KoboDevice, gui: ui.Main) -> None:
+def change_reading_status(
+    device: KoboDevice, gui: ui.Main, dispatcher: Dispatcher
+) -> None:
+    del dispatcher
     current_view = gui.current_view()
     if current_view is None or len(current_view.selectionModel().selectedRows()) == 0:
         return

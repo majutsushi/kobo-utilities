@@ -503,27 +503,6 @@ class CustomColumns:
 
 
 @dataclass
-class FetchQueries:
-    kepub: str
-    epub: str
-
-
-@dataclass
-class ReadLocationsJobOptions:
-    bookmark_options: BookmarkOptionsConfig
-    epub_location_like_kepub: bool
-    fetch_queries: FetchQueries
-    database_path: str
-    device_database_path: str
-    is_db_copied: bool
-    profile_name: str | None
-    custom_columns: CustomColumns | None
-    supports_ratings: bool
-    allOnDevice: bool
-    prompt_to_store: bool
-
-
-@dataclass
 class RemoveAnnotationsJobOptions:
     annotations_dir: str
     annotations_ext: str
@@ -688,6 +667,100 @@ def get_column_names(
         time_spent_reading_column,
         rest_of_book_estimate_column,
     )
+
+
+def validate_profile(profile_name: str, gui: ui.Main, device: KoboDevice | None):
+    columns_config = None
+    if profile_name:
+        profile = get_profile_info(gui.current_db, profile_name)
+        columns_config = profile.customColumnOptions
+    elif device is not None and device.profile is not None:
+        columns_config = device.profile.customColumnOptions
+
+    if columns_config is None:
+        return "{0}\n\n{1}".format(
+            _('Profile "{0}" does not exist.').format(profile_name),
+            _("Select another profile to proceed."),
+        )
+
+    custom_cols = gui.current_db.field_metadata.custom_field_metadata(
+        include_composites=False
+    )
+
+    def check_column_name(column_name: str | None):
+        return (
+            None
+            if column_name is None or len(column_name.strip()) == 0
+            else column_name
+        )
+
+    def check_column_exists(column_name: str | None):
+        return column_name is not None and column_name in custom_cols
+
+    debug("columns_config:", columns_config)
+    kobo_chapteridbookmarked_column = columns_config.currentReadingLocationColumn
+    kobo_percentRead_column = columns_config.percentReadColumn
+    rating_column = columns_config.ratingColumn
+    last_read_column = columns_config.lastReadColumn
+
+    kobo_chapteridbookmarked_column = check_column_name(kobo_chapteridbookmarked_column)
+    kobo_percentRead_column = check_column_name(kobo_percentRead_column)
+    rating_column = check_column_name(rating_column)
+    last_read_column = check_column_name(last_read_column)
+
+    if (
+        kobo_chapteridbookmarked_column is None
+        and kobo_percentRead_column is None
+        and rating_column is None
+        and last_read_column is None
+    ):
+        return "{0} {1}\n\n{2}".format(
+            _('Profile "{0}" is invalid.').format(profile_name),
+            _("It has no columns to store the reading status."),
+            _("Select another profile to proceed."),
+        )
+
+    kobo_chapteridbookmarked_column_exists = check_column_exists(
+        kobo_chapteridbookmarked_column
+    )
+    kobo_percentRead_column_exists = check_column_exists(kobo_percentRead_column)
+    if rating_column is not None:
+        rating_column_exists = rating_column == "rating" or check_column_exists(
+            rating_column
+        )
+    else:
+        rating_column_exists = False
+    last_read_column_exists = check_column_exists(last_read_column)
+
+    invalid_columns = []
+    if (
+        kobo_chapteridbookmarked_column is not None
+        and not kobo_chapteridbookmarked_column_exists
+    ):
+        invalid_columns.append(kobo_chapteridbookmarked_column)
+    if kobo_percentRead_column is not None and not kobo_percentRead_column_exists:
+        invalid_columns.append(kobo_percentRead_column)
+    if rating_column is not None and not rating_column_exists:
+        invalid_columns.append(rating_column)
+    if last_read_column is not None and not last_read_column_exists:
+        invalid_columns.append(last_read_column)
+
+    if len(invalid_columns) > 0:
+        invalid_columns_string = ", ".join(
+            [f'"{invalid_column}"' for invalid_column in invalid_columns]
+        )
+        invalid_columns_msg = (
+            _("The column {0} does not exist.")
+            if len(invalid_columns) == 1
+            else _("The columns {0} do not exist.")
+        )
+        return "{0} {1}\n\n{2}".format(
+            _('Profile "{0}" is invalid.').format(profile_name),
+            invalid_columns_msg.format(invalid_columns_string),
+            _("Select another profile to proceed."),
+        )
+
+    return None
 
 
 class ProfilesTab(QWidget):

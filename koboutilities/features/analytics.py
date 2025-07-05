@@ -9,7 +9,7 @@ from qt.core import QDialogButtonBox, QGridLayout, QGroupBox, QRadioButton, QVBo
 
 from .. import utils
 from ..constants import GUI_NAME
-from ..utils import ImageTitleLayout, SizePersistedDialog, debug
+from ..utils import Dispatcher, ImageTitleLayout, SizePersistedDialog, debug
 
 if TYPE_CHECKING:
     from calibre.gui2 import ui
@@ -18,7 +18,8 @@ if TYPE_CHECKING:
     from ..action import KoboDevice
 
 
-def block_analytics(device: KoboDevice, gui: ui.Main) -> None:
+def block_analytics(device: KoboDevice, gui: ui.Main, dispatcher: Dispatcher) -> None:
+    del dispatcher
     # Some background info:
     # https://www.mobileread.com/forums/showpost.php?p=3934039&postcount=44
     debug("start")

@@ -26,11 +26,15 @@ test_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path = [test_dir, *sys.path]
 
 if TYPE_CHECKING:
-    from ..koboutilities import action, config, jobs
+    from ..koboutilities import action, config, utils
     from ..koboutilities.action import KoboUtilitiesAction
+    from ..koboutilities.constants import BOOK_CONTENTTYPE
+    from ..koboutilities.features import locations
 else:
-    from calibre_plugins.koboutilities import action, config, jobs
+    from calibre_plugins.koboutilities import action, config, utils
     from calibre_plugins.koboutilities.action import KoboUtilitiesAction
+    from calibre_plugins.koboutilities.constants import BOOK_CONTENTTYPE
+    from calibre_plugins.koboutilities.features import locations
 
 TIMESTAMP_STRING = KOBOTOUCH.TIMESTAMP_STRING
 
@@ -137,7 +141,7 @@ class DeviceDb:
                 """,
                 {
                     **dataclasses.asdict(book),
-                    "content_type": "6",
+                    "content_type": BOOK_CONTENTTYPE,
                     "sync_time": self.sync_time,
                     "user_id": "",
                     "read_status": book.read_status.value,
@@ -171,17 +175,13 @@ class DeviceDb:
         }
 
 
-@mock.patch.object(
-    KoboUtilitiesAction,
-    "device_fwversion",
-    new_callable=mock.PropertyMock,
-    return_value=(4, 41, 23145),
-)
 class TestLocations(unittest.TestCase):
     def setUp(self):
         self.plugin = KoboUtilitiesAction(None, None)
+        driver = mock.MagicMock()
+        driver.fwversion = (4, 41, 23145)
         self.plugin.device = action.KoboDevice(
-            driver=mock.MagicMock(),
+            driver=driver,
             is_kobotouch=True,
             profile=config.ProfileConfig(),
             backup_config=config.BackupOptionsStoreConfig(),
@@ -204,8 +204,7 @@ class TestLocations(unittest.TestCase):
         self.queue = Queue()
         self.maxDiff = None
 
-    def test_store_bookmarks(self, fwversion: tuple[int, int, int]):
-        del fwversion
+    def test_store_bookmarks(self):
         book1 = TestBook(
             title="Title 1",
             authors=["Author 1"],
@@ -299,10 +298,12 @@ class TestLocations(unittest.TestCase):
             "#time_spent_reading",
             "#rest_of_book_estimate",
         )
-        options = config.ReadLocationsJobOptions(
+        options = locations.ReadLocationsJobOptions(
             bookmark_options,
             False,
-            config.FetchQueries(action.KEPUB_FETCH_QUERY, action.EPUB_FETCH_QUERY),
+            locations.FetchQueries(
+                locations.KEPUB_FETCH_QUERY, locations.EPUB_FETCH_QUERY
+            ),
             "unused",
             "unused",
             False,
@@ -315,11 +316,11 @@ class TestLocations(unittest.TestCase):
 
         # Run tested function
         with mock.patch.object(
-            jobs,
+            locations,
             "DeviceDatabaseConnection",
             return_value=device_db.db_conn,
         ):
-            stored_locations = jobs._read_locations(books_in_calibre, options)
+            stored_locations = locations._read_locations(books_in_calibre, options)
 
         pprint(stored_locations)
         self.assertNotIn(book1.calibre_id, stored_locations)
@@ -327,8 +328,7 @@ class TestLocations(unittest.TestCase):
         self.assertEqual(stored_locations[book2.calibre_id]["TimeSpentReading"], 450)
         self.assertEqual(stored_locations[book2.calibre_id]["RestOfBookEstimate"], 250)
 
-    def test_restore_current_bookmark(self, fwversion: tuple[int, int, int]):
-        del fwversion
+    def test_restore_current_bookmark(self):
         book1 = TestBook(
             title="Title A",
             authors=["Author A"],
@@ -438,11 +438,17 @@ class TestLocations(unittest.TestCase):
             )
             stack.enter_context(
                 mock.patch.object(
-                    plugin, "device_database_connection", return_value=device_db.db_conn
+                    utils, "device_database_connection", return_value=device_db.db_conn
                 )
             )
-            plugin._restore_current_bookmark(
-                [book.to_calibre_book() for book in books], options, None
+            device = plugin.device
+            assert device is not None
+            locations._restore_current_bookmark(
+                [book.to_calibre_book() for book in books],
+                device,
+                plugin.gui,
+                options,
+                None,
             )
 
         db_books_after = device_db.query_books()

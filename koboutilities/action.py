@@ -15,7 +15,6 @@ import re
 import shutil
 import threading
 import time
-from collections import OrderedDict
 from functools import partial
 from typing import (
     TYPE_CHECKING,
@@ -32,7 +31,6 @@ from calibre import strftime
 from calibre.constants import numeric_version as calibre_version
 from calibre.devices.kobo.books import Book
 from calibre.devices.kobo.driver import KOBO, KOBOTOUCH
-from calibre.devices.usbms.driver import USBMS
 from calibre.ebooks.metadata import authors_to_string
 from calibre.ebooks.metadata.book.base import Metadata
 from calibre.ebooks.oeb.polish.container import EpubContainer
@@ -49,7 +47,6 @@ from calibre.gui2.actions import InterfaceAction
 from calibre.gui2.device import DeviceJob, device_signals
 from calibre.gui2.dialogs.message_box import ViewLog
 from calibre.utils.config import config_dir
-from calibre.utils.icu import sort_key
 from calibre.utils.logging import default_log
 from qt.core import (
     QAction,
@@ -63,7 +60,6 @@ from qt.core import (
 
 from . import ActionKoboUtilities
 from . import config as cfg
-from .book import SeriesBook
 from .constants import BOOK_CONTENTTYPE, GUI_NAME
 from .dialogs import (
     AboutDialog,
@@ -73,7 +69,6 @@ from .dialogs import (
     CleanImagesDirProgressDialog,
     CoverUploadOptionsDialog,
     GetShelvesFromDeviceDialog,
-    ManageSeriesDeviceDialog,
     ReadLocationsProgressDialog,
     RemoveAnnotationsOptionsDialog,
     RemoveAnnotationsProgressDialog,
@@ -87,6 +82,7 @@ from .features import (
     analytics,
     database,
     duplicateshelves,
+    manageseries,
     metadata,
     reader,
     readingstatus,
@@ -458,7 +454,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 _("&Manage series information in device library"),
                 unique_name="Manage series information in device library",
                 shortcut_name=_("Manage series information in device library"),
-                triggered=self.manage_series_on_device,
+                triggered=menu_wrapper(manageseries.manage_series_on_device),
                 is_device_action=True,
                 is_supported=device is not None and device.supports_series,
             )
@@ -1669,129 +1665,6 @@ class KoboUtilitiesAction(InterfaceAction):
             result_message,
             show=True,
         )
-
-    def manage_series_on_device(self) -> None:
-        current_view = self.gui.current_view()
-        if (
-            current_view is None
-            or len(current_view.selectionModel().selectedRows()) == 0
-        ):
-            return
-
-        self.device = self.get_device()
-        if self.device is None:
-            error_dialog(
-                self.gui,
-                _("Cannot manage series in device library."),
-                _("No device connected."),
-                show=True,
-            )
-            return
-        series_columns = self.get_series_columns()
-
-        books = get_books_for_selected(self.gui)
-        debug("books[0].__class__=", books[0].__class__)
-
-        if len(books) == 0:
-            return
-        seriesBooks = [SeriesBook(book, series_columns) for book in books]
-        seriesBooks = sorted(seriesBooks, key=lambda k: k.sort_key(sort_by_name=True))
-        debug("seriesBooks[0]._mi.__class__=", seriesBooks[0]._mi.__class__)
-        debug("seriesBooks[0]._mi.kobo_series=", seriesBooks[0]._mi.kobo_series)
-        debug(
-            "seriesBooks[0]._mi.kobo_series_number=",
-            seriesBooks[0]._mi.kobo_series_number,
-        )
-        debug("books:", seriesBooks)
-
-        library_db = self.gui.library_view.model().db
-        all_series = library_db.all_series()
-        all_series.sort(key=lambda x: sort_key(x[1]))
-
-        d = ManageSeriesDeviceDialog(
-            self.gui, self, seriesBooks, all_series, series_columns
-        )
-        d.exec()
-        if d.result() != d.DialogCode.Accepted:
-            return
-
-        debug("done series management - books:", seriesBooks)
-
-        options = cfg.MetadataOptionsConfig()
-        books = []
-        for seriesBook in seriesBooks:
-            debug("seriesBook._mi.contentID=", seriesBook._mi.contentID)
-            if (
-                seriesBook.is_title_changed()
-                or seriesBook.is_pubdate_changed()
-                or seriesBook.is_series_changed()
-            ):
-                book = seriesBook._mi
-                book.series_index_string = seriesBook.series_index_string()
-                book.kobo_series_number = seriesBook.series_index_string()  # pyright: ignore[reportAttributeAccessIssue]
-                book.kobo_series = seriesBook.series_name()  # pyright: ignore[reportAttributeAccessIssue]
-                book.contentIDs = [book.contentID]
-                books.append(book)
-                options.title = options.title or seriesBook.is_title_changed()
-                options.series = options.series or seriesBook.is_series_changed()
-                options.published_date = (
-                    options.published_date or seriesBook.is_pubdate_changed()
-                )
-                debug("seriesBook._mi.__class__=", seriesBook._mi.__class__)
-                debug(
-                    "seriesBook.is_pubdate_changed()=%s"
-                    % seriesBook.is_pubdate_changed()
-                )
-                debug("book.kobo_series=", book.kobo_series)
-                debug("book.kobo_series_number=", book.kobo_series_number)
-                debug("book.series=", book.series)
-                debug("book.series_index=%s" % book.series_index)
-
-        if options.title or options.series or options.published_date:
-            progressbar = ProgressBar(
-                parent=self.gui,
-                window_title=_("Updating series information on device"),
-                on_top=True,
-            )
-            progressbar.show()
-            updated_books, unchanged_books, not_on_device_books, count_books = (
-                metadata.do_update_metadata(
-                    books, self.device, self.gui, progressbar, options
-                )
-            )
-
-            debug("about to call sync_booklists")
-            USBMS.sync_booklists(
-                self.device.driver, (current_view.model().db, None, None)
-            )
-            result_message = (
-                _("Update summary:")
-                + "\n\t"
-                + _(
-                    "Books updated={0}\n\tUnchanged books={1}\n\tBooks not on device={2}\n\tTotal books={3}"
-                ).format(
-                    updated_books, unchanged_books, not_on_device_books, count_books
-                )
-            )
-        else:
-            result_message = _("No changes made to series information.")
-        info_dialog(
-            self.gui,
-            _("Kobo Utilities") + " - " + _("Manage series on device"),
-            result_message,
-            show=True,
-        )
-
-    def get_series_columns(self) -> dict[str, str]:
-        custom_columns = cast(
-            "Dict[str, Dict[str, Any]]", self.gui.library_view.model().custom_columns
-        )
-        series_columns = OrderedDict()
-        for key, column in list(custom_columns.items()):
-            typ = column["datatype"]
-            if typ == "series":
-                series_columns[key] = column["name"]
-        return series_columns
 
     def upload_covers(self) -> None:
         current_view = self.gui.current_view()

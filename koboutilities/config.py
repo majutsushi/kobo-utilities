@@ -15,7 +15,7 @@ from pprint import pformat
 from typing import TYPE_CHECKING, Any, Dict, TypeVar, cast
 
 from calibre.constants import DEBUG as _DEBUG
-from calibre.gui2 import choose_dir, error_dialog, gprefs, open_url, question_dialog
+from calibre.gui2 import choose_dir, error_dialog, gprefs, open_url, question_dialog, ui
 from calibre.gui2.dialogs.confirm_delete import confirm
 from calibre.utils.config import JSONConfig
 from qt.core import (
@@ -635,6 +635,58 @@ def set_library_config(db: LibraryDatabase, library_config: LibraryConfig):
     debug("library_config:", library_config)
     db.prefs.set_namespaced(
         PREFS_NAMESPACE, PREFS_KEY_SETTINGS, library_config._wrapped_dict
+    )
+
+
+def get_column_names(
+    gui: ui.Main, device: KoboDevice | None, profile_name: str | None = None
+):
+    if profile_name:
+        profile = get_profile_info(gui.current_db, profile_name)
+        columns_config = profile.customColumnOptions
+    elif device is not None and device.profile is not None:
+        columns_config = device.profile.customColumnOptions
+    else:
+        return CustomColumns(None, None, None, None, None, None)
+
+    debug("columns_config:", columns_config)
+    kobo_chapteridbookmarked_column = columns_config.currentReadingLocationColumn
+    kobo_percentRead_column = columns_config.percentReadColumn
+    rating_column = columns_config.ratingColumn
+    last_read_column = columns_config.lastReadColumn
+    time_spent_reading_column = columns_config.timeSpentReadingColumn
+    rest_of_book_estimate_column = columns_config.restOfBookEstimateColumn
+
+    custom_cols = gui.current_db.field_metadata.custom_field_metadata(
+        include_composites=False
+    )
+    kobo_chapteridbookmarked_column = (
+        kobo_chapteridbookmarked_column
+        if kobo_chapteridbookmarked_column in custom_cols
+        else None
+    )
+    kobo_percentRead_column = (
+        kobo_percentRead_column if kobo_percentRead_column in custom_cols else None
+    )
+    if rating_column != "rating":
+        rating_column = rating_column if rating_column in custom_cols else None
+    last_read_column = last_read_column if last_read_column in custom_cols else None
+    time_spent_reading_column = (
+        time_spent_reading_column if time_spent_reading_column in custom_cols else None
+    )
+    rest_of_book_estimate_column = (
+        rest_of_book_estimate_column
+        if rest_of_book_estimate_column in custom_cols
+        else None
+    )
+
+    return CustomColumns(
+        kobo_chapteridbookmarked_column,
+        kobo_percentRead_column,
+        rating_column,
+        last_read_column,
+        time_spent_reading_column,
+        rest_of_book_estimate_column,
     )
 
 

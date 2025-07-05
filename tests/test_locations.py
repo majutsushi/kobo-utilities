@@ -434,7 +434,7 @@ class TestLocations(unittest.TestCase):
 
         with ExitStack() as stack:
             stack.enter_context(
-                mock.patch.object(plugin, "get_column_names", return_value=column_names)
+                mock.patch.object(config, "get_column_names", return_value=column_names)
             )
             stack.enter_context(
                 mock.patch.object(

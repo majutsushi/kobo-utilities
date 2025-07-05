@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
+
+from calibre.devices.kobo.books import Book
 from calibre.gui2.library.views import DeviceBooksView
 
 __license__ = "GPL v3"
@@ -11,7 +14,7 @@ __docformat__ = "restructuredtext en"
 import inspect
 import os
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Iterable, Literal, cast
 
 import apsw
 from calibre.constants import DEBUG, iswindows
@@ -34,6 +37,7 @@ from qt.core import (
     QLabel,
     QListWidget,
     QMenu,
+    QModelIndex,
     QPixmap,
     QProgressBar,
     QPushButton,
@@ -54,7 +58,9 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from types import TracebackType
 
+    from calibre.db.legacy import LibraryDatabase
     from calibre.gui2.dialogs.message_box import MessageBox
+    from calibre.gui2.library.models import DeviceBooksModel
 
     from .action import KoboDevice, KoboUtilitiesAction
     from .config import ConfigDictWrapper, ConfigWidget, ProfileConfig
@@ -355,6 +361,93 @@ def get_contentIDs_from_id(book_id: int, gui: ui.Main) -> list[str | None]:
         paths += x.paths_for_db_ids({book_id}, as_map=True)[book_id]
     debug("paths=", paths)
     return [r.contentID for r in paths]
+
+
+def get_selected_ids(gui: ui.Main) -> list[int]:
+    current_view = gui.current_view()
+    if current_view is None:
+        return []
+    rows: list[QModelIndex] = current_view.selectionModel().selectedRows()
+    if not rows or len(rows) == 0:
+        return []
+    debug("self.gui.current_view().model()", current_view.model())
+    return list(map(current_view.model().id, rows))
+
+
+def convert_calibre_ids_to_books(
+    db: LibraryDatabase, ids: Iterable[int], get_cover: bool = False
+) -> list[Book]:
+    books = []
+    for book_id in ids:
+        book = convert_calibre_id_to_book(db, book_id, get_cover=get_cover)
+        books.append(book)
+    return books
+
+
+def convert_calibre_id_to_book(
+    db: LibraryDatabase, book_id: int, get_cover: bool = False
+) -> Book:
+    mi = db.get_metadata(book_id, index_is_id=True, get_cover=get_cover)
+    book = Book("", "lpath", title=mi.title, other=mi)
+    book.calibre_id = mi.id
+    return book
+
+
+def get_device_paths_from_id(book_id: int, gui: ui.Main) -> list[str]:
+    books = get_books_from_ids({book_id}, gui)
+    return [book.path for book in books[book_id]]
+
+
+def get_device_path_from_contentID(
+    device: KoboDevice, contentID: str, mimetype: str
+) -> str:
+    card = "carda" if contentID.startswith("file:///mnt/sd/") else "main"
+    return device.driver.path_from_contentid(contentID, "6", mimetype, card)
+
+
+def get_books_from_ids(book_ids: Iterable[int], gui: ui.Main) -> dict[int, list[Book]]:
+    books = defaultdict(list)
+    for view in (gui.memory_view, gui.card_a_view):
+        model: DeviceBooksModel = view.model()
+        view_books = cast(
+            "dict[int, list[Book]]", model.paths_for_db_ids(book_ids, as_map=True)
+        )
+        for book_id in view_books:
+            books[book_id].extend(view_books[book_id])
+    debug("books=", books)
+    return books
+
+
+def contentid_from_path(device: KoboDevice, path: str, content_type: int):
+    main_prefix = device.driver._main_prefix
+    assert isinstance(main_prefix, str), f"_main_prefix is type {type(main_prefix)}"
+    if content_type == 6:
+        extension = os.path.splitext(path)[1]
+        if extension == ".kobo":
+            ContentID = os.path.splitext(path)[0]
+            # Remove the prefix on the file.  it could be either
+            ContentID = ContentID.replace(main_prefix, "")
+        elif extension == "":
+            ContentID = path
+            kepub_path = device.driver.normalize_path(".kobo/kepub/")
+            assert kepub_path is not None
+            ContentID = ContentID.replace(main_prefix + kepub_path, "")
+        else:
+            ContentID = path
+            ContentID = ContentID.replace(main_prefix, "file:///mnt/onboard/")
+
+        if device.driver._card_a_prefix is not None:
+            ContentID = ContentID.replace(
+                device.driver._card_a_prefix, "file:///mnt/sd/"
+            )
+    else:  # ContentType = 16
+        ContentID = path
+        ContentID = ContentID.replace(main_prefix, "file:///mnt/onboard/")
+        if device.driver._card_a_prefix is not None:
+            ContentID = ContentID.replace(
+                device.driver._card_a_prefix, "file:///mnt/sd/"
+            )
+    return ContentID.replace("\\", "/")
 
 
 class ImageTitleLayout(QHBoxLayout):

@@ -22,7 +22,6 @@ from calibre.ebooks.metadata import authors_to_string
 from calibre.gui2 import choose_dir, error_dialog, open_url, question_dialog, ui
 from calibre.gui2.complete2 import EditWithComplete
 from calibre.gui2.dialogs.confirm_delete import confirm
-from calibre.gui2.dialogs.template_dialog import TemplateDialog
 from calibre.gui2.library.delegates import DateDelegate
 from calibre.gui2.widgets2 import ColorButton
 from calibre.utils.config import tweaks
@@ -76,8 +75,11 @@ from .utils import (
     ReadOnlyTableWidgetItem,
     ReadOnlyTextIconWidgetItem,
     SizePersistedDialog,
+    contentid_from_path,
+    convert_calibre_ids_to_books,
     convert_kobo_date,
     debug,
+    get_device_paths_from_id,
     get_icon,
     is_device_view,
 )
@@ -91,18 +93,6 @@ if TYPE_CHECKING:
 # Checked with FW2.5.2
 
 
-READING_DIRECTIONS = {
-    _("Default"): "default",
-    _("RTL"): "rtl",
-    _("LTR"): "ltr",
-}
-
-DATE_COLUMNS = [
-    "timestamp",
-    "last_modified",
-    "pubdate",
-]
-
 KEY_REMOVE_ANNOT_ALL = 0
 KEY_REMOVE_ANNOT_NOBOOK = 1
 KEY_REMOVE_ANNOT_EMPTY = 2
@@ -111,11 +101,6 @@ KEY_REMOVE_ANNOT_SELECTED = 4
 
 # pulls in translation files for _() strings
 load_translations()
-
-
-def have_rating_column(plugin_action: KoboUtilitiesAction):
-    rating_column = plugin_action.get_column_names().rating
-    return rating_column != ""
 
 
 class AuthorTableWidgetItem(ReadOnlyTableWidgetItem):
@@ -133,7 +118,7 @@ class AuthorTableWidgetItem(ReadOnlyTableWidgetItem):
 class ReadLocationsProgressDialog(QProgressDialog):
     def __init__(
         self,
-        gui: ui.Main | None,  # TODO Can this actually be None?
+        gui: ui.Main,
         options: cfg.ReadLocationsJobOptions,
         queue: Callable[
             [cfg.ReadLocationsJobOptions, list[tuple[Any]]],
@@ -162,7 +147,7 @@ class ReadLocationsProgressDialog(QProgressDialog):
         library_db = self.db
         assert library_db is not None
 
-        custom_columns = self.plugin_action.get_column_names()
+        custom_columns = cfg.get_column_names(self.gui, self.plugin_action.device)
         self.options.custom_columns = custom_columns
         kobo_chapteridbookmarked_column = custom_columns.current_location
         kobo_percentRead_column = custom_columns.percent_read
@@ -191,17 +176,17 @@ class ReadLocationsProgressDialog(QProgressDialog):
         else:
             onDeviceIds = self.plugin_action._get_selected_ids()
 
-        self.books = self.plugin_action._convert_calibre_ids_to_books(
-            library_db, onDeviceIds
-        )
+        self.books = convert_calibre_ids_to_books(library_db, onDeviceIds)
         self.setRange(0, len(self.books))
+        device = self.plugin_action.device
+        assert device is not None
         for book in self.books:
             self.i += 1
-            device_book_paths = self.plugin_action.get_device_paths_from_id(
-                cast("int", book.calibre_id)
+            device_book_paths = get_device_paths_from_id(
+                cast("int", book.calibre_id), self.gui
             )
             book.contentIDs = [
-                self.plugin_action.contentid_from_path(path, BOOK_CONTENTTYPE)
+                contentid_from_path(device, path, BOOK_CONTENTTYPE)
                 for path in device_book_paths
             ]
             if len(book.contentIDs):
@@ -263,10 +248,6 @@ class ReadLocationsProgressDialog(QProgressDialog):
             self.setValue(self.i)
 
         debug("Finish")
-        if self.gui is None:
-            # There is a nasty QT bug with the timers/logic above which can
-            # result in the do_queue method being called twice
-            return
         self.hide()
 
         # Queue a job to process these ePub books
@@ -343,21 +324,21 @@ class RemoveAnnotationsProgressDialog(QProgressDialog):
                 self.books = self.plugin_action._get_books_for_selected()
             else:
                 onDeviceIds = self.plugin_action._get_selected_ids()
-                self.books = self.plugin_action._convert_calibre_ids_to_books(
-                    library_db, onDeviceIds
-                )
+                self.books = convert_calibre_ids_to_books(library_db, onDeviceIds)
             self.setRange(0, len(self.books))
 
+            device = self.plugin_action.device
+            assert device is not None
             for i, book in enumerate(self.books, start=1):
                 if is_device_view(self.gui):
                     device_book_paths = [book.path]
                     contentIDs = [book.contentID]
                 else:
-                    device_book_paths = self.plugin_action.get_device_paths_from_id(
-                        cast("int", book.calibre_id)
+                    device_book_paths = get_device_paths_from_id(
+                        cast("int", book.calibre_id), self.gui
                     )
                     contentIDs = [
-                        self.plugin_action.contentid_from_path(path, BOOK_CONTENTTYPE)
+                        contentid_from_path(device, path, BOOK_CONTENTTYPE)
                         for path in device_book_paths
                     ]
                 debug("device_book_paths:", device_book_paths)
@@ -376,395 +357,6 @@ class RemoveAnnotationsProgressDialog(QProgressDialog):
 
         # Queue a job to process these ePub books
         self.queue(self.options, self.books_to_scan)
-
-
-class UpdateMetadataOptionsDialog(SizePersistedDialog):
-    def __init__(self, parent: ui.Main, plugin_action: KoboUtilitiesAction, book: Book):
-        SizePersistedDialog.__init__(
-            self, parent, "kobo utilities plugin:update metadata settings dialog"
-        )
-        self.plugin_action = plugin_action
-        self.help_anchor = "UpdateMetadata"
-        self.test_book = book
-
-        self.initialize_controls()
-
-        # Set some default values from last time dialog was used.
-        title = cfg.plugin_prefs.MetadataOptions.title
-        self.title_checkbox.setChecked(title)
-        self.update_title_sort_checkbox()
-
-        title_sort = cfg.plugin_prefs.MetadataOptions.titleSort
-        self.title_sort_checkbox.setChecked(title_sort)
-
-        author = cfg.plugin_prefs.MetadataOptions.author
-        self.author_checkbox.setChecked(author)
-
-        author_sort = cfg.plugin_prefs.MetadataOptions.authourSort
-        self.author_sort_checkbox.setChecked(author_sort)
-        self.update_author_sort_checkbox()
-
-        description = cfg.plugin_prefs.MetadataOptions.description
-        self.description_checkbox.setChecked(description)
-
-        description_use_template = (
-            cfg.plugin_prefs.MetadataOptions.descriptionUseTemplate
-        )
-        self.description_use_template_checkbox.setChecked(description_use_template)
-        self.description_checkbox_clicked(description)
-        description_template = cfg.plugin_prefs.MetadataOptions.descriptionTemplate
-        self.description_template_edit.template = description_template
-
-        publisher = cfg.plugin_prefs.MetadataOptions.publisher
-        self.publisher_checkbox.setChecked(publisher)
-
-        published = cfg.plugin_prefs.MetadataOptions.published_date
-        self.published_checkbox.setChecked(published)
-
-        isbn = cfg.plugin_prefs.MetadataOptions.isbn
-        supports_ratings = (
-            self.plugin_action.device.supports_ratings
-            if self.plugin_action.device is not None
-            else False
-        )
-        self.isbn_checkbox.setChecked(isbn and supports_ratings)
-        self.isbn_checkbox.setEnabled(supports_ratings)
-
-        rating = cfg.plugin_prefs.MetadataOptions.rating
-        self.rating_checkbox.setChecked(rating and supports_ratings)
-        self.rating_checkbox.setEnabled(
-            have_rating_column(self.plugin_action) and supports_ratings
-        )
-
-        series = cfg.plugin_prefs.MetadataOptions.series
-        self.series_checkbox.setChecked(
-            series
-            and self.plugin_action.device is not None
-            and self.plugin_action.device.supports_series
-        )
-        self.series_checkbox.setEnabled(
-            self.plugin_action.device is not None
-            and self.plugin_action.device.supports_series
-        )
-
-        subtitle = cfg.plugin_prefs.MetadataOptions.subtitle
-        self.subtitle_checkbox.setChecked(subtitle)
-        self.subtitle_checkbox_clicked(subtitle)
-
-        subtitle_template = cfg.plugin_prefs.MetadataOptions.subtitleTemplate
-        self.subtitle_template_edit.template = subtitle_template
-
-        reading_direction = cfg.plugin_prefs.MetadataOptions.set_reading_direction
-        self.reading_direction_checkbox.setChecked(reading_direction)
-        self.reading_direction_checkbox_clicked(reading_direction)
-        reading_direction = cfg.plugin_prefs.MetadataOptions.reading_direction
-        self.reading_direction_combo.select_text(reading_direction)
-
-        date_added = cfg.plugin_prefs.MetadataOptions.set_sync_date
-        self.date_added_checkbox.setChecked(date_added)
-        date_added_column = cfg.plugin_prefs.MetadataOptions.sync_date_library_date
-        self.date_added_column_combo.populate_combo(
-            self.get_date_columns(DATE_COLUMNS),
-            date_added_column,
-            initial_items=cfg.OTHER_SORTS,
-            show_lookup_name=False,
-        )
-        self.date_added_checkbox_clicked(date_added)
-
-        use_plugboard = cfg.plugin_prefs.MetadataOptions.usePlugboard
-        self.use_plugboard_checkbox.setChecked(use_plugboard)
-        self.use_plugboard_checkbox_clicked()
-
-        update_kepubs = cfg.plugin_prefs.MetadataOptions.update_KoboEpubs
-        self.update_kepubs_checkbox.setChecked(update_kepubs)
-
-        language = cfg.plugin_prefs.MetadataOptions.language
-        self.language_checkbox.setChecked(language)
-
-        # Cause our dialog size to be restored from prefs or created on first usage
-        self.resize_dialog()
-
-    def initialize_controls(self):
-        self.setWindowTitle(GUI_NAME)
-        layout = QVBoxLayout(self)
-        self.setLayout(layout)
-        title_layout = ImageTitleLayout(
-            self, "images/icon.png", _("Update metadata in device library")
-        )
-        layout.addLayout(title_layout)
-
-        options_group = QGroupBox(_("Metadata to update"), self)
-        layout.addWidget(options_group)
-        options_layout = QGridLayout()
-        options_group.setLayout(options_layout)
-
-        widget_line = 0
-        self.title_checkbox = QCheckBox(_("Title"), self)
-        options_layout.addWidget(self.title_checkbox, widget_line, 0, 1, 1)
-        self.title_checkbox.clicked.connect(self.update_title_sort_checkbox)
-        self.title_sort_checkbox = QCheckBox(_("Use 'Title Sort'"), self)
-        options_layout.addWidget(self.title_sort_checkbox, widget_line, 1, 1, 1)
-
-        self.author_checkbox = QCheckBox(_("Author"), self)
-        options_layout.addWidget(self.author_checkbox, widget_line, 2, 1, 1)
-        self.author_checkbox.clicked.connect(self.update_author_sort_checkbox)
-        self.author_sort_checkbox = QCheckBox(_("Use 'Author Sort'"), self)
-        options_layout.addWidget(self.author_sort_checkbox, widget_line, 3, 1, 1)
-
-        widget_line += 1
-        self.description_checkbox = QCheckBox(_("Comments/Synopsis"), self)
-        options_layout.addWidget(self.description_checkbox, 1, 0, 1, 1)
-        self.description_checkbox.clicked.connect(self.description_checkbox_clicked)
-        self.description_use_template_checkbox = QCheckBox(_("Use template"), self)
-        options_layout.addWidget(
-            self.description_use_template_checkbox, widget_line, 1, 1, 1
-        )
-        self.description_use_template_checkbox.clicked.connect(
-            self.description_use_template_checkbox_clicked
-        )
-
-        self.description_template_edit = TemplateConfig(mi=self.test_book)
-        description_template_edit_tooltip = _(
-            "Enter a template to use to set the comment/synopsis."
-        )
-        self.description_template_edit.setToolTip(description_template_edit_tooltip)
-        options_layout.addWidget(self.description_template_edit, widget_line, 2, 1, 2)
-
-        widget_line += 1
-        self.series_checkbox = QCheckBox(_("Series and index"), self)
-        options_layout.addWidget(self.series_checkbox, widget_line, 0, 1, 2)
-
-        self.publisher_checkbox = QCheckBox(_("Publisher"), self)
-        options_layout.addWidget(self.publisher_checkbox, widget_line, 2, 1, 2)
-
-        widget_line += 1
-        self.published_checkbox = QCheckBox(_("Published date"), self)
-        options_layout.addWidget(self.published_checkbox, widget_line, 0, 1, 2)
-
-        self.isbn_checkbox = QCheckBox(_("ISBN"), self)
-        options_layout.addWidget(self.isbn_checkbox, widget_line, 2, 1, 2)
-
-        widget_line += 1
-        self.language_checkbox = QCheckBox(_("Language"), self)
-        options_layout.addWidget(self.language_checkbox, widget_line, 0, 1, 2)
-
-        self.rating_checkbox = QCheckBox(_("Rating"), self)
-        options_layout.addWidget(self.rating_checkbox, widget_line, 2, 1, 2)
-
-        widget_line += 1
-        self.subtitle_checkbox = QCheckBox(_("Subtitle"), self)
-        options_layout.addWidget(self.subtitle_checkbox, widget_line, 0, 1, 2)
-        self.subtitle_checkbox.clicked.connect(self.subtitle_checkbox_clicked)
-
-        self.subtitle_template_edit = TemplateConfig(
-            mi=self.test_book
-        )  # device_settings.save_template)
-        subtitle_template_edit_tooltip = _(
-            "Enter a template to use to set the subtitle. If the template is empty, the subtitle will be cleared."
-        )
-        self.subtitle_template_edit.setToolTip(subtitle_template_edit_tooltip)
-        options_layout.addWidget(self.subtitle_template_edit, widget_line, 2, 1, 2)
-
-        widget_line += 1
-        self.reading_direction_checkbox = QCheckBox(_("Reading direction"), self)
-        reading_direction_checkbox_tooltip = _("Set the reading direction")
-        self.reading_direction_checkbox.setToolTip(reading_direction_checkbox_tooltip)
-        options_layout.addWidget(self.reading_direction_checkbox, widget_line, 0, 1, 1)
-        self.reading_direction_checkbox.clicked.connect(
-            self.reading_direction_checkbox_clicked
-        )
-
-        self.reading_direction_combo = ReadingDirectionChoiceComboBox(
-            self, READING_DIRECTIONS
-        )
-        self.reading_direction_combo.setToolTip(reading_direction_checkbox_tooltip)
-        options_layout.addWidget(self.reading_direction_combo, widget_line, 1, 1, 1)
-
-        self.date_added_checkbox = QCheckBox(_("Date added"), self)
-        date_added_checkbox_tooltip = _(
-            "Set the date added to the device. This is used when sorting."
-        )
-        self.date_added_checkbox.setToolTip(date_added_checkbox_tooltip)
-        options_layout.addWidget(self.date_added_checkbox, widget_line, 2, 1, 1)
-        self.date_added_checkbox.clicked.connect(self.date_added_checkbox_clicked)
-
-        self.date_added_column_combo = CustomColumnComboBox(self)
-        self.date_added_column_combo.setToolTip(date_added_checkbox_tooltip)
-        options_layout.addWidget(self.date_added_column_combo, widget_line, 3, 1, 1)
-
-        widget_line += 1
-        self.use_plugboard_checkbox = QCheckBox(_("Use plugboard"), self)
-        self.use_plugboard_checkbox.setToolTip(
-            _(
-                "Set the metadata on the device using the plugboard for the device and book format."
-            )
-        )
-        self.use_plugboard_checkbox.clicked.connect(self.use_plugboard_checkbox_clicked)
-        options_layout.addWidget(self.use_plugboard_checkbox, widget_line, 0, 1, 2)
-
-        self.update_kepubs_checkbox = QCheckBox(_("Update Kobo ePubs"), self)
-        self.update_kepubs_checkbox.setToolTip(
-            _("Update the metadata for kePubs downloaded from the Kobo server.")
-        )
-        options_layout.addWidget(self.update_kepubs_checkbox, widget_line, 2, 1, 2)
-
-        self.readingStatusGroupBox = ReadingStatusGroupBox(
-            cast("ui.Main", self.parent())
-        )
-        layout.addWidget(self.readingStatusGroupBox)
-
-        layout.addStretch(1)
-
-        # Dialog buttons
-        button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        )
-        button_box.accepted.connect(self.ok_clicked)
-        button_box.rejected.connect(self.reject)
-        layout.addWidget(button_box)
-
-    def ok_clicked(self) -> None:
-        new_prefs = cfg.MetadataOptionsConfig()
-        new_prefs.title = self.title_checkbox.isChecked()
-        new_prefs.titleSort = self.title_sort_checkbox.isChecked()
-        new_prefs.author = self.author_checkbox.isChecked()
-        new_prefs.authourSort = self.author_sort_checkbox.isChecked()
-        new_prefs.description = self.description_checkbox.isChecked()
-        new_prefs.descriptionUseTemplate = (
-            self.description_use_template_checkbox.isChecked()
-        )
-        new_prefs.descriptionTemplate = self.description_template_edit.template
-        new_prefs.publisher = self.publisher_checkbox.isChecked()
-        new_prefs.published_date = self.published_checkbox.isChecked()
-        new_prefs.isbn = self.isbn_checkbox.isChecked()
-        new_prefs.rating = self.rating_checkbox.isChecked()
-        new_prefs.series = self.series_checkbox.isChecked()
-        new_prefs.usePlugboard = self.use_plugboard_checkbox.isChecked()
-        new_prefs.language = self.language_checkbox.isChecked()
-        new_prefs.update_KoboEpubs = self.update_kepubs_checkbox.isChecked()
-        new_prefs.subtitle = self.subtitle_checkbox.isChecked()
-        new_prefs.subtitleTemplate = self.subtitle_template_edit.template
-        new_prefs.set_reading_direction = self.reading_direction_checkbox.isChecked()
-        new_prefs.set_sync_date = self.date_added_checkbox.isChecked()
-
-        if (
-            new_prefs.descriptionUseTemplate
-            and not self.description_template_edit.validate()
-        ):
-            return
-
-        if new_prefs.subtitle and not self.subtitle_template_edit.validate():
-            return
-
-        if new_prefs.set_reading_direction:
-            new_prefs.reading_direction = READING_DIRECTIONS[
-                str(self.reading_direction_combo.currentText()).strip()
-            ]
-
-        if new_prefs.set_sync_date:
-            new_prefs.sync_date_library_date = (
-                self.date_added_column_combo.get_selected_column()
-            )
-
-        new_prefs.setRreadingStatus = (
-            self.readingStatusGroupBox.readingStatusIsChecked()
-        )
-        if self.readingStatusGroupBox.readingStatusIsChecked():
-            new_prefs.readingStatus = self.readingStatusGroupBox.readingStatus()
-            if new_prefs.readingStatus < 0:
-                error_dialog(
-                    self,
-                    "No reading status option selected",
-                    "If you are changing the reading status, you must select an option to continue",
-                    show=True,
-                    show_copy_button=False,
-                )
-                return
-            new_prefs.resetPosition = (
-                self.readingStatusGroupBox.reset_position_checkbox.isChecked()
-            )
-
-        # Only if the user has checked at least one option will we continue
-        for key, val in new_prefs:
-            debug("key='%s' new_prefs[key]=%s" % (key, val))
-            if val and key != "readingStatus" and key != "usePlugboard":
-                cfg.plugin_prefs.MetadataOptions = new_prefs
-                self.accept()
-                return
-        error_dialog(
-            self,
-            _("No options selected"),
-            _("You must select at least one option to continue."),
-            show=True,
-            show_copy_button=False,
-        )
-
-    def update_title_sort_checkbox(self):
-        self.title_sort_checkbox.setEnabled(
-            self.title_checkbox.isChecked()
-            and not self.use_plugboard_checkbox.isChecked()
-        )
-        if self.title_sort_checkbox.isEnabled():
-            self.title_sort_checkbox.setToolTip(None)
-        else:
-            self.title_sort_checkbox.setToolTip("Not used when plugboard is enabled")
-
-    def update_author_sort_checkbox(self):
-        self.author_sort_checkbox.setEnabled(
-            self.author_checkbox.isChecked()
-            and not self.use_plugboard_checkbox.isChecked()
-        )
-        if self.author_sort_checkbox.isEnabled():
-            self.author_sort_checkbox.setToolTip(None)
-        else:
-            self.author_sort_checkbox.setToolTip("Not used when plugboard is enabled")
-
-    def description_checkbox_clicked(self, checked: bool):
-        self.description_use_template_checkbox.setEnabled(checked)
-        self.description_use_template_checkbox_clicked(checked)
-
-    def description_use_template_checkbox_clicked(self, checked: bool):
-        self.description_template_edit.setEnabled(
-            checked and self.description_use_template_checkbox.isChecked()
-        )
-
-    def subtitle_checkbox_clicked(self, checked: bool):
-        self.subtitle_template_edit.setEnabled(checked)
-
-    def date_added_checkbox_clicked(self, checked: bool):
-        self.date_added_column_combo.setEnabled(checked)
-
-    def reading_direction_checkbox_clicked(self, checked: bool):
-        self.reading_direction_combo.setEnabled(checked)
-
-    def use_plugboard_checkbox_clicked(self):
-        self.update_title_sort_checkbox()
-        self.update_author_sort_checkbox()
-
-    def get_date_columns(
-        self, column_names: list[str] = DATE_COLUMNS
-    ) -> dict[str, str]:
-        available_columns: dict[str, str] = {}
-        for column_name in column_names:
-            calibre_column_name = (
-                self.plugin_action.gui.library_view.model().orig_headers[column_name]
-            )
-            available_columns[column_name] = calibre_column_name
-        available_columns.update(self.get_date_custom_columns())
-        return available_columns
-
-    def get_date_custom_columns(self):
-        column_types = ["datetime"]
-        return self.get_custom_columns(column_types)
-
-    def get_custom_columns(self, column_types: list[str]) -> dict[str, str]:
-        custom_columns = self.plugin_action.gui.library_view.model().custom_columns
-        available_columns = {}
-        for key, column in custom_columns.items():
-            typ = column["datatype"]
-            if typ in column_types:
-                available_columns[key] = column["name"]
-        return available_columns
 
 
 class GetShelvesFromDeviceDialog(SizePersistedDialog):
@@ -1056,11 +648,15 @@ class BookmarkOptionsDialog(SizePersistedDialog):
     def restore_radiobutton_clicked(self, checked: bool):
         self.status_to_reading_checkbox.setEnabled(checked)
         self.date_to_now_checkbox.setEnabled(checked)
+        device = self.plugin_action.device
+        has_rating_column = (
+            cfg.get_column_names(self.plugin_action.gui, device).rating != ""
+        )
         self.set_rating_checkbox.setEnabled(
             checked
-            and have_rating_column(self.plugin_action)
-            and self.plugin_action.device is not None
-            and self.plugin_action.device.supports_ratings
+            and has_rating_column
+            and device is not None
+            and device.supports_ratings
         )
         self.clear_if_unread_checkbox.setEnabled(not checked)
         self.store_if_more_recent_checkbox.setEnabled(not checked)
@@ -2768,7 +2364,9 @@ class ShowReadingPositionChangesTableWidget(QTableWidget):
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.db = db
 
-        custom_columns = parent.plugin_action.get_column_names()
+        custom_columns = cfg.get_column_names(
+            parent.plugin_action.gui, parent.plugin_action.device
+        )
         self.kobo_percentRead_column = custom_columns.percent_read
         self.last_read_column = custom_columns.last_read
 
@@ -3122,24 +2720,6 @@ class SetRelatedBooksDialog(SizePersistedDialog):
         return self.related_types_table.get_shelves()
 
 
-class ReadingDirectionChoiceComboBox(QComboBox):
-    def __init__(
-        self,
-        parent: QWidget,
-        reading_direction_list: dict[str, str] = READING_DIRECTIONS,
-    ):
-        QComboBox.__init__(self, parent)
-        for name, font in sorted(reading_direction_list.items()):
-            self.addItem(name, font)
-
-    def select_text(self, selected_text: str):
-        idx = self.findData(selected_text)
-        if idx != -1:
-            self.setCurrentIndex(idx)
-        else:
-            self.setCurrentIndex(0)
-
-
 class ReadingStatusGroupBox(QGroupBox):
     def __init__(self, parent: QWidget):
         QGroupBox.__init__(self, parent)
@@ -3193,54 +2773,6 @@ class ReadingStatusGroupBox(QGroupBox):
             readingStatus = 2
 
         return readingStatus
-
-
-class TemplateConfig(QWidget):  # {{{
-    def __init__(self, val: str | None = None, mi: Book | None = None):
-        QWidget.__init__(self)
-        self.mi = mi
-        debug("mi=", self.mi)
-        self.t = t = QLineEdit(self)
-        t.setText(val or "")
-        t.setCursorPosition(0)
-        self.setMinimumWidth(300)
-        self.l = layout = QGridLayout(self)
-        self.setLayout(layout)
-        layout.addWidget(t, 1, 0, 1, 1)
-        b = self.b = QPushButton(_("&Template editor"))
-        layout.addWidget(b, 1, 1, 1, 1)
-        b.clicked.connect(self.edit_template)
-
-    @property
-    def template(self):
-        return str(self.t.text()).strip()
-
-    @template.setter
-    def template(self, template: str):
-        self.t.setText(template)
-
-    def edit_template(self):
-        t = TemplateDialog(self, self.template, mi=self.mi)
-        t.setWindowTitle(_("Edit template"))
-        if t.exec():
-            self.t.setText(t.rule[1])
-
-    def validate(self):
-        from calibre.utils.formatter import validation_formatter
-
-        tmpl = self.template
-        try:
-            validation_formatter.validate(tmpl)
-            return True
-        except Exception as err:
-            error_dialog(
-                self,
-                _("Invalid template"),
-                "<p>" + _("The template %s is invalid:") % tmpl + "<br>" + str(err),
-                show=True,
-            )
-
-            return False
 
 
 class UpdateBooksToCDialog(SizePersistedDialog):

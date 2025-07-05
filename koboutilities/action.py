@@ -48,7 +48,6 @@ from calibre.gui2 import (
 from calibre.gui2.actions import InterfaceAction
 from calibre.gui2.device import DeviceJob, device_signals
 from calibre.gui2.dialogs.message_box import ViewLog
-from calibre.gui2.library.views import BooksView, DeviceBooksView
 from calibre.utils.config import config_dir
 from calibre.utils.icu import sort_key
 from calibre.utils.logging import default_log
@@ -70,7 +69,6 @@ from .dialogs import (
     AboutDialog,
     BackupAnnotationsOptionsDialog,
     BookmarkOptionsDialog,
-    ChangeReadingStatusOptionsDialog,
     CleanImagesDirOptionsDialog,
     CleanImagesDirProgressDialog,
     CoverUploadOptionsDialog,
@@ -85,7 +83,14 @@ from .dialogs import (
     ShowReadingPositionChangesDialog,
     UpdateBooksToCDialog,
 )
-from .features import analytics, database, duplicateshelves, metadata, reader
+from .features import (
+    analytics,
+    database,
+    duplicateshelves,
+    metadata,
+    reader,
+    readingstatus,
+)
 from .utils import (
     BOOKMARK_SEPARATOR,
     MIMETYPE_KOBO,
@@ -96,6 +101,7 @@ from .utils import (
     convert_kobo_date,
     create_menu_action_unique,
     debug,
+    get_books_for_selected,
     get_books_from_ids,
     get_contentIDs_from_id,
     get_device_paths_from_id,
@@ -443,7 +449,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 _("&Change reading status in device library"),
                 unique_name="Change reading status in device library",
                 shortcut_name=_("Change reading status in device library"),
-                triggered=self.change_reading_status,
+                triggered=menu_wrapper(readingstatus.change_reading_status),
                 is_device_action=True,
             )
 
@@ -829,7 +835,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 else:
                     self.menu_actions[button_action].trigger()
             else:
-                self.change_reading_status()
+                readingstatus.change_reading_status(self.device, self.gui)
         else:
             button_action = cfg.plugin_prefs.commonOptionsStore.buttonActionLibrary
             if button_action == "":
@@ -1486,67 +1492,6 @@ class KoboUtilitiesAction(InterfaceAction):
     def refresh_device_books(self):
         self.gui.device_detected(True, KOBOTOUCH)
 
-    def change_reading_status(self) -> None:
-        current_view = self.gui.current_view()
-        if (
-            current_view is None
-            or len(current_view.selectionModel().selectedRows()) == 0
-        ):
-            return
-        self.device = self.get_device()
-        if self.device is None:
-            error_dialog(
-                self.gui,
-                _("Cannot change reading status in device library."),
-                _("No device connected."),
-                show=True,
-            )
-            return
-
-        books = self._get_books_for_selected()
-
-        if len(books) == 0:
-            return
-        for book in books:
-            debug("book:", book)
-            book.contentIDs = [book.contentID]
-        debug("books:", books)
-
-        dlg = ChangeReadingStatusOptionsDialog(self.gui, self)
-        dlg.exec()
-        if dlg.result() != dlg.DialogCode.Accepted:
-            return
-        options = dlg.options
-        options.usePlugboard = False
-        options.titleSort = False
-        options.authourSort = False
-        options.subtitle = False
-        debug("options:", options)
-
-        progressbar = ProgressBar(
-            parent=self.gui, window_title=_("Changing reading status on device")
-        )
-        progressbar.show()
-
-        updated_books, unchanged_books, not_on_device_books, count_books = (
-            metadata.do_update_metadata(
-                books, self.device, self.gui, progressbar, options
-            )
-        )
-        result_message = (
-            _("Update summary:")
-            + "\n\t"
-            + _(
-                "Books updated={0}\n\tUnchanged books={1}\n\tBooks not on device={2}\n\tTotal books={3}"
-            ).format(updated_books, unchanged_books, not_on_device_books, count_books)
-        )
-        info_dialog(
-            self.gui,
-            _("Kobo Utilities") + " - " + _("Device library updated"),
-            result_message,
-            show=True,
-        )
-
     def show_books_not_in_database(self) -> None:
         current_view = self.gui.current_view()
         if current_view is None:
@@ -1562,7 +1507,7 @@ class KoboUtilitiesAction(InterfaceAction):
             )
             return
 
-        books = self._get_books_for_selected()
+        books = get_books_for_selected(self.gui)
 
         if len(books) == 0:
             books = current_view.model().db
@@ -1744,7 +1689,7 @@ class KoboUtilitiesAction(InterfaceAction):
             return
         series_columns = self.get_series_columns()
 
-        books = self._get_books_for_selected()
+        books = get_books_for_selected(self.gui)
         debug("books[0].__class__=", books[0].__class__)
 
         if len(books) == 0:
@@ -1919,7 +1864,7 @@ class KoboUtilitiesAction(InterfaceAction):
             selectedIDs = self._get_selected_ids()
             books = convert_calibre_ids_to_books(current_view.model().db, selectedIDs)
         else:
-            books = self._get_books_for_selected()
+            books = get_books_for_selected(self.gui)
 
         if len(books) == 0:
             return
@@ -1967,7 +1912,7 @@ class KoboUtilitiesAction(InterfaceAction):
             books = convert_calibre_ids_to_books(current_view.model().db, selectedIDs)
 
         else:
-            books = self._get_books_for_selected()
+            books = get_books_for_selected(self.gui)
 
         if len(books) == 0:
             return
@@ -2058,22 +2003,6 @@ class KoboUtilitiesAction(InterfaceAction):
             return []
         debug("self.gui.current_view().model()", current_view.model())
         return list(map(current_view.model().id, rows))
-
-    def _get_books_for_selected(self) -> list[Book]:
-        view: DeviceBooksView | BooksView | None = self.gui.current_view()  # pyright: ignore[reportGeneralTypeIssues]
-        if view is None:
-            return []
-        if isinstance(view, DeviceBooksView):
-            rows = view.selectionModel().selectedRows()
-            books = []
-            for r in rows:
-                book = view.model().db[view.model().map[r.row()]]
-                book.calibre_id = r.row()
-                books.append(book)
-        else:
-            books = []
-
-        return books
 
     def get_device_path(self) -> str:
         debug("BEGIN Get Device Path")

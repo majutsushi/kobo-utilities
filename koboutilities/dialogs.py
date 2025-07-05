@@ -79,6 +79,7 @@ from .utils import (
     convert_calibre_ids_to_books,
     convert_kobo_date,
     debug,
+    get_books_for_selected,
     get_device_paths_from_id,
     get_icon,
     is_device_view,
@@ -321,7 +322,7 @@ class RemoveAnnotationsProgressDialog(QProgressDialog):
             self.setValue(1)
 
             if is_device_view(self.gui):
-                self.books = self.plugin_action._get_books_for_selected()
+                self.books = get_books_for_selected(self.gui)
             else:
                 onDeviceIds = self.plugin_action._get_selected_ids()
                 self.books = convert_calibre_ids_to_books(library_db, onDeviceIds)
@@ -671,75 +672,6 @@ class BookmarkOptionsDialog(SizePersistedDialog):
         self.store_if_more_recent_checkbox.setEnabled(checked)
         self.do_not_store_if_reopened_checkbox.setEnabled(checked)
         self.background_checkbox.setEnabled(checked)
-
-
-class ChangeReadingStatusOptionsDialog(SizePersistedDialog):
-    def __init__(self, parent: ui.Main, plugin_action: KoboUtilitiesAction):
-        SizePersistedDialog.__init__(
-            self, parent, "kobo utilities plugin:change reading status settings dialog"
-        )
-        self.plugin_action = plugin_action
-        self.help_anchor = "ChangeReadingStatus"
-        self.options = cfg.MetadataOptionsConfig()
-
-        self.initialize_controls()
-
-        # Cause our dialog size to be restored from prefs or created on first usage
-        self.resize_dialog()
-
-    def initialize_controls(self):
-        self.setWindowTitle(GUI_NAME)
-        layout = QVBoxLayout(self)
-        self.setLayout(layout)
-        title_layout = ImageTitleLayout(
-            self, "images/icon.png", _("Change reading status in device library")
-        )
-        layout.addLayout(title_layout)
-
-        self.readingStatusGroupBox = ReadingStatusGroupBox(
-            cast("ui.Main", self.parent())
-        )
-        layout.addWidget(self.readingStatusGroupBox)
-
-        # Dialog buttons
-        button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        )
-        button_box.accepted.connect(self.ok_clicked)
-        button_box.rejected.connect(self.reject)
-        layout.addWidget(button_box)
-
-    def ok_clicked(self) -> None:
-        self.options.setRreadingStatus = (
-            self.readingStatusGroupBox.readingStatusIsChecked()
-        )
-        if self.options.setRreadingStatus:
-            self.options.readingStatus = self.readingStatusGroupBox.readingStatus()
-            if self.options.readingStatus < 0:
-                error_dialog(
-                    self,
-                    "No reading status option selected",
-                    "If you are changing the reading status, you must select an option to continue",
-                    show=True,
-                    show_copy_button=False,
-                )
-                return
-            self.options.resetPosition = (
-                self.readingStatusGroupBox.reset_position_checkbox.isChecked()
-            )
-
-        # Only if the user has checked at least one option will we continue
-        for _key, val in self.options:
-            if val:
-                self.accept()
-                return
-        error_dialog(
-            self,
-            _("No options selected"),
-            _("You must select at least one option to continue."),
-            show=True,
-            show_copy_button=False,
-        )
 
 
 class BackupAnnotationsOptionsDialog(SizePersistedDialog):

@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 
 from calibre.devices.kobo.books import Book
-from calibre.gui2.library.views import DeviceBooksView
+from calibre.gui2.library.views import BooksView, DeviceBooksView
 
 __license__ = "GPL v3"
 __copyright__ = "2011, Grant Drake <grant.drake@gmail.com>, 2012-2022 updates by David Forrester <davidfor@internode.on.net>"
@@ -415,6 +415,23 @@ def get_books_from_ids(book_ids: Iterable[int], gui: ui.Main) -> dict[int, list[
         for book_id in view_books:
             books[book_id].extend(view_books[book_id])
     debug("books=", books)
+    return books
+
+
+def get_books_for_selected(gui: ui.Main) -> list[Book]:
+    view: DeviceBooksView | BooksView | None = gui.current_view()  # pyright: ignore[reportGeneralTypeIssues]
+    if view is None:
+        return []
+    if isinstance(view, DeviceBooksView):
+        rows = view.selectionModel().selectedRows()
+        books = []
+        for r in rows:
+            book = view.model().db[view.model().map[r.row()]]
+            book.calibre_id = r.row()
+            books.append(book)
+    else:
+        books = []
+
     return books
 
 

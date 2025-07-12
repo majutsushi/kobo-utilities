@@ -47,6 +47,7 @@ from ..utils import (
     DateTableWidgetItem,
     Dispatcher,
     ImageTitleLayout,
+    LoadResources,
     ProgressBar,
     ReadOnlyTableWidgetItem,
     SizePersistedDialog,
@@ -63,7 +64,10 @@ if TYPE_CHECKING:
 
 
 def manage_series_on_device(
-    device: KoboDevice, gui: ui.Main, dispatcher: Dispatcher
+    device: KoboDevice,
+    gui: ui.Main,
+    dispatcher: Dispatcher,
+    load_resources: LoadResources,
 ) -> None:
     del dispatcher
     current_view = gui.current_view()
@@ -91,7 +95,9 @@ def manage_series_on_device(
     all_series = library_db.all_series()
     all_series.sort(key=lambda x: sort_key(x[1]))
 
-    d = ManageSeriesDeviceDialog(gui, seriesBooks, all_series, series_columns)
+    d = ManageSeriesDeviceDialog(
+        gui, seriesBooks, all_series, series_columns, load_resources
+    )
     d.exec()
     if d.result() != d.DialogCode.Accepted:
         return
@@ -176,14 +182,16 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         books: list[SeriesBook],
         all_series: list[tuple[int, str]],
         series_columns: dict[str, str],
+        load_resources: LoadResources,
     ):
         SizePersistedDialog.__init__(
-            self, parent, "kobo utilities plugin:series dialog"
+            self, parent, "kobo utilities plugin:series dialog", load_resources
         )
         self.db = parent.library_view.model().db
         self.books = books
         self.all_series = all_series
         self.series_columns = series_columns
+        self.load_resources = load_resources
         self.blockSignals(True)
 
         self.initialize_controls()
@@ -512,7 +520,9 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
                 book.set_assigned_index(auto_assign_value)
                 continue
 
-            d = LockSeriesDialog(self, book.title(), book.series_index())
+            d = LockSeriesDialog(
+                self, book.title(), book.series_index(), self.load_resources
+            )
             d.exec()
             if d.result() != d.DialogCode.Accepted:
                 break
@@ -969,9 +979,15 @@ class SeriesTableWidget(QTableWidget):
 
 
 class LockSeriesDialog(SizePersistedDialog):
-    def __init__(self, parent: QWidget, title: str, initial_value: float):
+    def __init__(
+        self,
+        parent: QWidget,
+        title: str,
+        initial_value: float,
+        load_resources: LoadResources,
+    ):
         SizePersistedDialog.__init__(
-            self, parent, "Manage Series plugin:lock series dialog"
+            self, parent, "Manage Series plugin:lock series dialog", load_resources
         )
         self.initialize_controls(title, initial_value)
 

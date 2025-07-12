@@ -15,11 +15,11 @@ __docformat__ = "restructuredtext en"
 import inspect
 import os
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Literal, cast
+from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, Literal, cast
 
 import apsw
 from calibre.constants import DEBUG, iswindows
-from calibre.gui2 import Application, error_dialog, gprefs, info_dialog, ui
+from calibre.gui2 import Application, error_dialog, gprefs, info_dialog, open_url, ui
 from calibre.gui2.actions import menu_action_unique_name
 from calibre.gui2.keyboard import ShortcutConfig
 from calibre.utils.config import config_dir
@@ -45,6 +45,7 @@ from qt.core import (
     Qt,
     QTableWidgetItem,
     QTextEdit,
+    QUrl,
     QVBoxLayout,
     QWidget,
 )
@@ -72,6 +73,7 @@ plugin_name = None
 plugin_icon_resources = {}
 
 Dispatcher = Callable[[Callable[[DeviceJob], None]], None]
+LoadResources = Callable[[Iterable[str]], Dict[str, bytes]]
 
 
 def debug(*args: Any):
@@ -471,6 +473,34 @@ def value_changed(old_value: Any | None, new_value: Any | None) -> bool:
     )
 
 
+def show_help(load_resources: LoadResources, anchor: str | None = None):
+    debug("anchor=", anchor)
+
+    # Extract on demand the help file resource
+    def get_help_file_resource():
+        # We will write the help file out every time, in case the user upgrades the plugin zip
+        # and there is a later help file contained within it.
+        from calibre.utils.localization import get_lang
+
+        lang = get_lang()
+        help_file = "KoboUtilities_Help_en.html"
+        if lang == "fr":
+            help_file = "KoboUtilities_Help_fr.html"
+        file_path = os.path.join(config_dir, "plugins", help_file).replace(os.sep, "/")
+        file_data = load_resources("help/" + help_file)["help/" + help_file]
+        debug("file_path:", file_path)
+        with open(file_path, "wb") as f:
+            f.write(file_data)
+        return file_path
+
+    debug("anchor=", anchor)
+    url = "file:///" + get_help_file_resource()
+    url = QUrl(url)
+    if anchor is not None and anchor != "":
+        url.setFragment(anchor)
+    open_url(url)
+
+
 class ImageTitleLayout(QHBoxLayout):
     """
     A reusable layout widget displaying an image followed by a title
@@ -543,18 +573,15 @@ class SizePersistedDialog(QDialog):
     """
 
     def __init__(
-        self,
-        parent: QWidget,
-        unique_pref_name: str,
-        plugin_action: KoboUtilitiesAction | None = None,
+        self, parent: QWidget, unique_pref_name: str, load_resources: LoadResources
     ):
         super().__init__(parent)
         self.unique_pref_name = unique_pref_name
+        self.load_resources = load_resources
         self.geom: QByteArray | None = gprefs.get(unique_pref_name, None)
         self.finished.connect(self.dialog_closing)
         self.help_anchor = None
         self.setWindowIcon(get_icon("images/icon.png"))
-        self.plugin_action = plugin_action
 
     def resize_dialog(self):
         if self.geom is None:
@@ -569,8 +596,7 @@ class SizePersistedDialog(QDialog):
 
     def help_link_activated(self, url: str):
         del url
-        if self.plugin_action is not None:
-            self.plugin_action.show_help(anchor=self.help_anchor)
+        show_help(self.load_resources, anchor=self.help_anchor)
 
 
 class ReadOnlyTableWidgetItem(QTableWidgetItem):
@@ -790,8 +816,8 @@ class KeyboardConfigDialog(SizePersistedDialog):
     This dialog is used to allow editing of keyboard shortcuts.
     """
 
-    def __init__(self, gui: ui.Main, group_name: str):
-        super().__init__(gui, "Keyboard shortcut dialog")
+    def __init__(self, gui: ui.Main, group_name: str, load_resources: LoadResources):
+        super().__init__(gui, "Keyboard shortcut dialog", load_resources)
         self.gui = gui
         self.setWindowTitle("Keyboard shortcuts")
         layout = QVBoxLayout(self)
@@ -899,8 +925,8 @@ def prompt_for_restart(parent: QWidget, title: str, message: str):
 
 
 class PrefsViewerDialog(SizePersistedDialog):
-    def __init__(self, gui: ui.Main, namespace: str):
-        super().__init__(gui, _("Prefs viewer dialog"))
+    def __init__(self, gui: ui.Main, namespace: str, load_resources: LoadResources):
+        super().__init__(gui, _("Prefs viewer dialog"), load_resources)
         self.setWindowTitle(_("Preferences for: {}").format(namespace))
 
         self.gui = gui

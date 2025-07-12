@@ -13,6 +13,7 @@ from ..features import metadata
 from ..utils import (
     Dispatcher,
     ImageTitleLayout,
+    LoadResources,
     ProgressBar,
     SizePersistedDialog,
     debug,
@@ -25,7 +26,10 @@ if TYPE_CHECKING:
 
 
 def change_reading_status(
-    device: KoboDevice, gui: ui.Main, dispatcher: Dispatcher
+    device: KoboDevice,
+    gui: ui.Main,
+    dispatcher: Dispatcher,
+    load_resources: LoadResources,
 ) -> None:
     del dispatcher
     current_view = gui.current_view()
@@ -41,7 +45,7 @@ def change_reading_status(
         book.contentIDs = [book.contentID]
     debug("books:", books)
 
-    dlg = ChangeReadingStatusOptionsDialog(gui)
+    dlg = ChangeReadingStatusOptionsDialog(gui, load_resources)
     dlg.exec()
     if dlg.result() != dlg.DialogCode.Accepted:
         return
@@ -76,9 +80,12 @@ def change_reading_status(
 
 
 class ChangeReadingStatusOptionsDialog(SizePersistedDialog):
-    def __init__(self, parent: ui.Main):
+    def __init__(self, parent: ui.Main, load_resources: LoadResources):
         SizePersistedDialog.__init__(
-            self, parent, "kobo utilities plugin:change reading status settings dialog"
+            self,
+            parent,
+            "kobo utilities plugin:change reading status settings dialog",
+            load_resources,
         )
         self.help_anchor = "ChangeReadingStatus"
         self.options = cfg.MetadataOptionsConfig()

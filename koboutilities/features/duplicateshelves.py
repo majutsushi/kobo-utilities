@@ -28,6 +28,7 @@ from ..utils import (
     DateTableWidgetItem,
     Dispatcher,
     ImageTitleLayout,
+    LoadResources,
     ProgressBar,
     RatingTableWidgetItem,
     SizePersistedDialog,
@@ -39,11 +40,14 @@ if TYPE_CHECKING:
 
 
 def fix_duplicate_shelves(
-    device: KoboDevice, gui: ui.Main, dispatcher: Dispatcher
+    device: KoboDevice,
+    gui: ui.Main,
+    dispatcher: Dispatcher,
+    load_resources: LoadResources,
 ) -> None:
     del dispatcher
     shelves = _get_shelf_count(device)
-    dlg = FixDuplicateShelvesDialog(gui, shelves)
+    dlg = FixDuplicateShelvesDialog(gui, load_resources, shelves)
     dlg.exec()
     if dlg.result() != dlg.DialogCode.Accepted:
         debug("dialog cancelled")
@@ -74,12 +78,14 @@ class FixDuplicateShelvesDialog(SizePersistedDialog):
     def __init__(
         self,
         parent: ui.Main,
+        load_resources: LoadResources,
         shelves: list[list[Any]],
     ):
         SizePersistedDialog.__init__(
             self,
             parent,
             "kobo utilities plugin:duplicate shelves in device database dialog",
+            load_resources,
         )
         self.shelves = shelves
         self.blockSignals(True)

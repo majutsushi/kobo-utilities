@@ -9,7 +9,13 @@ from qt.core import QDialogButtonBox, QGridLayout, QGroupBox, QRadioButton, QVBo
 
 from .. import utils
 from ..constants import GUI_NAME
-from ..utils import Dispatcher, ImageTitleLayout, SizePersistedDialog, debug
+from ..utils import (
+    Dispatcher,
+    ImageTitleLayout,
+    LoadResources,
+    SizePersistedDialog,
+    debug,
+)
 
 if TYPE_CHECKING:
     from calibre.gui2 import ui
@@ -18,12 +24,17 @@ if TYPE_CHECKING:
     from ..action import KoboDevice
 
 
-def block_analytics(device: KoboDevice, gui: ui.Main, dispatcher: Dispatcher) -> None:
+def block_analytics(
+    device: KoboDevice,
+    gui: ui.Main,
+    dispatcher: Dispatcher,
+    load_resources: LoadResources,
+) -> None:
     del dispatcher
     # Some background info:
     # https://www.mobileread.com/forums/showpost.php?p=3934039&postcount=44
     debug("start")
-    dlg = BlockAnalyticsOptionsDialog(gui)
+    dlg = BlockAnalyticsOptionsDialog(gui, load_resources)
     dlg.exec()
     if dlg.result() != dlg.DialogCode.Accepted:
         return
@@ -78,9 +89,12 @@ def _block_analytics(device: KoboDevice, create_trigger: bool):
 
 
 class BlockAnalyticsOptionsDialog(SizePersistedDialog):
-    def __init__(self, parent: QWidget):
+    def __init__(self, parent: QWidget, load_resources: LoadResources):
         SizePersistedDialog.__init__(
-            self, parent, "kobo utilities plugin:block analytics settings dialog"
+            self,
+            parent,
+            "kobo utilities plugin:block analytics settings dialog",
+            load_resources,
         )
         self.help_anchor = "BlockAnalyticsEvents"
         self.createAnalyticsEventsTrigger = True

@@ -29,6 +29,7 @@ from ..utils import (
     CustomColumnComboBox,
     Dispatcher,
     ImageTitleLayout,
+    LoadResources,
     ProgressBar,
     SizePersistedDialog,
     debug,
@@ -54,7 +55,12 @@ READING_DIRECTIONS = {
 }
 
 
-def update_metadata(device: KoboDevice, gui: ui.Main, dispatcher: Dispatcher) -> None:
+def update_metadata(
+    device: KoboDevice,
+    gui: ui.Main,
+    dispatcher: Dispatcher,
+    load_resources: LoadResources,
+) -> None:
     del dispatcher
     current_view = gui.current_view()
     if current_view is None or len(current_view.selectionModel().selectedRows()) == 0:
@@ -82,7 +88,7 @@ def update_metadata(device: KoboDevice, gui: ui.Main, dispatcher: Dispatcher) ->
         ]
     progressbar.hide()
 
-    dlg = UpdateMetadataOptionsDialog(gui, device, books[0])
+    dlg = UpdateMetadataOptionsDialog(gui, device, books[0], load_resources)
     dlg.exec()
     if dlg.result() != dlg.DialogCode.Accepted:
         return
@@ -791,9 +797,18 @@ def _render_synopsis(mi: Metadata, book: Book, template: str | None = None):
 
 
 class UpdateMetadataOptionsDialog(SizePersistedDialog):
-    def __init__(self, parent: ui.Main, device: KoboDevice, book: Book):
+    def __init__(
+        self,
+        parent: ui.Main,
+        device: KoboDevice,
+        book: Book,
+        load_resources: LoadResources,
+    ):
         SizePersistedDialog.__init__(
-            self, parent, "kobo utilities plugin:update metadata settings dialog"
+            self,
+            parent,
+            "kobo utilities plugin:update metadata settings dialog",
+            load_resources,
         )
         self.gui = parent
         self.help_anchor = "UpdateMetadata"

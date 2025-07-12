@@ -40,6 +40,7 @@ from ..utils import (
     DeviceDatabaseConnection,
     Dispatcher,
     ImageTitleLayout,
+    LoadResources,
     ProfileComboBox,
     ProgressBar,
     RatingTableWidgetItem,
@@ -193,7 +194,12 @@ FETCH_QUERIES[(4, 0, 7523)] = FetchQueries(KEPUB_FETCH_QUERY, EPUB_FETCH_QUERY)
 FETCH_QUERIES[(4, 17, 13651)] = FetchQueries(KEPUB_FETCH_QUERY, KEPUB_FETCH_QUERY)
 
 
-def handle_bookmarks(device: KoboDevice, gui: ui.Main, dispatcher: Dispatcher) -> None:
+def handle_bookmarks(
+    device: KoboDevice,
+    gui: ui.Main,
+    dispatcher: Dispatcher,
+    load_resources: LoadResources,
+) -> None:
     current_view = gui.current_view()
     if current_view is None or len(current_view.selectionModel().selectedRows()) == 0:
         return
@@ -203,7 +209,7 @@ def handle_bookmarks(device: KoboDevice, gui: ui.Main, dispatcher: Dispatcher) -
     if len(selectedIDs) == 0:
         return
 
-    dlg = BookmarkOptionsDialog(gui, device)
+    dlg = BookmarkOptionsDialog(gui, device, load_resources)
     dlg.exec()
     if dlg.result() != dlg.DialogCode.Accepted:
         return
@@ -212,7 +218,7 @@ def handle_bookmarks(device: KoboDevice, gui: ui.Main, dispatcher: Dispatcher) -
     assert profile_name is not None
 
     if cfg.plugin_prefs.BookmarkOptions.storeBookmarks:
-        store_current_bookmark(device, gui, dispatcher, profile_name)
+        store_current_bookmark(device, gui, dispatcher, load_resources, profile_name)
     else:
         restore_current_bookmark(device, gui, profile_name)
 
@@ -221,6 +227,7 @@ def store_current_bookmark(
     device: KoboDevice,
     gui: ui.Main,
     dispatcher: Dispatcher,
+    load_resources: LoadResources,
     profile_name: str,
 ) -> None:
     current_view = gui.current_view()
@@ -259,6 +266,7 @@ def store_current_bookmark(
             gui,
             device,
             dispatcher,
+            load_resources,
             options,
             current_view.model().db,
         )
@@ -1073,7 +1081,10 @@ def _restore_current_bookmark(
 
 
 def auto_store_current_bookmark(
-    device: KoboDevice, gui: ui.Main, dispatcher: Dispatcher
+    device: KoboDevice,
+    gui: ui.Main,
+    dispatcher: Dispatcher,
+    load_resources: LoadResources,
 ):
     debug("start")
 
@@ -1216,7 +1227,9 @@ def auto_store_current_bookmark(
             )
 
     if len(books_to_scan) > 0:
-        _store_queue_job(dispatcher, device, gui, options, books_to_scan)
+        _store_queue_job(
+            dispatcher, device, gui, load_resources, options, books_to_scan
+        )
 
     progressbar.hide()
 
@@ -1227,6 +1240,7 @@ def _store_queue_job(
     dispatcher: Dispatcher,
     device: KoboDevice,
     gui: ui.Main,
+    load_resources: LoadResources,
     options: ReadLocationsJobOptions,
     books_to_modify: list[tuple[Any]],
 ):
@@ -1237,14 +1251,20 @@ def _store_queue_job(
     desc = _("Storing reading positions for {0} books").format(len(books_to_modify))
     gui.device_manager.create_job(
         do_read_locations,
-        dispatcher(partial(_read_completed, device=device, gui=gui)),
+        dispatcher(
+            partial(
+                _read_completed, device=device, gui=gui, load_resources=load_resources
+            )
+        ),
         description=desc,
         args=args,
     )
     gui.status_bar.show_message(GUI_NAME + " - " + desc, 3000)
 
 
-def _read_completed(job: DeviceJob, device: KoboDevice, gui: ui.Main):
+def _read_completed(
+    job: DeviceJob, device: KoboDevice, gui: ui.Main, load_resources: LoadResources
+):
     if job.failed:
         gui.job_exception(job, dialog_title=_("Failed to get reading positions"))
         return
@@ -1275,6 +1295,7 @@ def _read_completed(job: DeviceJob, device: KoboDevice, gui: ui.Main):
                 modified_epubs_map,
                 device,
                 db,
+                load_resources,
                 profile_name,
                 goodreads_sync_plugin is not None,
             )
@@ -1611,9 +1632,14 @@ def _get_fetch_query_for_firmware_version(
 
 
 class BookmarkOptionsDialog(SizePersistedDialog):
-    def __init__(self, parent: ui.Main, device: KoboDevice):
+    def __init__(
+        self, parent: ui.Main, device: KoboDevice, load_resources: LoadResources
+    ):
         SizePersistedDialog.__init__(
-            self, parent, "kobo utilities plugin:bookmark options dialog"
+            self,
+            parent,
+            "kobo utilities plugin:bookmark options dialog",
+            load_resources,
         )
         self.gui = parent
         self.device = device
@@ -1803,6 +1829,7 @@ class ReadLocationsProgressDialog(QProgressDialog):
         gui: ui.Main,
         device: KoboDevice,
         dispatcher: Dispatcher,
+        load_resources: LoadResources,
         options: ReadLocationsJobOptions,
         db: LibraryDatabase | None,
     ):
@@ -1814,6 +1841,7 @@ class ReadLocationsProgressDialog(QProgressDialog):
         self.db = db
         self.gui = gui
         self.dispatcher = dispatcher
+        self.load_resources = load_resources
         self.device = device
         self.i = 0
         self.books_to_scan = []
@@ -1933,7 +1961,12 @@ class ReadLocationsProgressDialog(QProgressDialog):
 
         # Queue a job to process these ePub books
         _store_queue_job(
-            self.dispatcher, self.device, self.gui, self.options, self.books_to_scan
+            self.dispatcher,
+            self.device,
+            self.gui,
+            self.load_resources,
+            self.options,
+            self.books_to_scan,
         )
 
 
@@ -1944,11 +1977,15 @@ class ShowReadingPositionChangesDialog(SizePersistedDialog):
         reading_locations: dict[int, dict[str, Any]],
         device: KoboDevice,
         db: LibraryDatabase,
+        load_resources: LoadResources,
         profileName: str | None,
         goodreads_sync_installed: bool = False,
     ):
         SizePersistedDialog.__init__(
-            self, parent, "kobo utilities plugin:show reading position changes dialog"
+            self,
+            parent,
+            "kobo utilities plugin:show reading position changes dialog",
+            load_resources,
         )
         self.gui = parent
         self.reading_locations = reading_locations

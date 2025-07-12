@@ -25,7 +25,13 @@ from qt.core import (
 from .. import config as cfg
 from .. import utils
 from ..constants import BOOK_CONTENTTYPE, GUI_NAME
-from ..utils import Dispatcher, ImageTitleLayout, SizePersistedDialog, debug
+from ..utils import (
+    Dispatcher,
+    ImageTitleLayout,
+    LoadResources,
+    SizePersistedDialog,
+    debug,
+)
 
 if TYPE_CHECKING:
     from calibre.gui2 import ui
@@ -130,7 +136,12 @@ KOBO_FONTS = {
 }
 
 
-def set_reader_fonts(device: KoboDevice, gui: ui.Main, dispatcher: Dispatcher) -> None:
+def set_reader_fonts(
+    device: KoboDevice,
+    gui: ui.Main,
+    dispatcher: Dispatcher,
+    load_resouces: LoadResources,
+) -> None:
     del dispatcher
     current_view = gui.current_view()
     if current_view is None or len(current_view.selectionModel().selectedRows()) == 0:
@@ -144,7 +155,7 @@ def set_reader_fonts(device: KoboDevice, gui: ui.Main, dispatcher: Dispatcher) -
         return
 
     dlg = ReaderOptionsDialog(
-        gui, device, contentIDs[0] if len(contentIDs) == 1 else None
+        gui, device, load_resouces, contentIDs[0] if len(contentIDs) == 1 else None
     )
     dlg.exec()
     if dlg.result() != dlg.DialogCode.Accepted:
@@ -173,9 +184,12 @@ def set_reader_fonts(device: KoboDevice, gui: ui.Main, dispatcher: Dispatcher) -
 
 
 def remove_reader_fonts(
-    device: KoboDevice, gui: ui.Main, dispatcher: Dispatcher
+    device: KoboDevice,
+    gui: ui.Main,
+    dispatcher: Dispatcher,
+    load_resources: LoadResources,
 ) -> None:
-    del dispatcher
+    del dispatcher, load_resources
     current_view = gui.current_view()
     if current_view is None or len(current_view.selectionModel().selectedRows()) == 0:
         return
@@ -216,10 +230,14 @@ class ReaderOptionsDialog(SizePersistedDialog):
         self,
         parent: QWidget,
         device: KoboDevice,
+        load_resources: LoadResources,
         contentID: str | None,
     ):
         SizePersistedDialog.__init__(
-            self, parent, "kobo utilities plugin:reader font settings dialog"
+            self,
+            parent,
+            "kobo utilities plugin:reader font settings dialog",
+            load_resources,
         )
         self.device = device
         self.help_anchor = "SetReaderFonts"

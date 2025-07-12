@@ -209,6 +209,7 @@ class GetShelvesFromDeviceDialog(SizePersistedDialog):
             self,
             parent,
             "kobo utilities plugin:get shelves from device settings dialog",
+            plugin_action.load_resources,
         )
         self.plugin_action = plugin_action
         self.help_anchor = "GetShelvesFromDevice"
@@ -326,6 +327,7 @@ class BackupAnnotationsOptionsDialog(SizePersistedDialog):
             self,
             parent,
             "kobo utilities plugin:backup annotation files settings dialog",
+            plugin_action.load_resources,
         )
         self.plugin_action = plugin_action
         self.help_anchor = "BackupAnnotations"
@@ -406,6 +408,7 @@ class RemoveAnnotationsOptionsDialog(SizePersistedDialog):
             self,
             parent,
             "kobo utilities plugin:remove annotation files settings dialog",
+            plugin_action.load_resources,
         )
         self.plugin_action = plugin_action
         self.help_anchor = "RemoveAnnotations"
@@ -507,7 +510,10 @@ class RemoveAnnotationsOptionsDialog(SizePersistedDialog):
 class CoverUploadOptionsDialog(SizePersistedDialog):
     def __init__(self, parent: QWidget, plugin_action: KoboUtilitiesAction):
         SizePersistedDialog.__init__(
-            self, parent, "kobo utilities plugin:cover upload settings dialog"
+            self,
+            parent,
+            "kobo utilities plugin:cover upload settings dialog",
+            plugin_action.load_resources,
         )
         self.plugin_action = plugin_action
         self.help_anchor = "UploadCovers"
@@ -645,7 +651,10 @@ class CoverUploadOptionsDialog(SizePersistedDialog):
 class RemoveCoverOptionsDialog(SizePersistedDialog):
     def __init__(self, parent: QWidget, plugin_action: KoboUtilitiesAction):
         SizePersistedDialog.__init__(
-            self, parent, "kobo utilities plugin:remove cover settings dialog"
+            self,
+            parent,
+            "kobo utilities plugin:remove cover settings dialog",
+            plugin_action.load_resources,
         )
         self.plugin_action = plugin_action
         self.help_anchor = "RemoveCovers"
@@ -711,7 +720,10 @@ class RemoveCoverOptionsDialog(SizePersistedDialog):
 class CleanImagesDirOptionsDialog(SizePersistedDialog):
     def __init__(self, parent: QWidget, plugin_action: KoboUtilitiesAction):
         SizePersistedDialog.__init__(
-            self, parent, "kobo utilities plugin:clean images dir settings dialog"
+            self,
+            parent,
+            "kobo utilities plugin:clean images dir settings dialog",
+            plugin_action.load_resources,
         )
         self.plugin_action = plugin_action
         self.help_anchor = "CleanImagesDir"
@@ -881,9 +893,14 @@ class BooksNotInDeviceDatabaseTableWidget(QTableWidget):
 
 
 class ShowBooksNotInDeviceDatabaseDialog(SizePersistedDialog):
-    def __init__(self, parent: ui.Main, books: list[Book]):
+    def __init__(
+        self, parent: ui.Main, plugin_action: KoboUtilitiesAction, books: list[Book]
+    ):
         SizePersistedDialog.__init__(
-            self, parent, "kobo utilities plugin:not in device database dialog"
+            self,
+            parent,
+            "kobo utilities plugin:not in device database dialog",
+            plugin_action.load_resources,
         )
         self.db = parent.library_view.model().db
         self.books = books
@@ -1002,7 +1019,10 @@ class SetRelatedBooksDialog(SizePersistedDialog):
         related_types: list[dict[str, Any]],
     ):
         SizePersistedDialog.__init__(
-            self, parent, "kobo utilities plugin:set related books dialog"
+            self,
+            parent,
+            "kobo utilities plugin:set related books dialog",
+            plugin_action.load_resources,
         )
         self.plugin_action = plugin_action
         self.related_types = related_types
@@ -1219,7 +1239,7 @@ class UpdateBooksToCDialog(SizePersistedDialog):
         super().__init__(
             parent,
             "kobo utilities plugin:update book toc dialog",
-            plugin_action=plugin_action,
+            plugin_action.load_resources,
         )
         self.plugin_action = plugin_action
 

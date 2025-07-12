@@ -52,6 +52,7 @@ from .utils import (
     SimpleComboBox,
     debug,
     get_icon,
+    show_help,
 )
 
 if TYPE_CHECKING:
@@ -1937,18 +1938,22 @@ class ConfigWidget(QWidget):
         # Force the menus to be rebuilt immediately, so we have all our actions registered
         self.plugin_action.rebuild_menus()
         d = KeyboardConfigDialog(
-            self.plugin_action.gui, self.plugin_action.action_spec[0]
+            self.plugin_action.gui,
+            self.plugin_action.action_spec[0],
+            self.plugin_action.load_resources,
         )
         if d.exec() == d.DialogCode.Accepted:
             self.plugin_action.gui.keyboard.finalize()
 
     def view_prefs(self):
-        d = PrefsViewerDialog(self.plugin_action.gui, PREFS_NAMESPACE)
+        d = PrefsViewerDialog(
+            self.plugin_action.gui, PREFS_NAMESPACE, self.plugin_action.load_resources
+        )
         d.exec()
 
     def help_link_activated(self, url: str):
         del url
-        self.plugin_action.show_help(anchor="ConfigurationDialog")
+        show_help(self.plugin_action.load_resources, anchor="ConfigurationDialog")
 
     @property
     def get_create_new_custom_column_instance(self) -> CreateNewCustomColumn | None:

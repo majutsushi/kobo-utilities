@@ -36,14 +36,12 @@ from calibre.gui2 import (
     error_dialog,
     info_dialog,
     open_local_file,
-    open_url,
     question_dialog,
     ui,
 )
 from calibre.gui2.actions import InterfaceAction
 from calibre.gui2.device import DeviceJob, device_signals
 from calibre.gui2.dialogs.message_box import ViewLog
-from calibre.utils.config import config_dir
 from calibre.utils.logging import default_log
 from qt.core import (
     QAction,
@@ -51,7 +49,6 @@ from qt.core import (
     QMenu,
     QModelIndex,
     QTimer,
-    QUrl,
     pyqtSignal,
 )
 
@@ -85,6 +82,7 @@ from .features import (
 from .utils import (
     DeviceDatabaseConnection,
     Dispatcher,
+    LoadResources,
     ProgressBar,
     contentid_from_path,
     convert_calibre_ids_to_books,
@@ -97,6 +95,7 @@ from .utils import (
     get_selected_ids,
     is_device_view,
     set_plugin_icon_resources,
+    show_help,
 )
 
 if TYPE_CHECKING:
@@ -265,19 +264,30 @@ class KoboUtilitiesAction(InterfaceAction):
             if profile and profile.storeOptionsStore.storeOnConnect:
                 debug("About to start auto store")
                 locations.auto_store_current_bookmark(
-                    self.device, self.gui, cast("Dispatcher", self.Dispatcher)
+                    self.device,
+                    self.gui,
+                    cast("Dispatcher", self.Dispatcher),
+                    self.load_resources,
                 )
 
         self.rebuild_menus()
 
     def rebuild_menus(self) -> None:
         def menu_wrapper(
-            func: Callable[[KoboDevice, ui.Main, Dispatcher], None],
+            func: Callable[
+                [KoboDevice, ui.Main, Dispatcher, LoadResources],
+                None,
+            ],
         ):
             def wrapper():
                 if self.device is None:
                     raise AssertionError(_("No device connected."))
-                func(self.device, self.gui, cast("Dispatcher", self.Dispatcher))
+                func(
+                    self.device,
+                    self.gui,
+                    cast("Dispatcher", self.Dispatcher),
+                    self.load_resources,
+                )
 
             return wrapper
 
@@ -620,7 +630,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="Help",
                 shortcut_name=_("Help"),
                 image="help.png",
-                triggered=lambda _: self.show_help(),
+                triggered=lambda _: show_help(self.load_resources),
                 is_library_action=True,
                 is_device_action=True,
                 is_no_device_action=True,
@@ -730,7 +740,10 @@ class KoboUtilitiesAction(InterfaceAction):
                     self.menu_actions[button_action].trigger()
             else:
                 readingstatus.change_reading_status(
-                    self.device, self.gui, cast("Dispatcher", self.Dispatcher)
+                    self.device,
+                    self.gui,
+                    cast("Dispatcher", self.Dispatcher),
+                    self.load_resources,
                 )
         else:
             button_action = cfg.plugin_prefs.commonOptionsStore.buttonActionLibrary
@@ -1068,7 +1081,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
         books_not_in_database = self._check_book_in_database(books)
 
-        dlg = ShowBooksNotInDeviceDatabaseDialog(self.gui, books_not_in_database)
+        dlg = ShowBooksNotInDeviceDatabaseDialog(self.gui, self, books_not_in_database)
         dlg.show()
 
     def set_related_books(self) -> None:
@@ -3342,35 +3355,6 @@ class KoboUtilitiesAction(InterfaceAction):
     """
     End ToC Updating
     """
-
-    def show_help(self, anchor: str | None = None):
-        debug("anchor=", anchor)
-
-        # Extract on demand the help file resource
-        def get_help_file_resource():
-            # We will write the help file out every time, in case the user upgrades the plugin zip
-            # and there is a later help file contained within it.
-            from calibre.utils.localization import get_lang
-
-            lang = get_lang()
-            help_file = "KoboUtilities_Help_en.html"
-            if lang == "fr":
-                help_file = "KoboUtilities_Help_fr.html"
-            file_path = os.path.join(config_dir, "plugins", help_file).replace(
-                os.sep, "/"
-            )
-            file_data = self.load_resources("help/" + help_file)["help/" + help_file]
-            debug("file_path:", file_path)
-            with open(file_path, "wb") as f:
-                f.write(file_data)
-            return file_path
-
-        debug("anchor=", anchor)
-        url = "file:///" + get_help_file_resource()
-        url = QUrl(url)
-        if anchor is not None and anchor != "":
-            url.setFragment(anchor)
-        open_url(url)
 
 
 @dataclasses.dataclass

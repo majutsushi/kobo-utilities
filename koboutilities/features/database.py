@@ -11,16 +11,19 @@ from qt.core import (
 )
 
 from .. import utils
-from ..utils import Dispatcher, debug
+from ..utils import Dispatcher, LoadResources, debug
 
 if TYPE_CHECKING:
     from ..action import KoboDevice
 
 
 def check_device_database(
-    device: KoboDevice, gui: ui.Main, dispatcher: Dispatcher
+    device: KoboDevice,
+    gui: ui.Main,
+    dispatcher: Dispatcher,
+    load_resources: LoadResources,
 ) -> None:
-    del dispatcher
+    del dispatcher, load_resources
     check_result = utils.check_device_database(device.db_path)
 
     check_result = (
@@ -35,9 +38,12 @@ def check_device_database(
 
 
 def vacuum_device_database(
-    device: KoboDevice, gui: ui.Main, dispatcher: Dispatcher
+    device: KoboDevice,
+    gui: ui.Main,
+    dispatcher: Dispatcher,
+    load_resources: LoadResources,
 ) -> None:
-    del dispatcher
+    del dispatcher, load_resources
     debug("start")
 
     uncompressed_db_size = os.path.getsize(device.db_path)
@@ -61,9 +67,12 @@ def vacuum_device_database(
 
 
 def backup_device_database(
-    device: KoboDevice, gui: ui.Main, dispatcher: Dispatcher
+    device: KoboDevice,
+    gui: ui.Main,
+    dispatcher: Dispatcher,
+    load_resources: LoadResources,
 ) -> None:
-    del dispatcher
+    del dispatcher, load_resources
     fd = FileDialog(
         parent=gui,
         name="Kobo Utilities plugin:choose backup destination",

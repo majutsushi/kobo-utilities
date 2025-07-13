@@ -53,7 +53,6 @@ from .dialogs import (
     BackupAnnotationsOptionsDialog,
     RemoveAnnotationsOptionsDialog,
     RemoveAnnotationsProgressDialog,
-    SetRelatedBooksDialog,
     ShowBooksNotInDeviceDatabaseDialog,
 )
 from .features import (
@@ -68,13 +67,13 @@ from .features import (
     metadata,
     reader,
     readingstatus,
+    relatedbooks,
     toc,
 )
 from .utils import (
     DeviceDatabaseConnection,
     Dispatcher,
     LoadResources,
-    ProgressBar,
     contentid_from_path,
     convert_calibre_ids_to_books,
     create_menu_action_unique,
@@ -435,7 +434,7 @@ class KoboUtilitiesAction(InterfaceAction):
                     _("Set related books"),
                     unique_name="Set related books",
                     shortcut_name=_("Set related books"),
-                    triggered=self.set_related_books,
+                    triggered=menu_wrapper(relatedbooks.set_related_books),
                     is_library_action=True,
                     is_device_action=True,
                     is_supported=device.supports_series,
@@ -1073,51 +1072,6 @@ class KoboUtilitiesAction(InterfaceAction):
         dlg = ShowBooksNotInDeviceDatabaseDialog(self.gui, self, books_not_in_database)
         dlg.show()
 
-    def set_related_books(self) -> None:
-        debug("start")
-        self.device = self.get_device()
-        if self.device is None:
-            error_dialog(
-                self.gui,
-                _("Cannot set the related books."),
-                _("No device connected."),
-                show=True,
-            )
-            return
-
-        shelves = []
-        dlg = SetRelatedBooksDialog(self.gui, self, shelves)
-        dlg.exec()
-        if dlg.result() != dlg.DialogCode.Accepted:
-            debug("dialog cancelled")
-            return
-        options = cfg.plugin_prefs.setRelatedBooksOptionsStore
-        debug("options=%s" % options)
-        if dlg.deleteAllRelatedBooks:
-            self._delete_related_books()
-            result_message = _("Deleted all related books for sideloaded books.")
-        else:
-            related_types = dlg.get_related_types()
-            debug("related_types=", related_types)
-
-            categories_count, books_count = self._set_related_books(
-                related_types, options
-            )
-            result_message = (
-                _("Update summary:")
-                + "\n\t"
-                + _("Number of series or authors={0}\n\tNumber of books={1}").format(
-                    categories_count, books_count
-                )
-            )
-
-        info_dialog(
-            self.gui,
-            _("Kobo Utilities") + " - " + _("Set related books"),
-            result_message,
-            show=True,
-        )
-
     def getAnnotationForSelected(self) -> None:
         current_view = self.gui.current_view()
         if (
@@ -1487,148 +1441,6 @@ class KoboUtilitiesAction(InterfaceAction):
                 not_on_device_books.append(book)
 
         return not_on_device_books
-
-    def _get_related_books_count(self, related_category: int) -> list[dict[str, Any]]:
-        debug("order_shelf_type:", related_category)
-        connection = self.device_database_connection()
-        related_books = []
-
-        series_query = (
-            "SELECT Series, count(*) "
-            "FROM content c "
-            "WHERE c.ContentType = 6 "
-            "AND c.ContentID LIKE 'file%' "
-            "AND c.Series IS NOT NULL "
-            "GROUP BY Series"
-        )
-        authors_query = (
-            "SELECT Attribution, count(*) "
-            "FROM content c "
-            "WHERE c.ContentType = 6 "
-            "AND c.ContentID LIKE 'file%' "
-            "GROUP BY Attribution"
-        )
-
-        related_books_queries = [series_query, authors_query]
-        related_books_query = related_books_queries[related_category]
-        debug("related_books_query:", related_books_query)
-
-        cursor = connection.cursor()
-        cursor.execute(related_books_query)
-
-        for i, row in enumerate(cursor):
-            debug("row:", i, row[0], row[1])
-            shelf = {}
-            shelf["name"] = row[0]
-            shelf["count"] = int(row[1])
-            related_books.append(shelf)
-
-        debug("related_books:", related_books)
-        return related_books
-
-    def _set_related_books(
-        self,
-        related_books: list[dict[str, Any]],
-        options: cfg.SetRelatedBooksOptionsStoreConfig,
-    ):
-        debug("related_books:", related_books, " options:", options)
-
-        categories_count = 0
-        books_count = 0
-
-        progressbar = ProgressBar(parent=self.gui, window_title=_("Set related books"))
-        total_related_books = len(related_books)
-        progressbar.show_with_maximum(total_related_books)
-        progressbar.left_align_label()
-
-        series_query = (
-            "SELECT c.ContentID, c.Title, c.Attribution, Series, SeriesNumber "
-            "FROM content c "
-            "WHERE c.ContentType = 6 "
-            "AND Series = ? "
-            "AND ContentID LIKE 'file%' "
-        )
-        author_query = (
-            "SELECT c.ContentID, c.Title, c.Attribution, Series, SeriesNumber "
-            "FROM content c "
-            "WHERE c.ContentType = 6 "
-            "AND Attribution = ? "
-            "AND ContentID LIKE 'file%' "
-        )
-        if options.relatedBooksType == cfg.RelatedBooksType.Series:
-            get_query = series_query
-        else:
-            get_query = author_query
-        insert_query = "INSERT INTO volume_tabs VALUES ( ?, ? )"
-        delete_query = "DELETE FROM volume_tabs WHERE tabId = ? "
-
-        with self.device_database_connection(use_row_factory=True) as connection:
-            cursor = connection.cursor()
-            for related_type in related_books:
-                progressbar.set_label(
-                    _("Setting related books for {}").format(related_type["name"])
-                )
-                progressbar.increment()
-
-                categories_count += 1
-                debug(
-                    "related_type=%s, count=%d"
-                    % (related_type["name"], related_type["count"])
-                )
-                if related_type["count"] <= 1:
-                    continue
-                related_type_data = (related_type["name"],)
-                debug("related_type_data:", related_type_data)
-                cursor.execute(get_query, related_type_data)
-                related_type_contentIds = []
-                for i, row in enumerate(cursor):
-                    debug(
-                        "row:",
-                        i,
-                        row["ContentID"],
-                        row["Title"],
-                        row["Attribution"],
-                        row["Series"],
-                        row["SeriesNumber"],
-                    )
-                    related_type_contentIds.append(row["ContentID"])
-
-                debug("related_type_contentIds:", related_type_contentIds)
-                for tab_contentId in related_type_contentIds:
-                    cursor.execute(delete_query, (tab_contentId,))
-                    books_count += 1
-                    for volume_contentId in related_type_contentIds:
-                        if tab_contentId != volume_contentId:
-                            insert_data = (volume_contentId, tab_contentId)
-                            debug("insert_data:", insert_data)
-                            cursor.execute(insert_query, insert_data)
-
-        progressbar.hide()
-        debug("end")
-        return categories_count, books_count
-
-    def _delete_related_books(self) -> None:
-        progressbar = ProgressBar(
-            parent=self.gui, window_title=_("Delete related books")
-        )
-        progressbar.show_with_maximum(100)
-        progressbar.left_align_label()
-
-        connection = self.device_database_connection()
-        delete_query = (
-            "DELETE FROM volume_tabs  "
-            "WHERE tabId LIKE 'file%' "
-            "OR volumeId LIKE 'file%' "
-        )
-
-        cursor = connection.cursor()
-        progressbar.set_label(_("Delete related books"))
-        progressbar.increment()
-
-        cursor.execute(delete_query)
-
-        progressbar.hide()
-        debug("end")
 
     def _backup_annotation_files(self, books: list[Book], dest_path: str):
         annotations_found = 0

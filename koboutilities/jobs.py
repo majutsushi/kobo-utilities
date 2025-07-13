@@ -18,7 +18,6 @@ from calibre.utils.zipfile import ZipFile
 
 from . import config as cfg
 from .utils import (
-    DeviceDatabaseConnection,
     check_device_database,
     debug,
 )
@@ -213,90 +212,6 @@ def do_device_database_backup(backup_options_raw: bytes):
     return
 
 
-def do_clean_images_dir(
-    options_raw: bytes,
-    cpus: int,
-    notification: Callable[[float, str], Any] = lambda _x, y: y,
-):
-    del cpus
-    options: cfg.CleanImagesDirJobOptions = pickle.loads(options_raw)  # noqa: S301
-    main_image_path = options.main_image_path
-    sd_image_path = options.sd_image_path
-    database_path = options.database_path
-    device_database_path = options.device_database_path
-    is_db_copied = options.is_db_copied
-
-    notification(1 / 7, "Getting ImageIDs from main images directory")
-    debug(
-        "Getting ImageIDs from main images directory - Path is: '%s'"
-        % (main_image_path)
-    )
-    imageids_files_main = _get_file_imageIds(main_image_path)
-
-    notification(2 / 7, "Getting ImageIDs from SD card images directory")
-    debug("Getting ImageIDs from SD images directory - Path is: '%s'" % (sd_image_path))
-    imageids_files_sd = _get_file_imageIds(sd_image_path)
-
-    notification(3 / 7, "Getting ImageIDs from device database.")
-    debug("Getting ImageIDs from device database.")
-    imageids_db = _get_imageId_set(database_path, device_database_path, is_db_copied)
-
-    notification(4 / 7, "Checking/removing images from main images directory")
-    extra_imageids_files_main = set(imageids_files_main.keys()) - imageids_db
-    debug(
-        "Checking/removing images from main images directory - Number of extra images: %d"
-        % (len(extra_imageids_files_main))
-    )
-    extra_image_files_main = _remove_extra_files(
-        extra_imageids_files_main,
-        imageids_files_main,
-        options.delete_extra_covers,
-        main_image_path,
-        images_tree=options.images_tree,
-    )
-
-    notification(5 / 7, "Checking/removing images from SD card images directory")
-    extra_imageids_files_sd = set(imageids_files_sd.keys()) - imageids_db
-    debug(
-        "Checking/removing images from SD card images directory - Number of extra images: %d"
-        % (len(extra_imageids_files_sd))
-    )
-    extra_image_files_sd = _remove_extra_files(
-        extra_imageids_files_sd,
-        imageids_files_sd,
-        options.delete_extra_covers,
-        sd_image_path,
-        images_tree=options.images_tree,
-    )
-
-    extra_image_files: dict[str, list[str]] = {}
-    extra_image_files["main_memory"] = extra_image_files_main
-    extra_image_files["sd_card"] = extra_image_files_sd
-
-    notification(7 / 7, "Cleaning images directory - Done")
-
-    return extra_image_files
-
-
-def _get_file_imageIds(image_path: str | None) -> dict[str, str]:
-    imageids_files = {}
-    if image_path:
-        for path, _dirs, files in os.walk(image_path):
-            for filename in files:
-                if filename.find(" - N3_") > 0:
-                    imageid = filename.split(" - N3_")[0]
-                    imageids_files[imageid] = path
-                    continue
-                if filename.find(" - AndroidBookLoadTablet_Aspect") > 0:
-                    imageid = filename.split(" - AndroidBookLoadTablet_Aspect")[0]
-                    imageids_files[imageid] = path
-                    continue
-                debug("path=%s" % (path))
-                debug("check_covers: not 'N3' file - filename=%s" % (filename))
-
-    return imageids_files
-
-
 def _remove_extra_files(
     extra_imageids_files: set[str],
     imageids_files: dict[str, str],
@@ -329,23 +244,6 @@ def _remove_extra_files(
                 debug("removed path exception=", e)
 
     return extra_image_files
-
-
-def _get_imageId_set(
-    database_path: str, device_database_path: str, is_db_copied: bool
-) -> set[str]:
-    connection = DeviceDatabaseConnection(
-        database_path, device_database_path, is_db_copied, use_row_factory=True
-    )
-    imageId_query = (
-        "SELECT DISTINCT ImageId "
-        "FROM content "
-        "WHERE ContentType = 6 OR ContentType = 901"
-    )
-    cursor = connection.cursor()
-
-    cursor.execute(imageId_query)
-    return {row["ImageId"] for row in cursor}
 
 
 def do_remove_annotations(

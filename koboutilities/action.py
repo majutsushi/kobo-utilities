@@ -32,7 +32,6 @@ from calibre.ebooks.metadata import authors_to_string
 from calibre.gui2 import (
     error_dialog,
     info_dialog,
-    open_local_file,
     question_dialog,
     ui,
 )
@@ -54,18 +53,16 @@ from .constants import BOOK_CONTENTTYPE, GUI_NAME
 from .dialogs import (
     AboutDialog,
     BackupAnnotationsOptionsDialog,
-    CleanImagesDirOptionsDialog,
-    CleanImagesDirProgressDialog,
-    CoverUploadOptionsDialog,
     GetShelvesFromDeviceDialog,
     RemoveAnnotationsOptionsDialog,
     RemoveAnnotationsProgressDialog,
-    RemoveCoverOptionsDialog,
     SetRelatedBooksDialog,
     ShowBooksNotInDeviceDatabaseDialog,
 )
 from .features import (
     analytics,
+    cleanimages,
+    covers,
     database,
     duplicateshelves,
     locations,
@@ -85,7 +82,6 @@ from .utils import (
     create_menu_action_unique,
     debug,
     get_books_for_selected,
-    get_contentIDs_from_id,
     get_device_paths_from_id,
     get_icon,
     get_selected_ids,
@@ -390,7 +386,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="Upload covers for selected books",
                 shortcut_name=_("Upload covers for selected books"),
                 image="default_cover.png",
-                triggered=self.upload_covers,
+                triggered=menu_wrapper(covers.upload_covers),
                 is_library_action=True,
             )
             self.create_menu_item_ex(
@@ -398,7 +394,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 _("&Remove covers for selected books"),
                 unique_name="Remove covers for selected books",
                 shortcut_name=_("Remove covers for selected books"),
-                triggered=self.remove_covers,
+                triggered=menu_wrapper(covers.remove_covers),
                 is_library_action=True,
                 is_device_action=True,
                 is_supported=device is not None and device.is_kobotouch,
@@ -409,7 +405,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 _("&Clean images directory of extra cover images"),
                 unique_name="Clean images directory of extra cover images",
                 shortcut_name=_("Clean images directory of extra cover images"),
-                triggered=self.clean_images_dir,
+                triggered=menu_wrapper(cleanimages.clean_images_dir),
                 is_library_action=True,
                 is_device_action=True,
             )
@@ -418,7 +414,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 _("&Open cover image directory"),
                 unique_name="Open cover image directory",
                 shortcut_name=_("Open cover image directory"),
-                triggered=self.open_cover_image_directory,
+                triggered=menu_wrapper(covers.open_cover_image_directory),
                 is_library_action=True,
                 is_device_action=True,
                 is_supported=device is not None and device.is_kobotouch,
@@ -1232,188 +1228,6 @@ class KoboUtilitiesAction(InterfaceAction):
             show=True,
         )
 
-    def upload_covers(self) -> None:
-        current_view = self.gui.current_view()
-        if (
-            current_view is None
-            or len(current_view.selectionModel().selectedRows()) == 0
-        ):
-            return
-        self.device = self.get_device()
-        if self.device is None:
-            error_dialog(
-                self.gui,
-                _("Cannot upload covers."),
-                _("No device connected."),
-                show=True,
-            )
-            return
-
-        selectedIDs = get_selected_ids(self.gui)
-
-        if len(selectedIDs) == 0:
-            return
-        debug("selectedIDs:", selectedIDs)
-        books = convert_calibre_ids_to_books(
-            current_view.model().db, selectedIDs, get_cover=True
-        )
-
-        dlg = CoverUploadOptionsDialog(self.gui, self)
-        dlg.exec()
-        if dlg.result() != dlg.DialogCode.Accepted:
-            return
-
-        options = cfg.plugin_prefs.coverUpload
-        total_books, uploaded_covers, not_on_device_books = self._upload_covers(
-            books, options
-        )
-        result_message = (
-            _("Change summary:")
-            + "\n\t"
-            + _(
-                "Covers uploaded={0}\n\tBooks not on device={1}\n\tTotal books={2}"
-            ).format(uploaded_covers, not_on_device_books, total_books)
-        )
-        info_dialog(
-            self.gui,
-            _("Kobo Utilities") + " - " + _("Covers uploaded"),
-            result_message,
-            show=True,
-        )
-
-    def remove_covers(self) -> None:
-        current_view = self.gui.current_view()
-        if (
-            current_view is None
-            or len(current_view.selectionModel().selectedRows()) == 0
-        ):
-            return
-        self.device = self.get_device()
-        if self.device is None:
-            error_dialog(
-                self.gui,
-                _("Cannot remove covers."),
-                _("No device connected."),
-                show=True,
-            )
-            return
-        debug("self.device.path", self.device.path)
-
-        if self.gui.stack.currentIndex() == 0:
-            selectedIDs = get_selected_ids(self.gui)
-            books = convert_calibre_ids_to_books(current_view.model().db, selectedIDs)
-        else:
-            books = get_books_for_selected(self.gui)
-
-        if len(books) == 0:
-            return
-
-        dlg = RemoveCoverOptionsDialog(self.gui, self)
-        dlg.exec()
-        if dlg.result() != dlg.DialogCode.Accepted:
-            return
-
-        options = cfg.plugin_prefs.removeCovers
-        removed_covers, not_on_device_books, total_books = self._remove_covers(
-            books, options
-        )
-        result_message = (
-            _("Change summary:")
-            + "\n\t"
-            + _(
-                "Covers removed={0}\n\tBooks not on device={1}\n\tTotal books={2}"
-            ).format(removed_covers, not_on_device_books, total_books)
-        )
-        info_dialog(
-            self.gui,
-            _("Kobo Utilities") + " - " + _("Covers removed"),
-            result_message,
-            show=True,
-        )
-
-    def open_cover_image_directory(self) -> None:
-        current_view = self.gui.current_view()
-        if current_view is None:
-            return
-        self.device = self.get_device()
-        if self.device is None:
-            error_dialog(
-                self.gui,
-                _("Cannot open cover directory"),
-                _("No device connected."),
-                show=True,
-            )
-            return
-        debug("self.device.path", self.device.path)
-
-        if self.gui.stack.currentIndex() == 0:
-            selectedIDs = get_selected_ids(self.gui)
-            books = convert_calibre_ids_to_books(current_view.model().db, selectedIDs)
-
-        else:
-            books = get_books_for_selected(self.gui)
-
-        if len(books) == 0:
-            return
-
-        self._open_cover_image_directory(books)
-
-    def clean_images_dir(self) -> None:
-        debug("start")
-
-        self.device = self.get_device()
-        if self.device is None:
-            error_dialog(
-                self.gui,
-                _("Cannot clean covers directory."),
-                _("No device connected."),
-                show=True,
-            )
-            return
-        debug("self.device.path", self.device.path)
-
-        dlg = CleanImagesDirOptionsDialog(self.gui, self)
-        dlg.exec()
-        if dlg.result() != dlg.DialogCode.Accepted:
-            return
-
-        main_prefix = self.device.driver._main_prefix
-        assert isinstance(main_prefix, str), f"_main_prefix is type {type(main_prefix)}"
-        if (
-            isinstance(self.device.driver, KOBOTOUCH)
-            and self.device.driver.fwversion
-            >= self.device.driver.min_fwversion_images_tree
-        ):
-            main_image_path = os.path.join(main_prefix, ".kobo-images")
-            sd_image_path = (
-                os.path.join(
-                    self.device.driver._card_a_prefix, "koboExtStorage/images-cache/"
-                )
-                if self.device.driver._card_a_prefix
-                else None
-            )
-            images_tree = True
-        else:
-            main_image_path = os.path.join(main_prefix, ".kobo/images")
-            sd_image_path = (
-                os.path.join(self.device.driver._card_a_prefix, "koboExtStorage/images")
-                if self.device.driver._card_a_prefix
-                else None
-            )
-            images_tree = False
-
-        options = cfg.CleanImagesDirJobOptions(
-            str(self.device.driver.normalize_path(main_image_path)),
-            str(self.device.driver.normalize_path(sd_image_path)),
-            self.device.db_path,
-            self.device.device_db_path,
-            self.device.is_db_copied,
-            cfg.plugin_prefs.cleanImagesDir.delete_extra_covers,
-            images_tree,
-        )
-        debug("options=", options)
-        CleanImagesDirProgressDialog(self.gui, options, self._clean_images_dir_job)
-
     def getAnnotationForSelected(self) -> None:
         current_view = self.gui.current_view()
         if (
@@ -1611,74 +1425,6 @@ class KoboUtilitiesAction(InterfaceAction):
             )
             return
 
-    def _clean_images_dir_job(self, options: cfg.CleanImagesDirJobOptions):
-        debug("Start")
-        from .jobs import do_clean_images_dir
-
-        func = "arbitrary_n"
-        cpus = self.gui.job_manager.server.pool_size
-        args = [
-            do_clean_images_dir.__module__,
-            do_clean_images_dir.__name__,
-            (pickle.dumps(options), cpus),
-        ]
-        desc = _("Cleaning images directory")
-        self.gui.job_manager.run_job(
-            self.Dispatcher(partial(self._clean_images_dir_completed, options)),
-            func,
-            args=args,
-            description=desc,
-        )
-        self.gui.status_bar.show_message(_("Cleaning images directory") + "...")
-
-    def _clean_images_dir_completed(
-        self, options: cfg.CleanImagesDirJobOptions, job: DeviceJob
-    ) -> None:
-        if job.failed:
-            self.gui.job_exception(
-                job, dialog_title=_("Failed to check cover directory on device")
-            )
-            return
-        extra_image_files = job.result
-        extra_covers_count = len(extra_image_files["main_memory"]) + len(
-            extra_image_files["sd_card"]
-        )
-        self.gui.status_bar.show_message(_("Checking cover directory completed"), 3000)
-
-        details = ""
-        if extra_covers_count == 0:
-            msg = _("No extra files found")
-        else:
-            msg = _(
-                "Kobo Utilities found <b>{0} extra cover(s)</b> in the cover directory."
-            ).format(extra_covers_count)
-            if options.delete_extra_covers:
-                msg += "\n" + _("All files have been deleted.")
-            if len(extra_image_files["main_memory"]):
-                details += (
-                    "\n"
-                    + _("Extra files found in main memory images directory:")
-                    + "\n"
-                )
-                for filename in extra_image_files["main_memory"]:
-                    details += "\t%s\n" % filename
-
-            if len(extra_image_files["sd_card"]):
-                details += (
-                    "\n" + _("Extra files found in SD card images directory:") + "\n"
-                )
-                for filename in extra_image_files["sd_card"]:
-                    details += "\t%s\n" % filename
-
-        info_dialog(
-            self.gui,
-            _("Kobo Utilities") + " - " + _("Finished"),
-            msg,
-            show_copy_button=True,
-            show=True,
-            det_msg=details,
-        )
-
     def _remove_annotations_job(
         self, options: cfg.RemoveAnnotationsJobOptions, books: list[tuple[Any]]
     ):
@@ -1822,237 +1568,6 @@ class KoboUtilitiesAction(InterfaceAction):
         )
         d.setWindowIcon(self.qaction.icon())
         d.exec()
-
-    def _upload_covers(self, books: list[Book], options: cfg.CoverUploadConfig):
-        uploaded_covers = 0
-        total_books = 0
-        not_on_device_books = len(books)
-        device = self.device
-        assert device is not None
-
-        kobo_kepub_dir = cast("str", device.driver.normalize_path(".kobo/kepub/"))
-        sd_kepub_dir = cast(
-            "str", device.driver.normalize_path("koboExtStorage/kepub/")
-        )
-        debug("kobo_kepub_dir=", kobo_kepub_dir)
-        # Extra cover upload options were added in calibre 3.45.
-        driver_supports_extended_cover_options = hasattr(self.device, "dithered_covers")
-        driver_supports_cover_letterbox_colors = hasattr(
-            self.device, "letterbox_fs_covers_color"
-        )
-
-        for book in books:
-            total_books += 1
-            paths = get_device_paths_from_id(cast("int", book.calibre_id), self.gui)
-            not_on_device_books -= 1 if len(paths) > 0 else 0
-            for path in paths:
-                debug("path=", path)
-                if (
-                    kobo_kepub_dir not in path and sd_kepub_dir not in path
-                ) or options.kepub_covers:
-                    if isinstance(device.driver, KOBOTOUCH):
-                        if driver_supports_cover_letterbox_colors:
-                            device.driver._upload_cover(
-                                path,
-                                "",
-                                book,
-                                path,
-                                options.blackandwhite,
-                                dithered_covers=options.dithered_covers,
-                                keep_cover_aspect=options.keep_cover_aspect,
-                                letterbox_fs_covers=options.letterbox,
-                                letterbox_color=options.letterbox_color,
-                                png_covers=options.png_covers,
-                            )
-                        elif driver_supports_extended_cover_options:
-                            device.driver._upload_cover(
-                                path,
-                                "",
-                                book,
-                                path,
-                                options.blackandwhite,
-                                dithered_covers=options.dithered_covers,
-                                keep_cover_aspect=options.keep_cover_aspect,
-                                letterbox_fs_covers=options.letterbox,
-                                png_covers=options.png_covers,
-                            )
-                        else:
-                            device.driver._upload_cover(
-                                path,
-                                "",
-                                book,
-                                path,
-                                options.blackandwhite,
-                                keep_cover_aspect=options.keep_cover_aspect,
-                            )
-                    else:
-                        device.driver._upload_cover(
-                            path,
-                            "",
-                            book,
-                            path,
-                            options.blackandwhite,
-                        )
-                    uploaded_covers += 1
-
-        return total_books, uploaded_covers, not_on_device_books
-
-    def _remove_covers(self, books: list[Book], options: cfg.RemoveCoversConfig):
-        connection = self.device_database_connection()
-        total_books = 0
-        removed_covers = 0
-        not_on_device_books = 0
-
-        device = self.device
-        # These should have been checked in the calling method
-        assert device is not None
-        assert isinstance(device.driver, KOBOTOUCH)
-
-        remove_fullsize_covers = options.remove_fullsize_covers
-        debug("remove_fullsize_covers=", remove_fullsize_covers)
-
-        imageId_query = (
-            "SELECT ImageId "
-            "FROM content "
-            "WHERE ContentType = ? "
-            "AND ContentId = ?"
-        )  # fmt: skip
-        cursor = connection.cursor()
-
-        for book in books:
-            debug("book=", book)
-            debug("book.__class__=", book.__class__)
-            debug("book.contentID=", book.contentID)
-            debug("book.lpath=", book.lpath)
-            debug("book.path=", book.path)
-            contentIDs = (
-                [book.contentID]
-                if book.contentID is not None
-                else get_contentIDs_from_id(cast("int", book.calibre_id), self.gui)
-            )
-            debug("contentIDs=", contentIDs)
-            for contentID in contentIDs:
-                debug("contentID=", contentID)
-                if not contentID or (
-                    "file:///" not in contentID and not options.kepub_covers
-                ):
-                    continue
-
-                if contentID.startswith("file:///mnt/sd/"):
-                    path = device.driver._card_a_prefix
-                else:
-                    path = device.driver._main_prefix
-
-                query_values = (
-                    BOOK_CONTENTTYPE,
-                    contentID,
-                )
-                cursor.execute(imageId_query, query_values)
-                try:
-                    result = next(cursor)
-                    debug("contentId='%s', imageId='%s'" % (contentID, result[0]))
-                    image_id = result[0]
-                    debug("image_id=", image_id)
-                    if image_id is not None:
-                        image_path = device.driver.images_path(path, image_id)
-                        debug("image_path=%s" % image_path)
-
-                        for ending in list(device.driver.cover_file_endings().keys()):
-                            debug("ending='%s'" % ending)
-                            if remove_fullsize_covers and ending != " - N3_FULL.parsed":
-                                debug("not the full sized cover. Skipping")
-                                continue
-                            fpath = image_path + ending
-                            fpath = device.driver.normalize_path(fpath)
-                            assert isinstance(fpath, str)
-                            debug("fpath=%s" % fpath)
-
-                            if os.path.exists(fpath):
-                                debug("Image File Exists")
-                                os.unlink(fpath)
-
-                        try:
-                            os.removedirs(os.path.dirname(image_path))
-                        except Exception as e:
-                            debug(
-                                "unable to remove dir '%s': %s"
-                                % (os.path.dirname(image_path), e)
-                            )
-                    removed_covers += 1
-                except StopIteration:
-                    debug("no match for contentId='%s'" % (contentID,))
-                    not_on_device_books += 1
-                total_books += 1
-
-        return removed_covers, not_on_device_books, total_books
-
-    def _open_cover_image_directory(self, books: list[Book]):
-        connection = self.device_database_connection(use_row_factory=True)
-        total_books = 0
-        removed_covers = 0
-        not_on_device_books = 0
-
-        device = self.device
-        assert device is not None
-        assert isinstance(device.driver, KOBOTOUCH)
-
-        imageId_query = (
-            "SELECT ImageId "
-            "FROM content "
-            "WHERE ContentType = ? "
-            "AND ContentId = ?"
-        )  # fmt: skip
-        cursor = connection.cursor()
-
-        for book in books:
-            debug("book=", book)
-            debug("book.__class__=", book.__class__)
-            debug("book.contentID=", book.contentID)
-            debug("book.lpath=", book.lpath)
-            debug("book.path=", book.path)
-            contentIDs = (
-                [book.contentID]
-                if book.contentID is not None
-                else get_contentIDs_from_id(cast("int", book.calibre_id), self.gui)
-            )
-            debug("contentIDs=", contentIDs)
-            for contentID in contentIDs:
-                debug("contentID=", contentID)
-
-                if contentID is None:
-                    debug("Book does not have a content id.")
-                    continue
-                if contentID.startswith("file:///mnt/sd/"):
-                    path = device.driver._card_a_prefix
-                else:
-                    path = device.driver._main_prefix
-
-                query_values = (
-                    BOOK_CONTENTTYPE,
-                    contentID,
-                )
-                cursor.execute(imageId_query, query_values)
-                image_id = None
-                try:
-                    result = next(cursor)
-                    debug(
-                        "contentId='%s', imageId='%s'" % (contentID, result["ImageId"])
-                    )
-                    image_id = result["ImageId"]
-                except StopIteration:
-                    debug("no match for contentId='%s'" % (contentID,))
-                    image_id = device.driver.imageid_from_contentid(contentID)
-
-                if image_id:
-                    cover_image_file = device.driver.images_path(path, image_id)
-                    debug("cover_image_file='%s'" % (cover_image_file))
-                    cover_dir = os.path.dirname(os.path.abspath(cover_image_file))
-                    debug("cover_dir='%s'" % (cover_dir))
-                    if os.path.exists(cover_dir):
-                        open_local_file(cover_dir)
-                total_books += 1
-
-        return removed_covers, not_on_device_books, total_books
 
     def _check_book_in_database(self, books: list[Book]) -> list[Book]:
         connection = self.device_database_connection()

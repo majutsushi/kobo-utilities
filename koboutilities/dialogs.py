@@ -36,15 +36,6 @@ if TYPE_CHECKING:
     from calibre.gui2 import ui
 
 
-# Checked with FW2.5.2
-
-
-KEY_REMOVE_ANNOT_ALL = 0
-KEY_REMOVE_ANNOT_NOBOOK = 1
-KEY_REMOVE_ANNOT_EMPTY = 2
-KEY_REMOVE_ANNOT_NONEMPTY = 3
-KEY_REMOVE_ANNOT_SELECTED = 4
-
 # pulls in translation files for _() strings
 load_translations()
 

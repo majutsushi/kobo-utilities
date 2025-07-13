@@ -13,7 +13,7 @@ from enum import Enum
 from pathlib import Path
 from pprint import pprint
 from queue import Queue
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 from unittest import mock
 
 import apsw
@@ -170,7 +170,7 @@ class DeviceDb:
             book["ContentID"]: book
             # Inferred type doesn't account for row factory
             for book in cast(
-                "List[Dict[str, Any]]", self.cursor.execute(test_query).fetchall()
+                "list[dict[str, Any]]", self.cursor.execute(test_query).fetchall()
             )
         }
 

@@ -18,7 +18,6 @@ from typing import (
     Callable,
     Dict,
     Literal,
-    Tuple,
     cast,
 )
 
@@ -39,7 +38,6 @@ from qt.core import (
 
 from . import ActionKoboUtilities
 from . import config as cfg
-from .constants import GUI_NAME
 from .dialogs import (
     AboutDialog,
 )
@@ -63,7 +61,6 @@ from .features import (
     toc,
 )
 from .utils import (
-    DeviceDatabaseConnection,
     Dispatcher,
     LoadResources,
     create_menu_action_unique,
@@ -106,7 +103,6 @@ class KoboUtilitiesAction(InterfaceAction):
     qaction: QAction
 
     name = "KoboUtilities"
-    giu_name = GUI_NAME
     # Create our top-level menu/toolbar action (text, icon_path, tooltip, keyboard shortcut)
     action_spec = (name, None, ActionKoboUtilities.description, ())
     action_type = "current"
@@ -1026,23 +1022,6 @@ class KoboUtilitiesAction(InterfaceAction):
         )
         debug("kobo_device:", kobo_device)
         return kobo_device
-
-    @property
-    def device_fwversion(self) -> tuple[int, int, int] | None:
-        if self.device is not None:
-            return cast("Tuple[int, int, int]", self.device.driver.fwversion)
-        return None
-
-    def device_database_connection(
-        self, use_row_factory: bool = False
-    ) -> DeviceDatabaseConnection:
-        assert self.device is not None
-        return DeviceDatabaseConnection(
-            self.device.db_path,
-            self.device.device_db_path,
-            self.device.is_db_copied,
-            use_row_factory,
-        )
 
 
 @dataclasses.dataclass

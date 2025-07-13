@@ -229,9 +229,7 @@ class ConfigWrapper:
             assert isinstance(annotation.slice, ast.Name)
             val_type = annotation.slice.id
 
-        dict_wrapper = ConfigDictWrapper(
-            globals()[val_type], wrapped_dict, self._json_config
-        )
+        dict_wrapper = ConfigDictWrapper(wrapped_dict, self._json_config)
         for dict_key, dict_val in wrapped_dict.items():
             dict_wrapper[dict_key] = self._new_wrapper(val_type, dict_val)
         return dict_wrapper
@@ -285,16 +283,11 @@ W = TypeVar("W", bound="ConfigWrapper")
 class ConfigDictWrapper(Dict[str, W]):
     def __init__(
         self,
-        cls: type[W],
         wrapped_dict: dict[str, Any] | None = None,
         json_config: PicklableJSONConfig | None = None,
     ) -> None:
         self._wrapped_dict = wrapped_dict if wrapped_dict is not None else {}
-        self._cls = cls
         self._json_config = json_config
-
-    def add_item(self, name: str, value: W) -> None:
-        self._wrapped_dict[name] = value._wrapped_dict
 
     def __setitem__(self, key: str, value: W) -> None:
         self._wrapped_dict[key] = value._wrapped_dict
@@ -1770,7 +1763,7 @@ class DevicesTableWidget(QTableWidget):
 
     def get_data(self) -> ConfigDictWrapper[DeviceConfig]:
         debug("start")
-        devices = ConfigDictWrapper(DeviceConfig)
+        devices = ConfigDictWrapper()
         for row in range(self.rowCount()):
             widget = self.item(row, 1)
             assert widget is not None

@@ -163,7 +163,7 @@ class TestConfig(unittest.TestCase):
             self.assertEqual(len(config.Devices), 2)
             self.assertNotIn(uuid, config.Devices)
 
-            new_devices = ConfigDictWrapper(DeviceConfig)
+            new_devices = ConfigDictWrapper()
             self.assertEqual(len(new_devices), 0)
             self.assertNotIn("00000000-0000-0000-0000-000000000000", new_devices)
 

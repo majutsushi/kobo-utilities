@@ -26,7 +26,6 @@ from typing import (
 from calibre.constants import numeric_version as calibre_version
 from calibre.devices.kobo.driver import KOBO, KOBOTOUCH
 from calibre.gui2 import (
-    error_dialog,
     info_dialog,
     ui,
 )
@@ -41,14 +40,14 @@ from qt.core import (
 
 from . import ActionKoboUtilities
 from . import config as cfg
-from .constants import BOOK_CONTENTTYPE, GUI_NAME
+from .constants import GUI_NAME
 from .dialogs import (
     AboutDialog,
-    ShowBooksNotInDeviceDatabaseDialog,
 )
 from .features import (
     analytics,
     annotations,  # pyright: ignore[reportDuplicateImport]
+    booksnotindb,
     cleanimages,
     covers,
     database,
@@ -67,10 +66,8 @@ from .utils import (
     DeviceDatabaseConnection,
     Dispatcher,
     LoadResources,
-    contentid_from_path,
     create_menu_action_unique,
     debug,
-    get_books_for_selected,
     get_icon,
     is_device_view,
     set_plugin_icon_resources,
@@ -79,7 +76,6 @@ from .utils import (
 
 if TYPE_CHECKING:
     from calibre.db.legacy import LibraryDatabase
-    from calibre.devices.kobo.books import Book
 
 PLUGIN_ICONS = [
     "images/icon.png",
@@ -464,7 +460,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 _("Show books not in the device database"),
                 unique_name="Show books not in the device database",
                 shortcut_name=_("Show books not in the device database"),
-                triggered=self.show_books_not_in_database,
+                triggered=menu_wrapper(booksnotindb.show_books_not_in_database),
                 is_device_action=True,
             )
 
@@ -934,31 +930,6 @@ class KoboUtilitiesAction(InterfaceAction):
         self._device_database_backup(job_options)
         debug("end")
 
-    def show_books_not_in_database(self) -> None:
-        current_view = self.gui.current_view()
-        if current_view is None:
-            return
-
-        self.device = self.get_device()
-        if self.device is None:
-            error_dialog(
-                self.gui,
-                _("Cannot list books not in device library."),
-                _("No device connected."),
-                show=True,
-            )
-            return
-
-        books = get_books_for_selected(self.gui)
-
-        if len(books) == 0:
-            books = current_view.model().db
-
-        books_not_in_database = self._check_book_in_database(books)
-
-        dlg = ShowBooksNotInDeviceDatabaseDialog(self.gui, self, books_not_in_database)
-        dlg.show()
-
     def get_device_path(self) -> str:
         debug("BEGIN Get Device Path")
 
@@ -1136,35 +1107,6 @@ class KoboUtilitiesAction(InterfaceAction):
                 job, dialog_title=_("Failed to back up device database")
             )
             return
-
-    def _check_book_in_database(self, books: list[Book]) -> list[Book]:
-        connection = self.device_database_connection()
-        not_on_device_books = []
-
-        imageId_query = (
-            "SELECT 1 "
-            "FROM content "
-            "WHERE BookID is NULL "
-            "AND ContentId = ?"
-        )  # fmt: skip
-        cursor = connection.cursor()
-
-        for book in books:
-            if not book.contentID:
-                assert self.device is not None
-                book.contentID = contentid_from_path(  # pyright: ignore[reportAttributeAccessIssue]
-                    self.device, book.path, BOOK_CONTENTTYPE
-                )
-
-            query_values = (book.contentID,)
-            cursor.execute(imageId_query, query_values)
-            try:
-                next(cursor)
-            except StopIteration:
-                debug("no match for contentId='%s'" % (book.contentID,))
-                not_on_device_books.append(book)
-
-        return not_on_device_books
 
 
 @dataclasses.dataclass

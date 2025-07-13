@@ -484,7 +484,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="Refresh the list of books on the device",
                 shortcut_name=_("Refresh the list of books on the device"),
                 image="view-refresh.png",
-                triggered=self.refresh_device_books,
+                triggered=lambda _: self.gui.device_detected(True, KOBOTOUCH),
                 is_library_action=True,
                 is_device_action=True,
             )
@@ -1043,9 +1043,6 @@ class KoboUtilitiesAction(InterfaceAction):
         )
 
         return
-
-    def refresh_device_books(self):
-        self.gui.device_detected(True, KOBOTOUCH)
 
     def show_books_not_in_database(self) -> None:
         current_view = self.gui.current_view()

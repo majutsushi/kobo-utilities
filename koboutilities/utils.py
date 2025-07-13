@@ -2,26 +2,24 @@
 
 from __future__ import annotations
 
-from collections import defaultdict
-
-from calibre.devices.kobo.books import Book
-from calibre.gui2.device import DeviceJob
-from calibre.gui2.library.views import BooksView, DeviceBooksView
-
 __license__ = "GPL v3"
 __copyright__ = "2011, Grant Drake <grant.drake@gmail.com>, 2012-2022 updates by David Forrester <davidfor@internode.on.net>"
 __docformat__ = "restructuredtext en"
 
 import inspect
 import os
+from collections import defaultdict
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, Literal, cast
 
 import apsw
 from calibre.constants import DEBUG, iswindows
+from calibre.devices.kobo.books import Book
 from calibre.gui2 import Application, error_dialog, gprefs, info_dialog, open_url, ui
 from calibre.gui2.actions import menu_action_unique_name
+from calibre.gui2.device import DeviceJob
 from calibre.gui2.keyboard import ShortcutConfig
+from calibre.gui2.library.views import BooksView, DeviceBooksView
 from calibre.utils.config import config_dir
 from calibre.utils.date import UNDEFINED_DATE, format_date, now
 from qt.core import (
@@ -49,6 +47,8 @@ from qt.core import (
     QVBoxLayout,
     QWidget,
 )
+
+from .constants import GUI_NAME
 
 try:
     # timed_print got added in Calibre 7.2.0
@@ -351,6 +351,32 @@ def is_device_view(gui: ui.Main) -> bool:
     return isinstance(gui.current_view(), DeviceBooksView)
 
 
+def check_device_is_ready(
+    device: KoboDevice | None, gui: ui.Main, function_message: str
+):
+    if gui.job_manager.has_device_jobs(queued_also=True):
+        error_dialog(
+            gui,
+            GUI_NAME,
+            function_message + "<br/>" + _("Device jobs are running or queued."),
+            show=True,
+            show_copy_button=False,
+        )
+        return False
+
+    if device is None:
+        error_dialog(
+            gui,
+            GUI_NAME,
+            function_message + "<br/>" + _("No device connected."),
+            show=True,
+            show_copy_button=False,
+        )
+        return False
+
+    return True
+
+
 def get_contentIDs_from_id(book_id: int, gui: ui.Main) -> list[str | None]:
     debug("book_id=", book_id)
     paths = []
@@ -394,6 +420,11 @@ def convert_calibre_id_to_book(
 def get_device_paths_from_id(book_id: int, gui: ui.Main) -> list[str]:
     books = get_books_from_ids({book_id}, gui)
     return [book.path for book in books[book_id]]
+
+
+def get_device_path_from_id(book_id: int, gui: ui.Main) -> str | None:
+    paths = get_device_paths_from_id(book_id, gui)
+    return paths[0] if paths else None
 
 
 def get_device_path_from_contentID(

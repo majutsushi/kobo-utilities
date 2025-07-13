@@ -32,7 +32,6 @@ from calibre.ebooks.metadata import authors_to_string
 from calibre.gui2 import (
     error_dialog,
     info_dialog,
-    question_dialog,
     ui,
 )
 from calibre.gui2.actions import InterfaceAction
@@ -40,7 +39,6 @@ from calibre.gui2.device import DeviceJob, device_signals
 from calibre.gui2.dialogs.message_box import ViewLog
 from qt.core import (
     QAction,
-    QIcon,
     QMenu,
     QModelIndex,
     QTimer,
@@ -53,7 +51,6 @@ from .constants import BOOK_CONTENTTYPE, GUI_NAME
 from .dialogs import (
     AboutDialog,
     BackupAnnotationsOptionsDialog,
-    GetShelvesFromDeviceDialog,
     RemoveAnnotationsOptionsDialog,
     RemoveAnnotationsProgressDialog,
     SetRelatedBooksDialog,
@@ -65,6 +62,7 @@ from .features import (
     covers,
     database,
     duplicateshelves,
+    getshelves,
     locations,
     manageseries,
     metadata,
@@ -427,7 +425,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="Get collections from device",
                 shortcut_name=_("Get collections from device"),
                 image="catalog.png",
-                triggered=self.get_shelves_from_device,
+                triggered=menu_wrapper(getshelves.get_shelves_from_device),
                 is_library_action=True,
                 is_supported=device is not None and device.is_kobotouch,
             )
@@ -1120,114 +1118,6 @@ class KoboUtilitiesAction(InterfaceAction):
             show=True,
         )
 
-    def get_shelves_from_device(self) -> None:
-        current_view = self.gui.current_view()
-        if current_view is None:
-            return
-
-        debug("start")
-        self.device = self.get_device()
-        if self.device is None:
-            error_dialog(
-                self.gui,
-                _("Cannot get the collections from device."),
-                _("No device connected."),
-                show=True,
-            )
-            return
-
-        dlg = GetShelvesFromDeviceDialog(self.gui, self)
-        dlg.exec()
-        if dlg.result() != dlg.DialogCode.Accepted:
-            debug("dialog cancelled")
-            return
-
-        shelves_column = cfg.get_library_config(self.gui.current_db).shelvesColumn
-
-        # Check if driver is configured to manage shelves. If so, warn if selected column is one of
-        # the configured columns.
-        driver_shelves = self.device.driver.get_collections_attributes()
-        debug("driver_shelves=", driver_shelves)
-        debug("selected column=", shelves_column)
-        if shelves_column in driver_shelves:
-            debug(
-                "selected column is one of the columns used in the driver configuration!"
-            )
-            details_msg = _(
-                "The selected column is {0}."
-                "\n"
-                "The driver collection management columns are: {1}"
-            ).format(shelves_column, ", ".join(driver_shelves))
-            mb = question_dialog(
-                self.gui,
-                _("Getting collections from device"),
-                _(
-                    "The column selected is one of the columns used in the driver configuration for collection management. "
-                    "Updating this column might affect the collection management the next time you connect the device. "
-                    "\n\nAre you sure you want to do this?"
-                ),
-                override_icon=QIcon(I("dialog_warning.png")),
-                show_copy_button=False,
-                det_msg=details_msg,
-            )
-            if not mb:
-                debug("User cancelled because of column used.")
-                return
-
-        progressbar = ProgressBar(
-            parent=self.gui, window_title=_("Getting collections from device")
-        )
-        progressbar.show()
-        progressbar.set_label(_("Getting list of collections"))
-
-        library_db = current_view.model().db
-        options = cfg.plugin_prefs.getShelvesOptionStore
-        if options.allBooks:
-            selectedIDs = set(
-                library_db.search_getting_ids(
-                    "ondevice:True", None, sort_results=False, use_virtual_library=False
-                )
-            )
-        else:
-            selectedIDs = get_selected_ids(self.gui)
-
-        if len(selectedIDs) == 0:
-            return
-        debug("selectedIDs:", selectedIDs)
-        books = convert_calibre_ids_to_books(library_db, selectedIDs)
-        progressbar.set_label(
-            _("Number of books to get collections for: {0}").format(len(books))
-        )
-        for book in books:
-            device_book_paths = get_device_paths_from_id(
-                cast("int", book.calibre_id), self.gui
-            )
-            debug("device_book_paths:", device_book_paths)
-            book.paths = device_book_paths
-            book.contentIDs = [
-                contentid_from_path(self.device, path, BOOK_CONTENTTYPE)
-                for path in device_book_paths
-            ]
-
-        debug("about get shelves - options=%s" % options)
-
-        books_with_shelves, books_without_shelves, count_books = (
-            self._get_shelves_from_device(books, options, progressbar)
-        )
-        result_message = (
-            _("Update summary:")
-            + "\n\t"
-            + _(
-                "Books processed={0}\n\tBooks with collections={1}\n\tBooks without collections={2}"
-            ).format(count_books, books_with_shelves, books_without_shelves)
-        )
-        info_dialog(
-            self.gui,
-            _("Kobo Utilities") + " - " + _("Get collections from device"),
-            result_message,
-            show=True,
-        )
-
     def getAnnotationForSelected(self) -> None:
         current_view = self.gui.current_view()
         if (
@@ -1739,107 +1629,6 @@ class KoboUtilitiesAction(InterfaceAction):
 
         progressbar.hide()
         debug("end")
-
-    def _get_shelves_from_device(
-        self,
-        books: list[Book],
-        options: cfg.GetShelvesOptionStoreConfig,
-        progressbar: ProgressBar,
-    ):
-        count_books = 0
-        books_with_shelves = 0
-        books_without_shelves = 0
-        replace_shelves = options.replaceShelves
-
-        total_books = len(books)
-        progressbar.show_with_maximum(total_books)
-
-        fetch_query = (
-            "SELECT c.ContentID, sc.ShelfName "
-            "FROM content c LEFT OUTER JOIN ShelfContent sc "
-            "ON c.ContentID = sc.ContentId AND c.ContentType = 6  AND sc._IsDeleted = 'false' "
-            "JOIN Shelf s ON s.Name = sc.ShelfName AND s._IsDeleted = 'false' "
-            "WHERE c.ContentID = ? "
-            "ORDER BY c.ContentID, sc.ShelfName"
-        )
-
-        connection = self.device_database_connection()
-        library_db = self.gui.current_db
-        library_config = cfg.get_library_config(library_db)
-        bookshelf_column_name = library_config.shelvesColumn
-        debug("bookshelf_column_name=", bookshelf_column_name)
-        bookshelf_column = library_db.field_metadata[bookshelf_column_name]
-        bookshelf_column_label = library_db.field_metadata.key_to_label(
-            bookshelf_column_name
-        )
-        bookshelf_column_is_multiple = (
-            bookshelf_column["is_multiple"] is not None
-            and len(bookshelf_column["is_multiple"]) > 0
-        )
-        debug("bookshelf_column_label=", bookshelf_column_label)
-        debug("bookshelf_column_is_multiple=", bookshelf_column_is_multiple)
-
-        cursor = connection.cursor()
-        for book in books:
-            progressbar.set_label(_("Getting collections for {}").format(book.title))
-            progressbar.increment()
-            count_books += 1
-            shelf_names = []
-            update_library = False
-            for contentID in cast("List[str]", book.contentIDs):
-                debug("title='%s' contentId='%s'" % (book.title, contentID))
-                fetch_values = (contentID,)
-                debug("tetch_query='%s'" % (fetch_query))
-                cursor.execute(fetch_query, fetch_values)
-
-                for row in cursor:
-                    debug("result=", row)
-                    shelf_names.append(row[1])
-                    update_library = True
-
-            if len(shelf_names) > 0:
-                books_with_shelves += 1
-            else:
-                books_without_shelves += 1
-                continue
-
-            if update_library and len(shelf_names) > 0:
-                debug("device shelf_names='%s'" % (shelf_names))
-                debug("device set(shelf_names)='%s'" % (set(shelf_names)))
-                metadata = book.get_user_metadata(bookshelf_column_name, True)
-                assert metadata is not None
-                old_value = metadata["#value#"]
-                debug("library shelf names='%s'" % (old_value))
-                if old_value is None or set(old_value) != set(shelf_names):
-                    debug("shelves are not the same")
-                    shelf_names = (
-                        list(set(shelf_names))
-                        if bookshelf_column_is_multiple
-                        else ", ".join(shelf_names)
-                    )
-                    debug("device shelf_names='%s'" % (shelf_names))
-                    if replace_shelves or old_value is None:
-                        new_value = shelf_names
-                    elif bookshelf_column_is_multiple:
-                        new_value = old_value + shelf_names
-                    else:
-                        new_value = old_value + ", " + shelf_names
-                    debug("new shelf names='%s'" % (new_value))
-                    library_db.set_custom(
-                        book.calibre_id,
-                        new_value,
-                        label=bookshelf_column_label,
-                        commit=False,
-                    )
-
-            else:
-                books_with_shelves -= 1
-                books_without_shelves += 1
-
-        library_db.commit()
-        progressbar.hide()
-
-        return (books_with_shelves, books_without_shelves, count_books)
 
     def _backup_annotation_files(self, books: list[Book], dest_path: str):
         annotations_found = 0

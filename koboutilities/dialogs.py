@@ -46,7 +46,6 @@ from qt.core import (
 from . import config as cfg
 from .constants import BOOK_CONTENTTYPE, GUI_NAME
 from .utils import (
-    CustomColumnComboBox,
     DateTableWidgetItem,
     ImageTitleLayout,
     RatingTableWidgetItem,
@@ -154,124 +153,6 @@ class RemoveAnnotationsProgressDialog(QProgressDialog):
 
         # Queue a job to process these ePub books
         self.queue(self.options, self.books_to_scan)
-
-
-class GetShelvesFromDeviceDialog(SizePersistedDialog):
-    def __init__(self, parent: ui.Main, plugin_action: KoboUtilitiesAction):
-        SizePersistedDialog.__init__(
-            self,
-            parent,
-            "kobo utilities plugin:get shelves from device settings dialog",
-            plugin_action.load_resources,
-        )
-        self.plugin_action = plugin_action
-        self.help_anchor = "GetShelvesFromDevice"
-
-        self.initialize_controls()
-
-        all_books = cfg.plugin_prefs.getShelvesOptionStore.allBooks
-        self.all_books_checkbox.setChecked(all_books)
-
-        replace_shelves = cfg.plugin_prefs.getShelvesOptionStore.replaceShelves
-        self.replace_shelves_checkbox.setChecked(replace_shelves)
-
-        self.library_config = cfg.get_library_config(self.plugin_action.gui.current_db)
-        shelf_column = self.library_config.shelvesColumn
-        self.tag_type_custom_columns = self.get_tag_type_custom_columns()
-        self.shelf_column_combo.populate_combo(
-            self.tag_type_custom_columns, shelf_column
-        )
-        # Cause our dialog size to be restored from prefs or created on first usage
-        self.resize_dialog()
-
-    def initialize_controls(self):
-        self.setWindowTitle(GUI_NAME)
-        layout = QVBoxLayout(self)
-        self.setLayout(layout)
-        title_layout = ImageTitleLayout(
-            self, "images/icon.png", _("Get collections from device")
-        )
-        layout.addLayout(title_layout)
-
-        options_group = QGroupBox(_("Options"), self)
-        layout.addWidget(options_group)
-        options_layout = QGridLayout()
-        options_group.setLayout(options_layout)
-
-        shelf_column_label = QLabel(_("Collection column:"), self)
-        shelf_column_tooltip = _(
-            "Select a custom column to store the retrieved collection names. The column type must\nbe of type 'text'."
-        )
-        shelf_column_label.setToolTip(shelf_column_tooltip)
-        self.shelf_column_combo = CustomColumnComboBox(self)
-        self.shelf_column_combo.setToolTip(shelf_column_tooltip)
-        shelf_column_label.setBuddy(self.shelf_column_combo)
-        options_layout.addWidget(shelf_column_label, 0, 0, 1, 1)
-        options_layout.addWidget(self.shelf_column_combo, 0, 1, 1, 1)
-
-        self.all_books_checkbox = QCheckBox(_("All books on device"), self)
-        self.all_books_checkbox.setToolTip(
-            _(
-                "Get the collections for all the books on the device that are in the library. If not checked, will only get them for the selected books."
-            )
-        )
-        options_layout.addWidget(self.all_books_checkbox, 1, 0, 1, 2)
-
-        self.replace_shelves_checkbox = QCheckBox(
-            _("Replace column with collections"), self
-        )
-        self.replace_shelves_checkbox.setToolTip(
-            _(
-                "If this is selected, the current value in the library, will be replaced by\nthe retrieved collections. Otherwise, the retrieved collections will be added to the value"
-            )
-        )
-        options_layout.addWidget(self.replace_shelves_checkbox, 2, 0, 1, 2)
-
-        layout.addStretch(1)
-
-        # Dialog buttons
-        button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        )
-        button_box.accepted.connect(self.ok_clicked)
-        button_box.rejected.connect(self.reject)
-        layout.addWidget(button_box)
-
-    def get_tag_type_custom_columns(self):
-        column_types = ["text"]
-        return self.get_custom_columns(column_types)
-
-    def get_custom_columns(self, column_types: list[str]) -> dict[str, str]:
-        custom_columns = self.plugin_action.gui.library_view.model().custom_columns
-        available_columns: dict[str, str] = {}
-        for key, column in custom_columns.items():
-            typ = column["datatype"]
-            if typ in column_types:
-                available_columns[key] = column["name"]
-        return available_columns
-
-    def ok_clicked(self) -> None:
-        with cfg.plugin_prefs.getShelvesOptionStore as options:
-            options.allBooks = self.all_books_checkbox.isChecked()
-            options.replaceShelves = self.replace_shelves_checkbox.isChecked()
-
-        shelves_column = self.shelf_column_combo.get_selected_column()
-        if not shelves_column:
-            error_dialog(
-                self,
-                _("No collection column selected"),
-                _(
-                    "You must select a column to populate from the collections on the device"
-                ),
-                show=True,
-                show_copy_button=False,
-            )
-            return
-
-        self.library_config.shelvesColumn = shelves_column
-        cfg.set_library_config(self.plugin_action.gui.current_db, self.library_config)
-
-        self.accept()
 
 
 class BackupAnnotationsOptionsDialog(SizePersistedDialog):

@@ -1,14 +1,10 @@
 from __future__ import annotations
 
 import os
-import shutil
 from typing import TYPE_CHECKING
 
-from calibre.gui2 import FileDialog, info_dialog, ui
+from calibre.gui2 import info_dialog, ui
 from calibre.gui2.dialogs.message_box import ViewLog
-from qt.core import (
-    QFileDialog,
-)
 
 from .. import utils
 from ..utils import Dispatcher, LoadResources, debug
@@ -64,30 +60,3 @@ def vacuum_device_database(
         result_message,
         show=True,
     )
-
-
-def backup_device_database(
-    device: KoboDevice,
-    gui: ui.Main,
-    dispatcher: Dispatcher,
-    load_resources: LoadResources,
-) -> None:
-    del dispatcher, load_resources
-    fd = FileDialog(
-        parent=gui,
-        name="Kobo Utilities plugin:choose backup destination",
-        title=_("Choose backup destination"),
-        filters=[(_("SQLite database"), ["sqlite"])],
-        add_all_files_filter=False,
-        mode=QFileDialog.FileMode.AnyFile,
-    )
-    if not fd.accepted:
-        return
-    backup_file = fd.get_files()[0]
-
-    if not backup_file:
-        return
-
-    debug("backup file selected=", backup_file)
-    source_file = device.db_path
-    shutil.copyfile(source_file, backup_file)

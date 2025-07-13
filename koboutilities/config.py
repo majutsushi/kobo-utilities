@@ -52,6 +52,7 @@ from .utils import (
     SimpleComboBox,
     debug,
     get_icon,
+    get_serial_no,
     show_help,
 )
 
@@ -1439,7 +1440,7 @@ class DevicesTab(QWidget):
                 new_device.uuid = location_info["device_store_uuid"]
                 new_device.name = location_info["device_name"]
                 new_device.location_code = location_info["location_code"]
-                new_device.serial_no = self.plugin_action.device_serial_no()
+                new_device.serial_no = get_serial_no(self._connected_device)
                 devices[new_device.uuid] = new_device
 
         self.devices_table.populate_table(devices, self._connected_device)

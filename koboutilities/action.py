@@ -10,7 +10,6 @@ __docformat__ = "restructuredtext en"
 import calendar
 import dataclasses
 import os
-import pickle
 import threading
 import time
 from functools import partial
@@ -30,7 +29,7 @@ from calibre.gui2 import (
     ui,
 )
 from calibre.gui2.actions import InterfaceAction
-from calibre.gui2.device import DeviceJob, device_signals
+from calibre.gui2.device import device_signals
 from qt.core import (
     QAction,
     QMenu,
@@ -47,6 +46,7 @@ from .dialogs import (
 from .features import (
     analytics,
     annotations,  # pyright: ignore[reportDuplicateImport]
+    backup,
     booksnotindb,
     cleanimages,
     covers,
@@ -233,7 +233,9 @@ class KoboUtilitiesAction(InterfaceAction):
             debug("backup_config:", backup_config)
             if backup_config.doDailyBackp or backup_config.backupEachCOnnection:
                 debug("About to start auto backup")
-                self.auto_backup_device_database()
+                backup.auto_backup_device_database(
+                    self.device, self.gui, cast("Dispatcher", self.Dispatcher)
+                )
 
             if profile and profile.storeOptionsStore.storeOnConnect:
                 debug("About to start auto store")
@@ -527,7 +529,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 unique_name="Back up device database",
                 shortcut_name=_("Back up device database"),
                 image="images/databases.png",
-                triggered=menu_wrapper(database.backup_device_database),
+                triggered=menu_wrapper(backup.backup_device_database),
                 is_library_action=True,
                 is_device_action=True,
             )
@@ -886,50 +888,6 @@ class KoboUtilitiesAction(InterfaceAction):
         )
         debug("end")
 
-    def device_serial_no(self) -> str:
-        version_info = self.device.version_info if self.device is not None else None
-        return version_info.serial_no if version_info else "Unknown"
-
-    def auto_backup_device_database(self):
-        debug("start")
-        if not self.device or not self.device.backup_config:
-            debug("no backup configuration")
-            return
-        backup_config = self.device.backup_config
-
-        dest_dir = backup_config.backupDestDirectory
-        debug("destination directory=", dest_dir)
-        if not dest_dir or len(dest_dir) == 0:
-            debug("destination directory not set, not doing backup")
-            return
-
-        # Backup file names will be KoboReader-devicename-serialnumber-timestamp.sqlite
-        backup_file_template = "KoboReader-{0}-{1}-{2}"
-        debug("about to get version info from device...")
-        version_info = self.device.version_info
-        debug("version_info=", version_info)
-        serial_number = self.device_serial_no()
-        device_name = "".join(self.device.driver.gui_name.split())
-        debug("device_information=", self.device.driver.get_device_information())
-        debug("device_name=", device_name)
-        debug(
-            "backup_file_template=",
-            backup_file_template.format(device_name, serial_number, ""),
-        )
-
-        job_options = cfg.DatabaseBackupJobOptions(
-            backup_config,
-            device_name,
-            serial_number,
-            backup_file_template,
-            self.device.db_path,
-            str(self.device.driver._main_prefix),
-        )
-        debug("backup_options=", job_options)
-
-        self._device_database_backup(job_options)
-        debug("end")
-
     def get_device_path(self) -> str:
         debug("BEGIN Get Device Path")
 
@@ -1085,28 +1043,6 @@ class KoboUtilitiesAction(InterfaceAction):
             self.device.is_db_copied,
             use_row_factory,
         )
-
-    def _device_database_backup(self, backup_options: cfg.DatabaseBackupJobOptions):
-        debug("Start")
-
-        from .jobs import do_device_database_backup
-
-        args = [pickle.dumps(backup_options)]
-        desc = _("Backing up Kobo device database")
-        self.gui.device_manager.create_job(
-            do_device_database_backup,
-            self.Dispatcher(self._device_database_backup_completed),
-            description=desc,
-            args=args,
-        )
-        self.gui.status_bar.show_message(_("Kobo Utilities") + " - " + desc, 3000)
-
-    def _device_database_backup_completed(self, job: DeviceJob):
-        if job.failed:
-            self.gui.job_exception(
-                job, dialog_title=_("Failed to back up device database")
-            )
-            return
 
 
 @dataclasses.dataclass

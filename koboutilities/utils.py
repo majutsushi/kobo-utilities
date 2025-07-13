@@ -165,6 +165,11 @@ def get_local_images_dir(subfolder: str | None = None):
     return images_dir
 
 
+def get_serial_no(device: KoboDevice | None) -> str:
+    version_info = device.version_info if device is not None else None
+    return version_info.serial_no if version_info else "Unknown"
+
+
 def create_menu_action_unique(
     ia: KoboUtilitiesAction,
     parent_menu: QMenu,

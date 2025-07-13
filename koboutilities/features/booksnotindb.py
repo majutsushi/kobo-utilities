@@ -19,8 +19,14 @@ from qt.core import (
 
 from .. import utils
 from ..constants import BOOK_CONTENTTYPE
-from ..dialogs import AuthorsTableWidgetItem, TitleWidgetItem
-from ..utils import DateTableWidgetItem, ImageTitleLayout, SizePersistedDialog, debug
+from ..dialogs import (
+    AuthorsTableWidgetItem,
+    DateTableWidgetItem,
+    ImageTitleLayout,
+    SizePersistedDialog,
+    TitleWidgetItem,
+)
+from ..utils import debug
 
 if TYPE_CHECKING:
     from calibre.devices.kobo.books import Book

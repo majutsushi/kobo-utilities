@@ -25,18 +25,15 @@ from qt.core import (
 
 from .. import utils
 from ..constants import GUI_NAME
-from ..utils import (
+from ..dialogs import (
     CheckableTableWidgetItem,
-    DeviceDatabaseConnection,
-    Dispatcher,
     ImageTitleLayout,
-    LoadResources,
     ProgressBar,
     ReadOnlyTableWidgetItem,
     ReadOnlyTextIconWidgetItem,
     SizePersistedDialog,
-    debug,
 )
+from ..utils import DeviceDatabaseConnection, Dispatcher, LoadResources, debug
 
 if TYPE_CHECKING:
     from calibre.db.legacy import LibraryDatabase

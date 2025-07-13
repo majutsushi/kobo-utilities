@@ -24,16 +24,14 @@ from qt.core import (
 
 from .. import config as cfg
 from .. import utils
-from ..utils import (
+from ..dialogs import (
     DateTableWidgetItem,
-    Dispatcher,
     ImageTitleLayout,
-    LoadResources,
     ProgressBar,
     RatingTableWidgetItem,
     SizePersistedDialog,
-    debug,
 )
+from ..utils import Dispatcher, LoadResources, debug
 
 if TYPE_CHECKING:
     from ..action import KoboDevice

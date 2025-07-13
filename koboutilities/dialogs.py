@@ -9,35 +9,358 @@ __docformat__ = "restructuredtext en"
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
 )
 
+from calibre.gui2 import Application, error_dialog, gprefs
+from calibre.utils.date import UNDEFINED_DATE, format_date, now
 from qt.core import (
+    QByteArray,
     QCheckBox,
+    QComboBox,
+    QDateTime,
     QDialog,
     QDialogButtonBox,
+    QFont,
     QGridLayout,
     QGroupBox,
+    QHBoxLayout,
     QIcon,
     QLabel,
     QPixmap,
+    QProgressBar,
     QRadioButton,
     Qt,
     QTableWidgetItem,
+    QVBoxLayout,
     QWidget,
 )
 
+from . import utils
 from .constants import GUI_NAME
-from .utils import (
-    ReadOnlyTableWidgetItem,
-)
+from .utils import debug
 
 if TYPE_CHECKING:
+    import datetime as dt
+
     from calibre.devices.kobo.books import Book
     from calibre.gui2 import ui
+
+    from .config import ConfigWidget
+    from .utils import LoadResources
 
 
 # pulls in translation files for _() strings
 load_translations()
+
+
+class ImageTitleLayout(QHBoxLayout):
+    """
+    A reusable layout widget displaying an image followed by a title
+    """
+
+    def __init__(
+        self,
+        parent: SizePersistedDialog | ConfigWidget,
+        icon_name: str,
+        title: str,
+    ):
+        super().__init__()
+        self.title_image_label = QLabel(parent)
+        self.update_title_icon(icon_name)
+        self.addWidget(self.title_image_label)
+
+        title_font = QFont()
+        title_font.setPointSize(16)
+        shelf_label = QLabel(title, parent)
+        shelf_label.setFont(title_font)
+        self.addWidget(shelf_label)
+
+        help_layout = QHBoxLayout()
+
+        help_pixmap = utils.get_pixmap("help.png")
+        if help_pixmap is not None:
+            help_pixmap = help_pixmap.scaled(16, 16)
+            help_icon = QLabel()
+            help_icon.setPixmap(help_pixmap)
+            # help_icon.setAlignment(Qt.AlignmentFlag.AlignRight)
+            help_layout.addWidget(help_icon)
+
+        # Add hyperlink to a help file at the right. We will replace the correct name when it is clicked.
+        help_label = QLabel(
+            ('<a href="http://www.foo.com/">{0}</a>').format(_("Help")), parent
+        )
+        help_label.setTextInteractionFlags(
+            Qt.TextInteractionFlag.LinksAccessibleByMouse
+            | Qt.TextInteractionFlag.LinksAccessibleByKeyboard
+        )
+        help_label.linkActivated.connect(parent.help_link_activated)
+        help_layout.addWidget(help_label)
+
+        help_layout.setAlignment(Qt.AlignmentFlag.AlignRight)
+        help_widget = QWidget()
+        help_widget.setLayout(help_layout)
+        self.addWidget(help_widget)
+
+    def update_title_icon(self, icon_name: str):
+        pixmap = utils.get_pixmap(icon_name)
+        if pixmap is None:
+            error_dialog(
+                self.parent(),
+                _("Restart required"),
+                _(
+                    "Title image not found - you must restart Calibre before using this plugin!"
+                ),
+                show=True,
+            )
+        else:
+            self.title_image_label.setPixmap(pixmap)
+        self.title_image_label.setMaximumSize(32, 32)
+        self.title_image_label.setScaledContents(True)
+
+
+class SizePersistedDialog(QDialog):
+    """
+    This dialog is a base class for any dialogs that want their size/position
+    restored when they are next opened.
+    """
+
+    def __init__(
+        self, parent: QWidget, unique_pref_name: str, load_resources: LoadResources
+    ):
+        super().__init__(parent)
+        self.unique_pref_name = unique_pref_name
+        self.load_resources = load_resources
+        self.geom: QByteArray | None = gprefs.get(unique_pref_name, None)
+        self.finished.connect(self.dialog_closing)
+        self.help_anchor = None
+        self.setWindowIcon(utils.get_icon("images/icon.png"))
+
+    def resize_dialog(self):
+        if self.geom is None:
+            self.resize(self.sizeHint())
+        else:
+            self.restoreGeometry(self.geom)
+
+    def dialog_closing(self, result: Any):
+        del result
+        geom = self.saveGeometry()
+        gprefs[self.unique_pref_name] = geom
+
+    def help_link_activated(self, url: str):
+        del url
+        utils.show_help(self.load_resources, anchor=self.help_anchor)
+
+
+class ReadOnlyTableWidgetItem(QTableWidgetItem):
+    def __init__(self, text: str | None):
+        if text is None:
+            text = ""
+        super().__init__(text)
+        self.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
+
+
+class RatingTableWidgetItem(QTableWidgetItem):
+    def __init__(self, rating: int | None, is_read_only: bool = False):
+        super().__init__("")
+        self.setData(Qt.ItemDataRole.DisplayRole, rating)
+        if is_read_only:
+            self.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
+
+
+class DateTableWidgetItem(QTableWidgetItem):
+    def __init__(
+        self,
+        date_read: dt.datetime | None,
+        is_read_only: bool = False,
+        default_to_today: bool = False,
+        fmt: str | None = None,
+    ):
+        if date_read is None or (date_read == UNDEFINED_DATE and default_to_today):
+            date_read = now()
+        if is_read_only:
+            super().__init__(format_date(date_read, fmt))
+            self.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
+            self.setData(Qt.ItemDataRole.DisplayRole, QDateTime(date_read))
+        else:
+            super().__init__("")
+            self.setData(Qt.ItemDataRole.DisplayRole, QDateTime(date_read))
+
+
+class CheckableTableWidgetItem(QTableWidgetItem):
+    def __init__(self, checked: bool = False):
+        super().__init__("")
+        self.setFlags(
+            Qt.ItemFlag.ItemIsSelectable
+            | Qt.ItemFlag.ItemIsUserCheckable
+            | Qt.ItemFlag.ItemIsEnabled
+        )
+        if checked:
+            self.setCheckState(Qt.CheckState.Checked)
+        else:
+            self.setCheckState(Qt.CheckState.Unchecked)
+
+    def get_boolean_value(self):
+        """
+        Return a boolean value indicating whether checkbox is checked
+        If this is a tristate checkbox, a partially checked value is returned as None
+        """
+        if self.checkState() == Qt.CheckState.PartiallyChecked:
+            return None
+        return self.checkState() == Qt.CheckState.Checked
+
+
+class ReadOnlyTextIconWidgetItem(ReadOnlyTableWidgetItem):
+    def __init__(self, text: str | None, icon: QIcon):
+        super().__init__(text)
+        if icon:
+            self.setIcon(icon)
+
+
+class CustomColumnComboBox(QComboBox):
+    CREATE_NEW_COLUMN_ITEM = _("Create new column")
+
+    def __init__(
+        self,
+        parent: QWidget,
+        custom_columns: dict[str, str] | None = None,
+        selected_column: str = "",
+        initial_items: list[str] | None = None,
+        create_column_callback: Callable[[], bool] | None = None,
+    ):
+        if custom_columns is None:
+            custom_columns = {}
+        if initial_items is None:
+            initial_items = [""]
+        super().__init__(parent)
+        debug("create_column_callback=", create_column_callback)
+        self.create_column_callback = create_column_callback
+        self.current_index = 0
+        if create_column_callback is not None:
+            self.currentTextChanged.connect(self.current_text_changed)
+        self.populate_combo(custom_columns, selected_column, initial_items)
+
+    def populate_combo(
+        self,
+        custom_columns: dict[str, str],
+        selected_column: str | None,
+        initial_items: dict[str, str] | list[str] | None = None,
+        show_lookup_name: bool = True,
+    ):
+        if initial_items is None:
+            initial_items = [""]
+        self.clear()
+        self.column_names = []
+        selected_idx = 0
+
+        for key in sorted(custom_columns.keys()):
+            self.column_names.append(key)
+            display_name = (
+                "%s (%s)" % (key, custom_columns[key])
+                if show_lookup_name
+                else custom_columns[key]
+            )
+            self.addItem(display_name)
+            if key == selected_column:
+                selected_idx = len(self.column_names) - 1
+
+        if isinstance(initial_items, dict):
+            for key in sorted(initial_items.keys()):
+                self.column_names.append(key)
+                display_name = initial_items[key]
+                self.addItem(display_name)
+                if key == selected_column:
+                    selected_idx = len(self.column_names) - 1
+        else:
+            for display_name in initial_items:
+                self.column_names.append(display_name)
+                self.addItem(display_name)
+                if display_name == selected_column:
+                    selected_idx = len(self.column_names) - 1
+
+        debug("create_column_callback=", self.create_column_callback)
+        if self.create_column_callback is not None:
+            self.addItem(self.CREATE_NEW_COLUMN_ITEM)
+
+        self.setCurrentIndex(selected_idx)
+
+    def get_selected_column(self) -> str:
+        return self.column_names[self.currentIndex()]
+
+    def current_text_changed(self, new_text: str):
+        debug("new_text='%s'" % new_text)
+        debug(
+            "new_text == self.CREATE_NEW_COLUMN_ITEM='%s'"
+            % (new_text == self.CREATE_NEW_COLUMN_ITEM)
+        )
+        if (
+            new_text == self.CREATE_NEW_COLUMN_ITEM
+            and self.create_column_callback is not None
+        ):
+            debug("calling callback")
+            result = self.create_column_callback()
+            if not result:
+                debug(
+                    "column not created, setting back to original value - ",
+                    self.current_index,
+                )
+                self.setCurrentIndex(self.current_index)
+        else:
+            self.current_index = self.currentIndex()
+
+
+class ProgressBar(QDialog):
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        max_items: int = 100,
+        window_title: str = "Progress Bar",
+        label: str = "Label goes here",
+        on_top: bool = False,
+    ):
+        if on_top:
+            super().__init__(parent=parent, flags=Qt.WindowType.WindowStaysOnTopHint)
+        else:
+            super().__init__(parent=parent)
+        self.application = Application
+        self.setWindowTitle(window_title)
+        self.l = QVBoxLayout(self)
+        self.setLayout(self.l)
+
+        self.label = QLabel(label)
+        self.l.addWidget(self.label)
+
+        self.progressBar = QProgressBar(self)
+        self.progressBar.setRange(0, max_items)
+        self.progressBar.setValue(0)
+        self.l.addWidget(self.progressBar)
+
+    def show_with_maximum(self, maximum_count: int):
+        self.set_maximum(maximum_count)
+        self.set_value(0)
+        self.show()
+
+    def increment(self):
+        self.progressBar.setValue(self.progressBar.value() + 1)
+        self.refresh()
+
+    def refresh(self):
+        self.application.processEvents()
+
+    def set_label(self, value: str):
+        self.label.setText(value)
+        self.refresh()
+
+    def left_align_label(self):
+        self.label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+
+    def set_maximum(self, value: int):
+        self.progressBar.setMaximum(value)
+        self.refresh()
+
+    def set_value(self, value: int):
+        self.progressBar.setValue(value)
+        self.refresh()
 
 
 class TitleWidgetItem(QTableWidgetItem):

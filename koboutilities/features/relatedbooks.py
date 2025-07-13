@@ -21,13 +21,13 @@ from qt.core import (
 from .. import config as cfg
 from .. import utils
 from ..constants import GUI_NAME
-from ..utils import (
+from ..dialogs import (
     ImageTitleLayout,
     ProgressBar,
     RatingTableWidgetItem,
     SizePersistedDialog,
-    debug,
 )
+from ..utils import debug
 
 if TYPE_CHECKING:
     from calibre.gui2 import ui

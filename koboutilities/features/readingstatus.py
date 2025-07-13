@@ -8,16 +8,14 @@ from qt.core import QDialogButtonBox, QVBoxLayout
 from .. import config as cfg
 from .. import utils
 from ..constants import GUI_NAME
-from ..dialogs import ReadingStatusGroupBox
-from ..features import metadata
-from ..utils import (
-    Dispatcher,
+from ..dialogs import (
     ImageTitleLayout,
-    LoadResources,
     ProgressBar,
+    ReadingStatusGroupBox,
     SizePersistedDialog,
-    debug,
 )
+from ..features import metadata
+from ..utils import Dispatcher, LoadResources, debug
 
 if TYPE_CHECKING:
     from calibre.gui2 import ui

@@ -17,11 +17,13 @@ from typing import TYPE_CHECKING, Any, Dict, TypeVar, cast
 from calibre.constants import DEBUG as _DEBUG
 from calibre.gui2 import choose_dir, error_dialog, gprefs, open_url, question_dialog, ui
 from calibre.gui2.dialogs.confirm_delete import confirm
+from calibre.gui2.keyboard import ShortcutConfig
 from calibre.utils.config import JSONConfig
 from qt.core import (
     QAbstractItemView,
     QCheckBox,
     QComboBox,
+    QDialogButtonBox,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
@@ -29,30 +31,33 @@ from qt.core import (
     QInputDialog,
     QLabel,
     QLineEdit,
+    QListWidget,
     QPushButton,
     QSize,
     QSpinBox,
     Qt,
     QTableWidget,
     QTabWidget,
+    QTextEdit,
     QToolButton,
     QVBoxLayout,
     QWidget,
 )
 
-from .utils import (
+from .dialogs import (
     CheckableTableWidgetItem,
     CustomColumnComboBox,
     ImageTitleLayout,
-    KeyboardConfigDialog,
-    PrefsViewerDialog,
-    ProfileComboBox,
     ReadOnlyTableWidgetItem,
     ReadOnlyTextIconWidgetItem,
-    SimpleComboBox,
+    SizePersistedDialog,
+)
+from .utils import (
+    LoadResources,
     debug,
     get_icon,
     get_serial_no,
+    prompt_for_restart,
     show_help,
 )
 
@@ -1959,3 +1964,224 @@ class ConfigWidget(QWidget):
                 self.plugin_action.gui
             )
         return self._get_create_new_custom_column_instance
+
+
+class PrefsViewerDialog(SizePersistedDialog):
+    def __init__(self, gui: ui.Main, namespace: str, load_resources: LoadResources):
+        super().__init__(gui, _("Prefs viewer dialog"), load_resources)
+        self.setWindowTitle(_("Preferences for: {}").format(namespace))
+
+        self.gui = gui
+        self.db = gui.current_db
+        self.namespace = namespace
+        self._init_controls()
+        self.resize_dialog()
+
+        self._populate_settings()
+
+        if self.keys_list.count():
+            self.keys_list.setCurrentRow(0)
+
+    def _init_controls(self):
+        layout = QVBoxLayout(self)
+        self.setLayout(layout)
+
+        ml = QHBoxLayout()
+        layout.addLayout(ml, 1)
+
+        self.keys_list = QListWidget(self)
+        self.keys_list.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.keys_list.setFixedWidth(150)
+        self.keys_list.setAlternatingRowColors(True)
+        ml.addWidget(self.keys_list)
+        self.value_text = QTextEdit(self)
+        self.value_text.setReadOnly(False)
+        ml.addWidget(self.value_text, 1)
+
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        button_box.accepted.connect(self._apply_changes)
+        button_box.rejected.connect(self.reject)
+        self.clear_button = button_box.addButton(
+            _("Clear"), QDialogButtonBox.ButtonRole.ResetRole
+        )
+        assert self.clear_button is not None
+        self.clear_button.setIcon(get_icon("trash.png"))
+        self.clear_button.setToolTip(_("Clear all settings for this plugin"))
+        self.clear_button.clicked.connect(self._clear_settings)
+        layout.addWidget(button_box)
+
+    def _populate_settings(self):
+        self.keys_list.clear()
+        ns_prefix = self._get_ns_prefix()
+        keys = sorted(
+            [
+                k[len(ns_prefix) :]
+                for k in list(self.db.prefs.keys())
+                if k.startswith(ns_prefix)
+            ]
+        )
+        for key in keys:
+            self.keys_list.addItem(key)
+        self.keys_list.setMinimumWidth(self.keys_list.sizeHintForColumn(0))
+        self.keys_list.currentRowChanged[int].connect(self._current_row_changed)
+
+    def _current_row_changed(self, new_row: int):
+        if new_row < 0:
+            self.value_text.clear()
+            return
+        current_item = self.keys_list.currentItem()
+        assert current_item is not None
+        key = str(current_item.text())
+        val = self.db.prefs.get_namespaced(self.namespace, key, "")
+        self.value_text.setPlainText(self.db.prefs.to_raw(val))
+
+    def _get_ns_prefix(self):
+        return "namespaced:%s:" % self.namespace
+
+    def _apply_changes(self):
+        from calibre.gui2.dialogs.confirm_delete import confirm
+
+        message = (
+            "<p>Are you sure you want to change your settings in this library for this plugin?</p>"
+            "<p>Any settings in other libraries or stored in a JSON file in your calibre plugins "
+            "folder will not be touched.</p>"
+            "<p>You must restart calibre afterwards.</p>"
+        )
+        if not confirm(message, self.namespace + "_clear_settings", self):
+            return
+
+        val = self.db.prefs.raw_to_object(str(self.value_text.toPlainText()))
+        current_item = self.keys_list.currentItem()
+        assert current_item is not None
+        key = str(current_item.text())
+        self.db.prefs.set_namespaced(self.namespace, key, val)
+
+        restart = prompt_for_restart(
+            self,
+            "Settings changed",
+            "<p>Settings for this plugin in this library have been changed.</p>"
+            "<p>Please restart calibre now.</p>",
+        )
+        self.close()
+        if restart:
+            self.gui.quit(restart=True)
+
+    def _clear_settings(self):
+        from calibre.gui2.dialogs.confirm_delete import confirm
+
+        message = (
+            "<p>Are you sure you want to clear your settings in this library for this plugin?</p>"
+            "<p>Any settings in other libraries or stored in a JSON file in your calibre plugins "
+            "folder will not be touched.</p>"
+            "<p>You must restart calibre afterwards.</p>"
+        )
+        if not confirm(message, self.namespace + "_clear_settings", self):
+            return
+
+        ns_prefix = self._get_ns_prefix()
+        keys = [k for k in list(self.db.prefs.keys()) if k.startswith(ns_prefix)]
+        for k in keys:
+            del self.db.prefs[k]
+        self._populate_settings()
+        restart = prompt_for_restart(
+            self,
+            _("Settings deleted"),
+            _("<p>All settings for this plugin in this library have been cleared.</p>")
+            + _("<p>Please restart calibre now.</p>"),
+        )
+        self.close()
+        if restart:
+            self.gui.quit(restart=True)
+
+
+class KeyboardConfigDialog(SizePersistedDialog):
+    """
+    This dialog is used to allow editing of keyboard shortcuts.
+    """
+
+    def __init__(self, gui: ui.Main, group_name: str, load_resources: LoadResources):
+        super().__init__(gui, "Keyboard shortcut dialog", load_resources)
+        self.gui = gui
+        self.setWindowTitle("Keyboard shortcuts")
+        layout = QVBoxLayout(self)
+        self.setLayout(layout)
+
+        self.keyboard_widget = ShortcutConfig(self)
+        layout.addWidget(self.keyboard_widget)
+        self.group_name = group_name
+
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        button_box.accepted.connect(self.commit)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
+
+        # Cause our dialog size to be restored from prefs or created on first usage
+        self.resize_dialog()
+        self.initialize()
+
+    def initialize(self):
+        self.keyboard_widget.initialize(self.gui.keyboard)
+        self.keyboard_widget.highlight_group(self.group_name)
+
+    def commit(self):
+        self.keyboard_widget.commit()
+        self.accept()
+
+
+class ProfileComboBox(QComboBox):
+    def __init__(
+        self,
+        parent: QWidget,
+        profiles: ConfigDictWrapper[ProfileConfig],
+        selected_text: str | None = None,
+    ):
+        super().__init__(parent)
+        self.populate_combo(profiles, selected_text)
+
+    def populate_combo(
+        self,
+        profiles: ConfigDictWrapper[ProfileConfig],
+        selected_text: str | None = None,
+    ):
+        self.blockSignals(True)
+        self.clear()
+        for list_name in sorted(profiles.keys()):
+            self.addItem(list_name)
+        self.select_view(selected_text)
+        self.blockSignals(False)
+
+    def select_view(self, selected_text: str | None):
+        self.blockSignals(True)
+        if selected_text:
+            idx = self.findText(selected_text)
+            self.setCurrentIndex(idx)
+        elif self.count() > 0:
+            self.setCurrentIndex(0)
+        self.blockSignals(False)
+
+
+class SimpleComboBox(QComboBox):
+    def __init__(self, parent: QWidget, values: list[str], selected_value: str):
+        super().__init__(parent)
+        self.values = values
+        self.populate_combo(selected_value)
+
+    def populate_combo(self, selected_value: str):
+        self.clear()
+        selected_idx = idx = -1
+        for value in sorted(self.values):
+            idx = idx + 1
+            self.addItem(value)
+            if value == selected_value:
+                selected_idx = idx
+        self.setCurrentIndex(selected_idx)
+
+    def selected_key(self):
+        for value in list(self.values):
+            if value == str(self.currentText()).strip():
+                return value
+        return None

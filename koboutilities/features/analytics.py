@@ -9,13 +9,8 @@ from qt.core import QDialogButtonBox, QGridLayout, QGroupBox, QRadioButton, QVBo
 
 from .. import utils
 from ..constants import GUI_NAME
-from ..utils import (
-    Dispatcher,
-    ImageTitleLayout,
-    LoadResources,
-    SizePersistedDialog,
-    debug,
-)
+from ..dialogs import ImageTitleLayout, SizePersistedDialog
+from ..utils import Dispatcher, LoadResources, debug
 
 if TYPE_CHECKING:
     from calibre.gui2 import ui

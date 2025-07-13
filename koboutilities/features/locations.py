@@ -33,18 +33,19 @@ from qt.core import (
 from .. import config as cfg
 from .. import utils
 from ..constants import BOOK_CONTENTTYPE, GUI_NAME, MIMETYPE_KOBO
-from ..dialogs import AuthorsTableWidgetItem
-from ..utils import (
+from ..dialogs import (
+    AuthorsTableWidgetItem,
     CheckableTableWidgetItem,
     DateTableWidgetItem,
-    DeviceDatabaseConnection,
-    Dispatcher,
     ImageTitleLayout,
-    LoadResources,
-    ProfileComboBox,
     ProgressBar,
     RatingTableWidgetItem,
     SizePersistedDialog,
+)
+from ..utils import (
+    DeviceDatabaseConnection,
+    Dispatcher,
+    LoadResources,
     debug,
 )
 
@@ -1757,7 +1758,7 @@ class BookmarkOptionsDialog(SizePersistedDialog):
 
         profiles_label = QLabel(_("Profile"), self)
         options_layout.addWidget(profiles_label, 6, 0, 1, 1)
-        self.select_profile_combo = ProfileComboBox(
+        self.select_profile_combo = cfg.ProfileComboBox(
             self, self.profiles, self.profile_name
         )
         self.select_profile_combo.setMinimumSize(150, 20)

@@ -41,18 +41,16 @@ from qt.core import (
 
 from .. import config as cfg
 from .. import utils
-from ..dialogs import AuthorsTableWidgetItem
-from ..features import metadata
-from ..utils import (
+from ..dialogs import (
+    AuthorsTableWidgetItem,
     DateTableWidgetItem,
-    Dispatcher,
     ImageTitleLayout,
-    LoadResources,
     ProgressBar,
     ReadOnlyTableWidgetItem,
     SizePersistedDialog,
-    debug,
 )
+from ..features import metadata
+from ..utils import Dispatcher, LoadResources, debug
 
 if TYPE_CHECKING:
     import datetime as dt

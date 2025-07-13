@@ -25,13 +25,8 @@ from qt.core import (
 from .. import config as cfg
 from .. import utils
 from ..constants import BOOK_CONTENTTYPE, GUI_NAME
-from ..utils import (
-    Dispatcher,
-    ImageTitleLayout,
-    LoadResources,
-    SizePersistedDialog,
-    debug,
-)
+from ..dialogs import ImageTitleLayout, SizePersistedDialog
+from ..utils import Dispatcher, LoadResources, debug
 
 if TYPE_CHECKING:
     from calibre.gui2 import ui

@@ -24,16 +24,14 @@ from qt.core import (
 from .. import config as cfg
 from .. import utils
 from ..constants import BOOK_CONTENTTYPE, GUI_NAME
-from ..dialogs import ReadingStatusGroupBox
-from ..utils import (
+from ..dialogs import (
     CustomColumnComboBox,
-    Dispatcher,
     ImageTitleLayout,
-    LoadResources,
     ProgressBar,
+    ReadingStatusGroupBox,
     SizePersistedDialog,
-    debug,
 )
+from ..utils import Dispatcher, LoadResources, debug
 
 if TYPE_CHECKING:
     from calibre.devices.kobo.books import Book

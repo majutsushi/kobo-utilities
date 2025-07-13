@@ -19,7 +19,7 @@ from qt.core import (
 )
 
 from .. import config as cfg
-from .. import jobs
+from .. import utils
 from ..constants import GUI_NAME
 from ..utils import (
     DeviceDatabaseConnection,
@@ -186,7 +186,7 @@ def do_clean_images_dir(
         "Checking/removing images from main images directory - Number of extra images: %d"
         % (len(extra_imageids_files_main))
     )
-    extra_image_files_main = jobs._remove_extra_files(
+    extra_image_files_main = utils.remove_extra_files(
         extra_imageids_files_main,
         imageids_files_main,
         options.delete_extra_covers,
@@ -200,7 +200,7 @@ def do_clean_images_dir(
         "Checking/removing images from SD card images directory - Number of extra images: %d"
         % (len(extra_imageids_files_sd))
     )
-    extra_image_files_sd = jobs._remove_extra_files(
+    extra_image_files_sd = utils.remove_extra_files(
         extra_imageids_files_sd,
         imageids_files_sd,
         options.delete_extra_covers,

@@ -1,26 +1,25 @@
 # vim:fileencoding=UTF-8:ts=4:sw=4:sta:et:sts=4:ai
 from __future__ import annotations
 
-from typing import Any, Callable
-
 __license__ = "GPL v3"
 __copyright__ = "2012-2017, David Forrester <davidfor@internode.on.net>"
 __docformat__ = "restructuredtext en"
 
 import os
 import pickle
-import re
 import shutil
 from datetime import datetime
+from typing import TYPE_CHECKING
 
-from calibre.ebooks.BeautifulSoup import BeautifulStoneSoup
 from calibre.utils.zipfile import ZipFile
 
-from . import config as cfg
 from .utils import (
     check_device_database,
     debug,
 )
+
+if TYPE_CHECKING:
+    from . import config as cfg
 
 
 def do_device_database_backup(backup_options_raw: bytes):
@@ -210,228 +209,3 @@ def do_device_database_backup(backup_options_raw: bytes):
         debug("Manually managing backups")
 
     return
-
-
-def _remove_extra_files(
-    extra_imageids_files: set[str],
-    imageids_files: dict[str, str],
-    delete_extra_covers: bool,
-    image_path: str,
-    images_tree: bool = False,
-) -> list[str]:
-    extra_image_files = []
-    from glob import glob
-
-    debug("images_tree=%s" % (images_tree))
-    for imageId in extra_imageids_files:
-        image_path = imageids_files[imageId]
-        debug("image_path=%s" % (image_path))
-        debug("imageId=%s" % (imageId))
-        escaped_path = os.path.join(image_path, imageId + "*")
-        escaped_path = re.sub(r"([\[\]])", r"[\1]", escaped_path)
-        debug("escaped_path:", escaped_path)
-        for filename in glob(escaped_path):
-            debug("filename=%s" % (filename))
-            extra_image_files.append(os.path.basename(filename))
-            if delete_extra_covers:
-                os.unlink(filename)
-        if images_tree and delete_extra_covers:
-            debug("about to remove directory: image_path=%s" % image_path)
-            try:
-                os.removedirs(image_path)
-                debug("removed path=%s" % (image_path))
-            except Exception as e:
-                debug("removed path exception=", e)
-
-    return extra_image_files
-
-
-def do_remove_annotations(
-    options_raw: bytes,
-    books: list[tuple[int, list[str], list[str], str, str]],
-    cpus: int,
-    notification: Callable[[float, str], Any] = lambda _x, y: y,
-):
-    del cpus
-    options: cfg.RemoveAnnotationsJobOptions = pickle.loads(options_raw)  # noqa: S301
-    annotations_dir = options.annotations_dir
-    annotations_ext = options.annotations_ext
-    device_path = options.device_path
-    msg = None
-    details = None
-    steps = 3
-    current_step = 1
-    annotation_files = {}
-
-    notification(
-        current_step / steps, _("Removing annotations files") + " - " + _("Start")
-    )
-    debug("options:", options)
-    debug("len(books):", len(books))
-    debug("annotations_dir: '%s'" % (annotations_dir))
-    if options.remove_annot_action == cfg.RemoveAnnotationsAction.All:
-        if os.path.exists(annotations_dir):
-            debug("removing annotations directory")
-            shutil.rmtree(annotations_dir)
-            msg = _("Annotations directory removed.")
-            debug("removing annotations directory - done")
-    elif options.remove_annot_action == cfg.RemoveAnnotationsAction.Selected:
-        if books and len(books) > 0:
-            annotation_files = _get_annotation_files_for_books(
-                books, annotations_dir, annotations_ext, device_path
-            )
-    else:
-        current_step += 1
-        notification(current_step / steps, _("Getting annotations files."))
-        annotation_files = _get_annotation_files(annotations_dir, annotations_ext)
-        msg = _("Found {0} annotation files.").format(len(annotation_files))
-
-    if len(annotation_files.keys()) > 0:
-        annotation_test_func = None
-        if options.remove_annot_action == cfg.RemoveAnnotationsAction.NotOnDevice:
-            annotation_test_func = _book_file_does_not_exists
-        elif options.remove_annot_action == cfg.RemoveAnnotationsAction.Empty:
-            annotation_test_func = _annotation_file_is_empty
-        elif options.remove_annot_action == cfg.RemoveAnnotationsAction.NotEmpty:
-            annotation_test_func = _annotation_file_is_not_empty
-        elif options.remove_annot_action == cfg.RemoveAnnotationsAction.Selected:
-            pass
-        if annotation_test_func:
-            current_step += 1
-            notification(current_step / steps, _("Checking annotations files."))
-            annotation_files = _check_annotation_files(
-                annotation_files,
-                annotations_dir,
-                device_path,
-                annotation_test_func,
-            )
-            msg = _("Found {0} annotation files to be removed.").format(
-                len(annotation_files)
-            )
-
-    if len(annotation_files.keys()) > 0:
-        current_step += 1
-        notification(current_step / steps, _("Removing annotations files"))
-        debug("Removing annotations files")
-        annotation_files_names = set(annotation_files.keys())
-        removed_annotation_files = _remove_extra_files(
-            annotation_files_names,
-            annotation_files,
-            True,
-            annotations_dir,
-            images_tree=True,
-        )
-        msg = _("{0} annotations files removed.").format(len(removed_annotation_files))
-
-    remove_annotations_result: dict[str, Any] = {}
-    remove_annotations_result["message"] = msg
-    remove_annotations_result["details"] = details
-    remove_annotations_result["options"] = options
-
-    current_step = steps
-    notification(
-        current_step / steps, _("Removing annotations files") + " - " + _("Finished")
-    )
-
-    return remove_annotations_result
-
-
-def _get_annotation_files(
-    annotations_path: str, annotations_ext: str
-) -> dict[str, str]:
-    annotation_files = {}
-    if annotations_path:
-        for path, dirs, files in os.walk(annotations_path):
-            debug("path=%s, dirs=%s" % (path, dirs))
-            debug("files=", files)
-            debug("len(files)=", len(files))
-            for filename in files:
-                debug("filename=", filename)
-                if filename.endswith(annotations_ext):
-                    annotation_files[filename] = path
-
-    return annotation_files
-
-
-def _get_annotation_files_for_books(
-    books: list[tuple[int, list[str], list[str], str, str]],
-    annotations_path: str,
-    annotations_ext: str,
-    device_path: str,
-) -> dict[str, str]:
-    annotation_files = {}
-    debug("annotations_path=", annotations_path)
-    debug("device_path=", device_path)
-    for book in books:
-        for filename in book[2]:
-            debug("filename=", filename)
-            book_filename = filename
-            debug("book_filename=", book_filename)
-            annotation_file_path = (
-                book_filename.replace(device_path, annotations_path) + annotations_ext
-            )
-            debug("annotation_file_path=", annotation_file_path)
-            if os.path.exists(annotation_file_path):
-                annotation_filename = os.path.basename(annotation_file_path)
-                debug("annotation_filename=", annotation_filename)
-                path = os.path.dirname(annotation_file_path)
-                debug("path=", path)
-                annotation_files[annotation_filename] = path
-
-    return annotation_files
-
-
-def _check_annotation_files(
-    annotation_files: dict[str, str],
-    annotations_dir: str,
-    device_path: str,
-    annotation_test_func: Callable[[str, str, str, str], bool],
-) -> dict[str, str]:
-    annotation_files_to_remove = {}
-    for filename in annotation_files:
-        debug("filename='%s', path='%s'" % (filename, annotation_files[filename]))
-        file_path = annotation_files[filename]
-        if annotation_test_func(filename, file_path, annotations_dir, device_path):
-            debug("annotation to be removed=", filename)
-            annotation_files_to_remove[filename] = file_path
-
-    return annotation_files_to_remove
-
-
-def _book_file_does_not_exists(
-    annotation_filename: str,
-    annotation_path: str,
-    annotations_dir: str,
-    device_path: str,
-) -> bool:
-    book_file = os.path.splitext(annotation_filename)[0]
-    book_path = annotation_path.replace(annotations_dir, device_path)
-    book_file = os.path.join(book_path, book_file)
-    return not os.path.exists(book_file)
-
-
-def _annotation_file_is_empty(
-    annotation_filename: str,
-    annotation_path: str,
-    annotations_dir: str,
-    device_path: str,
-) -> bool:
-    return not _annotation_file_is_not_empty(
-        annotation_filename, annotation_path, annotations_dir, device_path
-    )
-
-
-def _annotation_file_is_not_empty(
-    annotation_filename: str,
-    annotation_path: str,
-    annotations_dir: str,
-    device_path: str,
-) -> bool:
-    del annotations_dir, device_path
-    debug("annotation_filename=", annotation_filename)
-    annotation_filepath = os.path.join(annotation_path, annotation_filename)
-    with open(annotation_filepath) as annotation_file:
-        soup = BeautifulStoneSoup(annotation_file.read())
-        annotation = soup.find("annotation")
-
-    return annotation is not None

@@ -10,18 +10,14 @@ import datetime as dt
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     cast,
 )
 
-from calibre.ebooks.metadata import authors_to_string
-from calibre.gui2 import choose_dir, error_dialog, ui
 from calibre.gui2.library.delegates import DateDelegate
 from calibre.utils.config import tweaks
 from calibre.utils.date import utc_tz
 from qt.core import (
     QAbstractItemView,
-    QButtonGroup,
     QCheckBox,
     QDialog,
     QDialogButtonBox,
@@ -30,38 +26,26 @@ from qt.core import (
     QHBoxLayout,
     QIcon,
     QLabel,
-    QLineEdit,
     QPixmap,
-    QProgressDialog,
-    QPushButton,
     QRadioButton,
     Qt,
     QTableWidget,
     QTableWidgetItem,
-    QTimer,
     QVBoxLayout,
     QWidget,
 )
 
-from . import config as cfg
-from .constants import BOOK_CONTENTTYPE, GUI_NAME
+from .constants import GUI_NAME
 from .utils import (
     DateTableWidgetItem,
     ImageTitleLayout,
     ReadOnlyTableWidgetItem,
     SizePersistedDialog,
-    contentid_from_path,
-    convert_calibre_ids_to_books,
-    debug,
-    get_books_for_selected,
-    get_device_paths_from_id,
-    get_selected_ids,
-    is_device_view,
 )
 
 if TYPE_CHECKING:
-    from calibre.db.legacy import LibraryDatabase
     from calibre.devices.kobo.books import Book
+    from calibre.gui2 import ui
 
     from .action import KoboUtilitiesAction
 
@@ -76,268 +60,6 @@ KEY_REMOVE_ANNOT_SELECTED = 4
 
 # pulls in translation files for _() strings
 load_translations()
-
-
-class RemoveAnnotationsProgressDialog(QProgressDialog):
-    def __init__(
-        self,
-        gui: ui.Main | None,  # TODO Can this actually be None?
-        options: cfg.RemoveAnnotationsJobOptions,
-        queue: Callable[[cfg.RemoveAnnotationsJobOptions, list[tuple[Any]]], None],
-        db: LibraryDatabase | None,
-        plugin_action: KoboUtilitiesAction,
-    ):
-        QProgressDialog.__init__(self, "", "", 0, 0, gui)
-        debug("init")
-        self.setMinimumWidth(500)
-        self.books = []
-        self.options = options
-        self.queue = queue
-        self.db = db
-        self.plugin_action = plugin_action
-        self.gui = gui
-        self.books_to_scan = []
-
-        self.setWindowTitle(_("Creating queue for removing annotations files"))
-        QTimer.singleShot(0, self.do_remove_annotations_queue)
-        self.exec()
-
-    def do_remove_annotations_queue(self):
-        debug("start")
-        if self.gui is None:
-            # There is a nasty QT bug with the timers/logic above which can
-            # result in the do_queue method being called twice
-            return
-        if self.options.remove_annot_action == cfg.RemoveAnnotationsAction.Selected:
-            library_db = self.db  # self.gui.current_db
-            assert library_db is not None
-
-            self.setLabelText(_("Preparing the list of books ..."))
-            self.setValue(1)
-
-            if is_device_view(self.gui):
-                self.books = get_books_for_selected(self.gui)
-            else:
-                onDeviceIds = get_selected_ids(self.gui)
-                self.books = convert_calibre_ids_to_books(library_db, onDeviceIds)
-            self.setRange(0, len(self.books))
-
-            device = self.plugin_action.device
-            assert device is not None
-            for i, book in enumerate(self.books, start=1):
-                if is_device_view(self.gui):
-                    device_book_paths = [book.path]
-                    contentIDs = [book.contentID]
-                else:
-                    device_book_paths = get_device_paths_from_id(
-                        cast("int", book.calibre_id), self.gui
-                    )
-                    contentIDs = [
-                        contentid_from_path(device, path, BOOK_CONTENTTYPE)
-                        for path in device_book_paths
-                    ]
-                debug("device_book_paths:", device_book_paths)
-                book.paths = device_book_paths
-                book.contentIDs = contentIDs
-                if len(book.contentIDs):
-                    title = book.title
-                    self.setLabelText(_("Queueing {}").format(title))
-                    authors = authors_to_string(book.authors)
-
-                    self.books_to_scan.append(
-                        (book.calibre_id, book.contentIDs, book.paths, title, authors)
-                    )
-                self.setValue(i)
-        self.hide()
-
-        # Queue a job to process these ePub books
-        self.queue(self.options, self.books_to_scan)
-
-
-class BackupAnnotationsOptionsDialog(SizePersistedDialog):
-    def __init__(self, parent: QWidget, plugin_action: KoboUtilitiesAction):
-        SizePersistedDialog.__init__(
-            self,
-            parent,
-            "kobo utilities plugin:backup annotation files settings dialog",
-            plugin_action.load_resources,
-        )
-        self.plugin_action = plugin_action
-        self.help_anchor = "BackupAnnotations"
-
-        self.initialize_controls()
-
-        self.dest_directory_edit.setText(
-            cfg.plugin_prefs.backupAnnotations.dest_directory
-        )
-        # Cause our dialog size to be restored from prefs or created on first usage
-        self.resize_dialog()
-
-    def initialize_controls(self):
-        self.setWindowTitle(GUI_NAME)
-        layout = QVBoxLayout(self)
-        self.setLayout(layout)
-        title_layout = ImageTitleLayout(
-            self, "images/icon.png", _("Back up annotations files")
-        )
-        layout.addLayout(title_layout)
-        options_layout = QGridLayout()
-        layout.addLayout(options_layout)
-
-        dest_directory_label = QLabel(_("Destination:"), self)
-        dest_directory_label.setToolTip(
-            _("Select the destination the annotations files are to be backed up in.")
-        )
-        self.dest_directory_edit = QLineEdit(self)
-        self.dest_directory_edit.setMinimumSize(200, 0)
-        dest_directory_label.setBuddy(self.dest_directory_edit)
-        dest_pick_button = QPushButton(_("..."), self)
-        dest_pick_button.setMaximumSize(24, 20)
-        dest_pick_button.clicked.connect(self._get_dest_directory_name)
-        options_layout.addWidget(dest_directory_label, 0, 0, 1, 1)
-        options_layout.addWidget(self.dest_directory_edit, 0, 1, 1, 1)
-        options_layout.addWidget(dest_pick_button, 0, 2, 1, 1)
-
-        layout.addStretch(1)
-
-        # Dialog buttons
-        button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        )
-        button_box.accepted.connect(self.ok_clicked)
-        button_box.rejected.connect(self.reject)
-        layout.addWidget(button_box)
-
-    def ok_clicked(self) -> None:
-        if len(self.dest_directory_edit.text()) == 0:
-            error_dialog(
-                self,
-                "No destination",
-                "You must enter a destination directory to save the annotation files in",
-                show=True,
-                show_copy_button=False,
-            )
-
-        cfg.plugin_prefs.backupAnnotations.dest_directory = (
-            self.dest_directory_edit.text()
-        )
-        self.accept()
-
-    def dest_path(self):
-        return self.dest_directory_edit.text()
-
-    def _get_dest_directory_name(self):
-        path = choose_dir(
-            self,
-            "back up annotations destination dialog",
-            _("Choose destination directory"),
-        )
-        self.dest_directory_edit.setText(path)
-
-
-class RemoveAnnotationsOptionsDialog(SizePersistedDialog):
-    def __init__(self, parent: QWidget, plugin_action: KoboUtilitiesAction):
-        SizePersistedDialog.__init__(
-            self,
-            parent,
-            "kobo utilities plugin:remove annotation files settings dialog",
-            plugin_action.load_resources,
-        )
-        self.plugin_action = plugin_action
-        self.help_anchor = "RemoveAnnotations"
-
-        self.initialize_controls()
-        self.annotation_clean_option_idx = (
-            cfg.plugin_prefs.removeAnnotations.removeAnnotAction.value
-        )
-        button = self.annotation_clean_option_button_group.button(
-            self.annotation_clean_option_idx
-        )
-        assert button is not None
-        button.setChecked(True)
-        # Cause our dialog size to be restored from prefs or created on first usage
-        self.resize_dialog()
-
-    def initialize_controls(self):
-        self.setWindowTitle(GUI_NAME)
-        layout = QVBoxLayout(self)
-        self.setLayout(layout)
-        title_layout = ImageTitleLayout(
-            self, "images/icon.png", _("Remove annotations files")
-        )
-        layout.addLayout(title_layout)
-        options_layout = QGridLayout()
-        layout.addLayout(options_layout)
-
-        annotation_clean_option_group_box = QGroupBox(_("Remove..."), self)
-        options_layout.addWidget(annotation_clean_option_group_box, 0, 0, 1, 1)
-
-        annotation_clean_options = {
-            cfg.RemoveAnnotationsAction.All.value: (
-                _("All"),
-                _("Remove the annotations directory and all files within it"),
-                True,
-            ),
-            cfg.RemoveAnnotationsAction.Selected.value: (
-                _("For selected books"),
-                _("Only remove annotations files for the selected books"),
-                False,
-            ),
-            cfg.RemoveAnnotationsAction.NotOnDevice.value: (
-                _("Where book is not on device"),
-                _("Remove annotations files where there is no book on the device"),
-                True,
-            ),
-            cfg.RemoveAnnotationsAction.Empty.value: (
-                _("Empty"),
-                _("Remove all empty annotations files"),
-                True,
-            ),
-            cfg.RemoveAnnotationsAction.NotEmpty.value: (
-                _("Not empty"),
-                _("Only remove annotations files if they contain annotations"),
-                True,
-            ),
-        }
-
-        annotation_clean_option_group_box_layout = QVBoxLayout()
-        annotation_clean_option_group_box.setLayout(
-            annotation_clean_option_group_box_layout
-        )
-        self.annotation_clean_option_button_group = QButtonGroup(self)
-        self.annotation_clean_option_button_group.buttonClicked.connect(
-            self._annotation_clean_option_radio_clicked
-        )
-        self.annotation_clean_option_buttons = {}
-        for row, clean_option in enumerate(annotation_clean_options):
-            clean_options = annotation_clean_options[clean_option]
-            rdo = QRadioButton(clean_options[0], self)
-            rdo.setToolTip(clean_options[1])
-            self.annotation_clean_option_button_group.addButton(rdo)
-            self.annotation_clean_option_button_group.setId(rdo, clean_option)
-            annotation_clean_option_group_box_layout.addWidget(rdo)
-            self.annotation_clean_option_buttons[rdo] = row
-
-        layout.addStretch(1)
-
-        # Dialog buttons
-        button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        )
-        button_box.accepted.connect(self.ok_clicked)
-        button_box.rejected.connect(self.reject)
-        layout.addWidget(button_box)
-
-    def ok_clicked(self):
-        cfg.plugin_prefs.removeAnnotations.removeAnnotAction = (
-            cfg.RemoveAnnotationsAction(self.annotation_clean_option_idx)
-        )
-        self.accept()
-
-    def _annotation_clean_option_radio_clicked(self, radioButton: QRadioButton):
-        self.annotation_clean_option_idx = self.annotation_clean_option_buttons[
-            radioButton
-        ]
 
 
 class TitleWidgetItem(QTableWidgetItem):

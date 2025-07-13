@@ -8,6 +8,7 @@ __docformat__ = "restructuredtext en"
 
 import inspect
 import os
+import re
 from collections import defaultdict
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, Literal, cast
@@ -494,6 +495,40 @@ def contentid_from_path(device: KoboDevice, path: str, content_type: int):
                 device.driver._card_a_prefix, "file:///mnt/sd/"
             )
     return ContentID.replace("\\", "/")
+
+
+def remove_extra_files(
+    extra_imageids_files: set[str],
+    imageids_files: dict[str, str],
+    delete_extra_covers: bool,
+    image_path: str,
+    images_tree: bool = False,
+) -> list[str]:
+    extra_image_files = []
+    from glob import glob
+
+    debug("images_tree=%s" % (images_tree))
+    for imageId in extra_imageids_files:
+        image_path = imageids_files[imageId]
+        debug("image_path=%s" % (image_path))
+        debug("imageId=%s" % (imageId))
+        escaped_path = os.path.join(image_path, imageId + "*")
+        escaped_path = re.sub(r"([\[\]])", r"[\1]", escaped_path)
+        debug("escaped_path:", escaped_path)
+        for filename in glob(escaped_path):
+            debug("filename=%s" % (filename))
+            extra_image_files.append(os.path.basename(filename))
+            if delete_extra_covers:
+                os.unlink(filename)
+        if images_tree and delete_extra_covers:
+            debug("about to remove directory: image_path=%s" % image_path)
+            try:
+                os.removedirs(image_path)
+                debug("removed path=%s" % (image_path))
+            except Exception as e:
+                debug("removed path exception=", e)
+
+    return extra_image_files
 
 
 def value_changed(old_value: Any | None, new_value: Any | None) -> bool:

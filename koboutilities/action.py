@@ -11,16 +11,13 @@ import calendar
 import dataclasses
 import os
 import pickle
-import shutil
 import threading
 import time
 from functools import partial
 from typing import (
     TYPE_CHECKING,
-    Any,
     Callable,
     Dict,
-    List,
     Literal,
     Tuple,
     cast,
@@ -28,7 +25,6 @@ from typing import (
 
 from calibre.constants import numeric_version as calibre_version
 from calibre.devices.kobo.driver import KOBO, KOBOTOUCH
-from calibre.ebooks.metadata import authors_to_string
 from calibre.gui2 import (
     error_dialog,
     info_dialog,
@@ -36,11 +32,9 @@ from calibre.gui2 import (
 )
 from calibre.gui2.actions import InterfaceAction
 from calibre.gui2.device import DeviceJob, device_signals
-from calibre.gui2.dialogs.message_box import ViewLog
 from qt.core import (
     QAction,
     QMenu,
-    QModelIndex,
     QTimer,
     pyqtSignal,
 )
@@ -50,13 +44,11 @@ from . import config as cfg
 from .constants import BOOK_CONTENTTYPE, GUI_NAME
 from .dialogs import (
     AboutDialog,
-    BackupAnnotationsOptionsDialog,
-    RemoveAnnotationsOptionsDialog,
-    RemoveAnnotationsProgressDialog,
     ShowBooksNotInDeviceDatabaseDialog,
 )
 from .features import (
     analytics,
+    annotations,  # pyright: ignore[reportDuplicateImport]
     cleanimages,
     covers,
     database,
@@ -68,6 +60,7 @@ from .features import (
     reader,
     readingstatus,
     relatedbooks,
+    removeannotations,
     toc,
 )
 from .utils import (
@@ -75,13 +68,10 @@ from .utils import (
     Dispatcher,
     LoadResources,
     contentid_from_path,
-    convert_calibre_ids_to_books,
     create_menu_action_unique,
     debug,
     get_books_for_selected,
-    get_device_paths_from_id,
     get_icon,
-    get_selected_ids,
     is_device_view,
     set_plugin_icon_resources,
     show_help,
@@ -446,7 +436,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 image="edit_input.png",
                 unique_name="Copy annotation for selected book",
                 shortcut_name=_("Copy annotation for selected book"),
-                triggered=self.getAnnotationForSelected,
+                triggered=menu_wrapper(annotations.getAnnotationForSelected),
                 is_library_action=True,
             )
             self.create_menu_item_ex(
@@ -454,7 +444,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 _("Back up annotation file"),
                 unique_name="Back up annotation file",
                 shortcut_name=_("Back up annotation file"),
-                triggered=self.backup_annotation_files,
+                triggered=menu_wrapper(annotations.backup_annotation_files),
                 is_library_action=True,
             )
             self.create_menu_item_ex(
@@ -462,7 +452,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 _("Remove annotation files"),
                 unique_name="Remove annotation files",
                 shortcut_name=_("Remove annotation files"),
-                triggered=self.remove_annotations_files,
+                triggered=menu_wrapper(removeannotations.remove_annotations_files),
                 is_library_action=True,
                 is_device_action=True,
             )
@@ -944,106 +934,6 @@ class KoboUtilitiesAction(InterfaceAction):
         self._device_database_backup(job_options)
         debug("end")
 
-    def backup_annotation_files(self) -> None:
-        current_view = self.gui.current_view()
-        if (
-            current_view is None
-            or len(current_view.selectionModel().selectedRows()) == 0
-        ):
-            return
-
-        self.device = self.get_device()
-        if self.device is None:
-            error_dialog(
-                self.gui,
-                _("Cannot back up annotation files from device."),
-                _("No device connected."),
-                show=True,
-            )
-            return
-
-        selectedIDs = get_selected_ids(self.gui)
-
-        if len(selectedIDs) == 0:
-            return
-
-        dlg = BackupAnnotationsOptionsDialog(self.gui, self)
-        dlg.exec()
-        if dlg.result() != dlg.DialogCode.Accepted:
-            return
-
-        dest_path = dlg.dest_path()
-        debug("selectedIDs:", selectedIDs)
-        books = convert_calibre_ids_to_books(current_view.model().db, selectedIDs)
-        for book in books:
-            device_book_paths = get_device_paths_from_id(
-                cast("int", book.calibre_id), self.gui
-            )
-            debug("device_book_paths:", device_book_paths)
-            book.paths = device_book_paths
-            book.contentIDs = [
-                contentid_from_path(self.device, path, BOOK_CONTENTTYPE)
-                for path in device_book_paths
-            ]
-
-        debug("dest_path=", dest_path)
-        annotations_found, no_annotations, kepubs, count_books = (
-            self._backup_annotation_files(books, dest_path)
-        )
-        result_message = _(
-            "Annotations backup summary:\n\tBooks with annotations={0}\n\tBooks without annotations={1}\n\tKobo epubs={2}\n\tTotal books={3}"
-        ).format(annotations_found, no_annotations, kepubs, count_books)
-        info_dialog(
-            self.gui,
-            _("Kobo Utilities") + _(" - Annotations backup"),
-            result_message,
-            show=True,
-        )
-
-    def remove_annotations_files(self) -> None:
-        self.device = self.get_device()
-        current_view = self.gui.current_view()
-        if current_view is None:
-            return
-
-        if self.device is None:
-            error_dialog(
-                self.gui,
-                _("Cannot remove files from device."),
-                _("No device connected."),
-                show=True,
-            )
-            return
-
-        dlg = RemoveAnnotationsOptionsDialog(self.gui, self)
-        dlg.exec()
-        if dlg.result() != dlg.DialogCode.Accepted:
-            return
-
-        debug("self.device.path='%s'" % (self.device.path))
-
-        options = cfg.RemoveAnnotationsJobOptions(
-            str(
-                self.device.driver.normalize_path(
-                    self.device.path + "Digital Editions/Annotations/"
-                )
-            ),
-            ".annot",
-            self.device.path,
-            cfg.plugin_prefs.removeAnnotations.removeAnnotAction,
-        )
-
-        debug("options=", options)
-        RemoveAnnotationsProgressDialog(
-            self.gui,
-            options,
-            self._remove_annotations_job,
-            current_view.model().db,
-            plugin_action=self,
-        )
-
-        return
-
     def show_books_not_in_database(self) -> None:
         current_view = self.gui.current_view()
         if current_view is None:
@@ -1068,25 +958,6 @@ class KoboUtilitiesAction(InterfaceAction):
 
         dlg = ShowBooksNotInDeviceDatabaseDialog(self.gui, self, books_not_in_database)
         dlg.show()
-
-    def getAnnotationForSelected(self) -> None:
-        current_view = self.gui.current_view()
-        if (
-            current_view is None
-            or len(current_view.selectionModel().selectedRows()) == 0
-        ):
-            return
-        self.device = self.get_device()
-        if self.device is None:
-            error_dialog(
-                self.gui,
-                _("Cannot upload covers."),
-                _("No device connected."),
-                show=True,
-            )
-            return
-
-        self._getAnnotationForSelected()
 
     def get_device_path(self) -> str:
         debug("BEGIN Get Device Path")
@@ -1266,150 +1137,6 @@ class KoboUtilitiesAction(InterfaceAction):
             )
             return
 
-    def _remove_annotations_job(
-        self, options: cfg.RemoveAnnotationsJobOptions, books: list[tuple[Any]]
-    ):
-        debug("Start")
-        from .jobs import do_remove_annotations
-
-        func = "arbitrary_n"
-        cpus = self.gui.job_manager.server.pool_size
-        args = [
-            do_remove_annotations.__module__,
-            do_remove_annotations.__name__,
-            (pickle.dumps(options), books, cpus),
-        ]
-        desc = _("Removing annotations files")
-        self.gui.job_manager.run_job(
-            self.Dispatcher(self._remove_annotations_completed),
-            func,
-            args=args,
-            description=desc,
-        )
-        self.gui.status_bar.show_message(_("Removing annotations files") + "...")
-
-    def _remove_annotations_completed(self, job: DeviceJob) -> None:
-        if job.failed:
-            self.gui.job_exception(
-                job, dialog_title=_("Failed to check cover directory on device")
-            )
-            return
-        annotations_removed = job.result
-        msg = annotations_removed["message"]
-        self.gui.status_bar.show_message(_("Cleaning annotations completed"), 3000)
-
-        details = ""
-        if msg:
-            pass
-        else:
-            msg = _("Kobo Utilities removed <b>{0} annotation files(s)</b>.").format(0)
-
-        info_dialog(
-            self.gui,
-            _("Kobo Utilities") + " - " + _("Finished"),
-            msg,
-            show_copy_button=True,
-            show=True,
-            det_msg=details,
-        )
-
-    def _getAnnotationForSelected(self) -> None:
-        assert self.device is not None
-
-        # Generate a path_map from selected ids
-        def get_ids_from_selected_rows() -> list[int]:
-            rows = self.gui.library_view.selectionModel().selectedRows()
-            if not rows or len(rows) < 1:
-                rows = range(self.gui.library_view.model().rowCount(QModelIndex()))
-            return list(map(self.gui.library_view.model().id, rows))
-
-        def get_formats(_id: int) -> list[str]:
-            formats = db.formats(_id, index_is_id=True)
-            return [fmt.lower() for fmt in formats.split(",")]
-
-        def generate_annotation_paths(
-            ids: list[int],
-        ) -> dict[int, dict[str, str | list[str]]]:
-            # Generate path templates
-            # Individual storage mount points scanned/resolved in driver.get_annotations()
-            path_map = {}
-            for _id in ids:
-                paths = get_device_paths_from_id(_id, self.gui)
-                debug("paths=", paths)
-                if len(paths) > 0:
-                    the_path = paths[0]
-                    if len(paths) > 1 and (
-                        len(os.path.splitext(paths[0])) > 1
-                    ):  # No extension - is kepub
-                        the_path = paths[1]
-                    path_map[_id] = {"path": the_path, "fmts": get_formats(_id)}
-            return path_map
-
-        annotationText = []
-
-        if self.gui.current_view() is not self.gui.library_view:
-            error_dialog(
-                self.gui,
-                _("Use library only"),
-                _("User annotations generated from main library only"),
-                show=True,
-            )
-            return
-        db = self.gui.library_view.model().db
-
-        # Get the list of ids
-        ids = get_ids_from_selected_rows()
-        if not ids:
-            error_dialog(
-                self.gui,
-                _("No books selected"),
-                _("No books selected to fetch annotations from"),
-                show=True,
-            )
-            return
-
-        debug("ids=", ids)
-        # Map ids to paths
-        path_map = generate_annotation_paths(ids)
-        debug("path_map=", path_map)
-        if len(path_map) == 0:
-            error_dialog(
-                self.gui,
-                _("No books on device selected"),
-                _(
-                    "None of the books selected were on the device. Annotations can only be copied for books on the device."
-                ),
-                show=True,
-            )
-            return
-
-        # Dispatch to the device get_annotations()
-        debug("path_map=", path_map)
-        bookmarked_books = self.device.driver.get_annotations(path_map)
-        debug("bookmarked_books=", bookmarked_books)
-
-        for id_ in bookmarked_books:
-            bm = self.device.driver.UserAnnotation(
-                bookmarked_books[id_][0], bookmarked_books[id_][1]
-            )
-
-            mi = db.get_metadata(id_, index_is_id=True)
-
-            user_notes_soup = self.device.driver.generate_annotation_html(bm.value)
-            book_heading = "<b>%(title)s</b> by <b>%(author)s</b>" % {
-                "title": mi.title,
-                "author": authors_to_string(mi.authors),
-            }
-            bookmark_html = str(user_notes_soup.div)
-            debug("bookmark_html:", bookmark_html)
-            annotationText.append(book_heading + bookmark_html)
-
-        d = ViewLog(
-            "Kobo Touch Annotation", "\n<hr/>\n".join(annotationText), parent=self.gui
-        )
-        d.setWindowIcon(self.qaction.icon())
-        d.exec()
-
     def _check_book_in_database(self, books: list[Book]) -> list[Book]:
         connection = self.device_database_connection()
         not_on_device_books = []
@@ -1438,66 +1165,6 @@ class KoboUtilitiesAction(InterfaceAction):
                 not_on_device_books.append(book)
 
         return not_on_device_books
-
-    def _backup_annotation_files(self, books: list[Book], dest_path: str):
-        annotations_found = 0
-        kepubs = 0
-        no_annotations = 0
-        count_books = 0
-
-        device = self.device
-        assert device is not None
-
-        debug("self.device.path='%s'" % (device.path))
-        kepub_dir = cast("str", device.driver.normalize_path(".kobo/kepub/"))
-        annotations_dir = cast(
-            "str",
-            device.driver.normalize_path(device.path + "Digital Editions/Annotations/"),
-        )
-        annotations_ext = ".annot"
-
-        for book in books:
-            count_books += 1
-
-            for book_path in cast("List[str]", book.paths):
-                relative_path = book_path.replace(device.path, "")
-                annotation_file = device.driver.normalize_path(
-                    annotations_dir + relative_path + annotations_ext
-                )
-                assert annotation_file is not None
-                debug(
-                    "kepub title='%s' annotation_file='%s'"
-                    % (book.title, annotation_file)
-                )
-                if relative_path.startswith(kepub_dir):
-                    debug("kepub title='%s' book_path='%s'" % (book.title, book_path))
-                    kepubs += 1
-                elif os.path.exists(annotation_file):
-                    debug("book_path='%s'" % (book_path))
-                    backup_file = device.driver.normalize_path(
-                        dest_path + "/" + relative_path + annotations_ext
-                    )
-                    assert backup_file is not None
-                    debug("backup_file='%s'" % (backup_file))
-                    d, p = os.path.splitdrive(backup_file)
-                    debug("d='%s' p='%s'" % (d, p))
-                    backup_path = os.path.dirname(str(backup_file))
-                    try:
-                        os.makedirs(backup_path)
-                    except OSError:
-                        debug("path exists: backup_path='%s'" % (backup_path))
-                    shutil.copyfile(annotation_file, backup_file)
-                    annotations_found += 1
-                else:
-                    debug("book_path='%s'" % (book_path))
-                    no_annotations += 1
-
-        debug(
-            "Backup summary: annotations_found=%d, no_annotations=%d, kepubs=%d Total=%d"
-            % (annotations_found, no_annotations, kepubs, count_books)
-        )
-
-        return (annotations_found, no_annotations, kepubs, count_books)
 
 
 @dataclasses.dataclass

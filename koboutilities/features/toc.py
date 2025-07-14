@@ -28,10 +28,10 @@ from ..constants import GUI_NAME
 from ..dialogs import (
     CheckableTableWidgetItem,
     ImageTitleLayout,
+    PluginDialog,
     ProgressBar,
     ReadOnlyTableWidgetItem,
     ReadOnlyTextIconWidgetItem,
-    SizePersistedDialog,
 )
 from ..utils import DeviceDatabaseConnection, Dispatcher, LoadResources, debug
 
@@ -953,22 +953,20 @@ def addManifestEntryToDatabase(
     cursorShortCover.close()
 
 
-class UpdateBooksToCDialog(SizePersistedDialog):
+class UpdateBooksToCDialog(PluginDialog):
     def __init__(
         self,
         parent: ui.Main,
         load_resources: LoadResources,
         books: list[dict[str, Any]],
     ):
-        super().__init__(
-            parent, "kobo utilities plugin:update book toc dialog", load_resources
-        )
+        super().__init__(parent, "kobo utilities plugin:update book toc dialog")
         self.setWindowTitle(GUI_NAME)
 
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "toc.png", _("Update ToCs in device database")
+            self, "toc.png", _("Update ToCs in device database"), load_resources
         )
         layout.addLayout(title_layout)
 

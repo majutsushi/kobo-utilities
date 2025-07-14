@@ -19,8 +19,8 @@ from ..constants import BOOK_CONTENTTYPE, GUI_NAME
 from ..dialogs import (
     CustomColumnComboBox,
     ImageTitleLayout,
+    PluginDialog,
     ProgressBar,
-    SizePersistedDialog,
 )
 from ..utils import debug
 
@@ -239,17 +239,13 @@ def _get_shelves_from_device(
     return (books_with_shelves, books_without_shelves, count_books)
 
 
-class GetShelvesFromDeviceDialog(SizePersistedDialog):
+class GetShelvesFromDeviceDialog(PluginDialog):
     def __init__(self, parent: ui.Main, load_resources: LoadResources):
-        SizePersistedDialog.__init__(
-            self,
+        super().__init__(
             parent,
             "kobo utilities plugin:get shelves from device settings dialog",
-            load_resources,
         )
-        self.help_anchor = "GetShelvesFromDevice"
-
-        self.initialize_controls()
+        self.initialize_controls(load_resources)
         self.gui = parent
 
         all_books = cfg.plugin_prefs.getShelvesOptionStore.allBooks
@@ -267,12 +263,16 @@ class GetShelvesFromDeviceDialog(SizePersistedDialog):
         # Cause our dialog size to be restored from prefs or created on first usage
         self.resize_dialog()
 
-    def initialize_controls(self):
+    def initialize_controls(self, load_resources: LoadResources):
         self.setWindowTitle(GUI_NAME)
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/icon.png", _("Get collections from device")
+            self,
+            "images/icon.png",
+            _("Get collections from device"),
+            load_resources,
+            "GetShelvesFromDevice",
         )
         layout.addLayout(title_layout)
 

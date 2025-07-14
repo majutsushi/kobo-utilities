@@ -27,9 +27,9 @@ from .. import utils
 from ..dialogs import (
     DateTableWidgetItem,
     ImageTitleLayout,
+    PluginDialog,
     ProgressBar,
     RatingTableWidgetItem,
-    SizePersistedDialog,
 )
 from ..utils import Dispatcher, LoadResources, debug
 
@@ -72,24 +72,21 @@ def fix_duplicate_shelves(
     )
 
 
-class FixDuplicateShelvesDialog(SizePersistedDialog):
+class FixDuplicateShelvesDialog(PluginDialog):
     def __init__(
         self,
         parent: ui.Main,
         load_resources: LoadResources,
         shelves: list[list[Any]],
     ):
-        SizePersistedDialog.__init__(
-            self,
+        super().__init__(
             parent,
             "kobo utilities plugin:duplicate shelves in device database dialog",
-            load_resources,
         )
         self.shelves = shelves
         self.blockSignals(True)
-        self.help_anchor = "FixDuplicateShelves"
 
-        self.initialize_controls()
+        self.initialize_controls(load_resources)
 
         # Display the books in the table
         self.blockSignals(False)
@@ -98,7 +95,7 @@ class FixDuplicateShelvesDialog(SizePersistedDialog):
         # Cause our dialog size to be restored from prefs or created on first usage
         self.resize_dialog()
 
-    def initialize_controls(self):
+    def initialize_controls(self, load_resources: LoadResources):
         options = cfg.plugin_prefs.fixDuplicatesOptionsStore
         self.setWindowTitle(_("Duplicate collections in device database"))
         layout = QVBoxLayout(self)
@@ -107,6 +104,8 @@ class FixDuplicateShelvesDialog(SizePersistedDialog):
             self,
             "images/manage_series.png",
             _("Duplicate collections in device database"),
+            load_resources,
+            "FixDuplicateShelves",
         )
         layout.addLayout(title_layout)
 

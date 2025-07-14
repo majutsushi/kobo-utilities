@@ -18,7 +18,7 @@ from qt.core import (
 from .. import config as cfg
 from .. import utils
 from ..constants import BOOK_CONTENTTYPE, GUI_NAME
-from ..dialogs import ImageTitleLayout, SizePersistedDialog
+from ..dialogs import ImageTitleLayout, PluginDialog
 from ..utils import debug
 
 if TYPE_CHECKING:
@@ -372,19 +372,15 @@ def _open_cover_image_directory(books: list[Book], device: KoboDevice, gui: ui.M
     return removed_covers, not_on_device_books, total_books
 
 
-class CoverUploadOptionsDialog(SizePersistedDialog):
+class CoverUploadOptionsDialog(PluginDialog):
     def __init__(
         self, parent: QWidget, device: KoboDevice, load_resources: LoadResources
     ):
-        SizePersistedDialog.__init__(
-            self,
+        super().__init__(
             parent,
             "kobo utilities plugin:cover upload settings dialog",
-            load_resources,
         )
-        self.help_anchor = "UploadCovers"
-
-        self.initialize_controls()
+        self.initialize_controls(load_resources)
 
         options = cfg.plugin_prefs.coverUpload
 
@@ -424,11 +420,17 @@ class CoverUploadOptionsDialog(SizePersistedDialog):
         # Cause our dialog size to be restored from prefs or created on first usage
         self.resize_dialog()
 
-    def initialize_controls(self):
+    def initialize_controls(self, load_resources: LoadResources):
         self.setWindowTitle(GUI_NAME)
         layout = QVBoxLayout(self)
         self.setLayout(layout)
-        title_layout = ImageTitleLayout(self, "default_cover.png", _("Upload covers"))
+        title_layout = ImageTitleLayout(
+            self,
+            "default_cover.png",
+            _("Upload covers"),
+            load_resources,
+            "UploadCovers",
+        )
         layout.addLayout(title_layout, stretch=0)
 
         options_group = QGroupBox(_("Upload covers"), self)
@@ -513,17 +515,13 @@ class CoverUploadOptionsDialog(SizePersistedDialog):
         )
 
 
-class RemoveCoverOptionsDialog(SizePersistedDialog):
+class RemoveCoverOptionsDialog(PluginDialog):
     def __init__(self, parent: QWidget, load_resources: LoadResources):
-        SizePersistedDialog.__init__(
-            self,
+        super().__init__(
             parent,
             "kobo utilities plugin:remove cover settings dialog",
-            load_resources,
         )
-        self.help_anchor = "RemoveCovers"
-
-        self.initialize_controls()
+        self.initialize_controls(load_resources)
 
         options = cfg.plugin_prefs.removeCovers
         self.remove_fullsize_covers_checkbox.setChecked(options.remove_fullsize_covers)
@@ -532,11 +530,17 @@ class RemoveCoverOptionsDialog(SizePersistedDialog):
         # Cause our dialog size to be restored from prefs or created on first usage
         self.resize_dialog()
 
-    def initialize_controls(self):
+    def initialize_controls(self, load_resources: LoadResources):
         self.setWindowTitle(GUI_NAME)
         layout = QVBoxLayout(self)
         self.setLayout(layout)
-        title_layout = ImageTitleLayout(self, "default_cover.png", _("Remove covers"))
+        title_layout = ImageTitleLayout(
+            self,
+            "default_cover.png",
+            _("Remove covers"),
+            load_resources,
+            "RemoveCovers",
+        )
         layout.addLayout(title_layout)
 
         options_group = QGroupBox(_("Remove covers"), self)

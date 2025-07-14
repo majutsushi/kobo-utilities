@@ -27,9 +27,9 @@ from ..constants import BOOK_CONTENTTYPE, GUI_NAME
 from ..dialogs import (
     CustomColumnComboBox,
     ImageTitleLayout,
+    PluginDialog,
     ProgressBar,
     ReadingStatusGroupBox,
-    SizePersistedDialog,
 )
 from ..utils import Dispatcher, LoadResources, debug
 
@@ -794,7 +794,7 @@ def _render_synopsis(mi: Metadata, book: Book, template: str | None = None):
     return rendered_comments
 
 
-class UpdateMetadataOptionsDialog(SizePersistedDialog):
+class UpdateMetadataOptionsDialog(PluginDialog):
     def __init__(
         self,
         parent: ui.Main,
@@ -802,17 +802,14 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         book: Book,
         load_resources: LoadResources,
     ):
-        SizePersistedDialog.__init__(
-            self,
+        super().__init__(
             parent,
             "kobo utilities plugin:update metadata settings dialog",
-            load_resources,
         )
         self.gui = parent
-        self.help_anchor = "UpdateMetadata"
         self.test_book = book
 
-        self.initialize_controls()
+        self.initialize_controls(load_resources)
 
         # Set some default values from last time dialog was used.
         title = cfg.plugin_prefs.MetadataOptions.title
@@ -897,12 +894,16 @@ class UpdateMetadataOptionsDialog(SizePersistedDialog):
         # Cause our dialog size to be restored from prefs or created on first usage
         self.resize_dialog()
 
-    def initialize_controls(self):
+    def initialize_controls(self, load_resources: LoadResources):
         self.setWindowTitle(GUI_NAME)
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/icon.png", _("Update metadata in device library")
+            self,
+            "images/icon.png",
+            _("Update metadata in device library"),
+            load_resources,
+            "UpdateMetadata",
         )
         layout.addLayout(title_layout)
 

@@ -10,9 +10,9 @@ from .. import utils
 from ..constants import GUI_NAME
 from ..dialogs import (
     ImageTitleLayout,
+    PluginDialog,
     ProgressBar,
     ReadingStatusGroupBox,
-    SizePersistedDialog,
 )
 from ..features import metadata
 from ..utils import Dispatcher, LoadResources, debug
@@ -77,28 +77,29 @@ def change_reading_status(
     )
 
 
-class ChangeReadingStatusOptionsDialog(SizePersistedDialog):
+class ChangeReadingStatusOptionsDialog(PluginDialog):
     def __init__(self, parent: ui.Main, load_resources: LoadResources):
-        SizePersistedDialog.__init__(
-            self,
+        super().__init__(
             parent,
             "kobo utilities plugin:change reading status settings dialog",
-            load_resources,
         )
-        self.help_anchor = "ChangeReadingStatus"
         self.options = cfg.MetadataOptionsConfig()
 
-        self.initialize_controls()
+        self.initialize_controls(load_resources)
 
         # Cause our dialog size to be restored from prefs or created on first usage
         self.resize_dialog()
 
-    def initialize_controls(self):
+    def initialize_controls(self, load_resources: LoadResources):
         self.setWindowTitle(GUI_NAME)
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/icon.png", _("Change reading status in device library")
+            self,
+            "images/icon.png",
+            _("Change reading status in device library"),
+            load_resources,
+            "ChangeReadingStatus",
         )
         layout.addLayout(title_layout)
 

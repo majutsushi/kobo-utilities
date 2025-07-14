@@ -45,9 +45,9 @@ from ..dialogs import (
     AuthorsTableWidgetItem,
     DateTableWidgetItem,
     ImageTitleLayout,
+    PluginDialog,
     ProgressBar,
     ReadOnlyTableWidgetItem,
-    SizePersistedDialog,
 )
 from ..features import metadata
 from ..utils import Dispatcher, LoadResources, debug
@@ -173,7 +173,7 @@ def get_series_columns(gui: ui.Main) -> dict[str, str]:
     return series_columns
 
 
-class ManageSeriesDeviceDialog(SizePersistedDialog):
+class ManageSeriesDeviceDialog(PluginDialog):
     def __init__(
         self,
         parent: ui.Main,
@@ -182,9 +182,7 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         series_columns: dict[str, str],
         load_resources: LoadResources,
     ):
-        SizePersistedDialog.__init__(
-            self, parent, "kobo utilities plugin:series dialog", load_resources
-        )
+        super().__init__(parent, "kobo utilities plugin:series dialog")
         self.db = parent.library_view.model().db
         self.books = books
         self.all_series = all_series
@@ -192,7 +190,7 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         self.load_resources = load_resources
         self.blockSignals(True)
 
-        self.initialize_controls()
+        self.initialize_controls(load_resources)
 
         # Books will have been sorted by the Calibre series column
         # Choose the appropriate series column to be editing
@@ -216,12 +214,15 @@ class ManageSeriesDeviceDialog(SizePersistedDialog):
         # Cause our dialog size to be restored from prefs or created on first usage
         self.resize_dialog()
 
-    def initialize_controls(self):
+    def initialize_controls(self, load_resources: LoadResources):
         self.setWindowTitle(_("Manage series"))
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/manage_series.png", _("Manage series on device")
+            self,
+            "images/manage_series.png",
+            _("Manage series on device"),
+            load_resources,
         )
         layout.addLayout(title_layout)
 
@@ -976,7 +977,7 @@ class SeriesTableWidget(QTableWidget):
             item.setText("New " + text)
 
 
-class LockSeriesDialog(SizePersistedDialog):
+class LockSeriesDialog(PluginDialog):
     def __init__(
         self,
         parent: QWidget,
@@ -984,20 +985,20 @@ class LockSeriesDialog(SizePersistedDialog):
         initial_value: float,
         load_resources: LoadResources,
     ):
-        SizePersistedDialog.__init__(
-            self, parent, "Manage Series plugin:lock series dialog", load_resources
-        )
-        self.initialize_controls(title, initial_value)
+        super().__init__(parent, "Manage Series plugin:lock series dialog")
+        self.initialize_controls(title, initial_value, load_resources)
 
         # Cause our dialog size to be restored from prefs or created on first usage
         self.resize_dialog()
 
-    def initialize_controls(self, title: str, initial_value: float):
+    def initialize_controls(
+        self, title: str, initial_value: float, load_resources: LoadResources
+    ):
         self.setWindowTitle(_("Lock series index"))
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/lock32.png", _("Lock series index")
+            self, "images/lock32.png", _("Lock series index"), load_resources
         )
         layout.addLayout(title_layout)
 

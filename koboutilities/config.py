@@ -48,17 +48,15 @@ from .dialogs import (
     CheckableTableWidgetItem,
     CustomColumnComboBox,
     ImageTitleLayout,
+    PluginDialog,
     ReadOnlyTableWidgetItem,
     ReadOnlyTextIconWidgetItem,
-    SizePersistedDialog,
 )
 from .utils import (
-    LoadResources,
     debug,
     get_icon,
     get_serial_no,
     prompt_for_restart,
-    show_help,
 )
 
 if TYPE_CHECKING:
@@ -769,7 +767,6 @@ class ProfilesTab(QWidget):
         QWidget.__init__(self)
 
         self.plugin_action = plugin_action
-        self.help_anchor = "ConfigurationDialog"
         self.library_config = get_library_config(self.plugin_action.gui.current_db)
         debug("self.library_config", self.library_config)
         self.profiles = self.library_config.profiles
@@ -1878,13 +1875,16 @@ class ConfigWidget(QWidget):
         self.plugin_action = plugin_action
         layout = QVBoxLayout(self)
         self.setLayout(layout)
-        self.help_anchor = "ConfigurationDialog"
 
         self._get_create_new_custom_column_instance = None
         self.supports_create_custom_column = SUPPORTS_CREATE_CUSTOM_COLUMN
 
         title_layout = ImageTitleLayout(
-            self, "images/icon.png", _("Kobo Utilities options")
+            self,
+            "images/icon.png",
+            _("Kobo Utilities options"),
+            self.plugin_action.load_resources,
+            "ConfigurationDialog",
         )
         layout.addLayout(title_layout)
 
@@ -1937,22 +1937,14 @@ class ConfigWidget(QWidget):
         # Force the menus to be rebuilt immediately, so we have all our actions registered
         self.plugin_action.rebuild_menus()
         d = KeyboardConfigDialog(
-            self.plugin_action.gui,
-            self.plugin_action.action_spec[0],
-            self.plugin_action.load_resources,
+            self.plugin_action.gui, self.plugin_action.action_spec[0]
         )
         if d.exec() == d.DialogCode.Accepted:
             self.plugin_action.gui.keyboard.finalize()
 
     def view_prefs(self):
-        d = PrefsViewerDialog(
-            self.plugin_action.gui, PREFS_NAMESPACE, self.plugin_action.load_resources
-        )
+        d = PrefsViewerDialog(self.plugin_action.gui, PREFS_NAMESPACE)
         d.exec()
-
-    def help_link_activated(self, url: str):
-        del url
-        show_help(self.plugin_action.load_resources, anchor="ConfigurationDialog")
 
     @property
     def get_create_new_custom_column_instance(self) -> CreateNewCustomColumn | None:
@@ -1966,9 +1958,9 @@ class ConfigWidget(QWidget):
         return self._get_create_new_custom_column_instance
 
 
-class PrefsViewerDialog(SizePersistedDialog):
-    def __init__(self, gui: ui.Main, namespace: str, load_resources: LoadResources):
-        super().__init__(gui, _("Prefs viewer dialog"), load_resources)
+class PrefsViewerDialog(PluginDialog):
+    def __init__(self, gui: ui.Main, namespace: str):
+        super().__init__(gui, _("Prefs viewer dialog"))
         self.setWindowTitle(_("Preferences for: {}").format(namespace))
 
         self.gui = gui
@@ -2096,13 +2088,13 @@ class PrefsViewerDialog(SizePersistedDialog):
             self.gui.quit(restart=True)
 
 
-class KeyboardConfigDialog(SizePersistedDialog):
+class KeyboardConfigDialog(PluginDialog):
     """
     This dialog is used to allow editing of keyboard shortcuts.
     """
 
-    def __init__(self, gui: ui.Main, group_name: str, load_resources: LoadResources):
-        super().__init__(gui, "Keyboard shortcut dialog", load_resources)
+    def __init__(self, gui: ui.Main, group_name: str):
+        super().__init__(gui, "Keyboard shortcut dialog")
         self.gui = gui
         self.setWindowTitle("Keyboard shortcuts")
         layout = QVBoxLayout(self)

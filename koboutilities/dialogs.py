@@ -12,10 +12,10 @@ from typing import (
     Callable,
 )
 
-from calibre.gui2 import Application, error_dialog, gprefs
+from calibre.gui2 import Application, error_dialog
+from calibre.gui2.dialogs.plugin_updater import SizePersistedDialog
 from calibre.utils.date import UNDEFINED_DATE, format_date, now
 from qt.core import (
-    QByteArray,
     QCheckBox,
     QComboBox,
     QDateTime,
@@ -46,7 +46,6 @@ if TYPE_CHECKING:
     from calibre.devices.kobo.books import Book
     from calibre.gui2 import ui
 
-    from .config import ConfigWidget
     from .utils import LoadResources
 
 
@@ -61,9 +60,11 @@ class ImageTitleLayout(QHBoxLayout):
 
     def __init__(
         self,
-        parent: SizePersistedDialog | ConfigWidget,
+        parent: QWidget,
         icon_name: str,
         title: str,
+        load_resources: LoadResources,
+        help_anchor: str | None = None,
     ):
         super().__init__()
         self.title_image_label = QLabel(parent)
@@ -94,7 +95,9 @@ class ImageTitleLayout(QHBoxLayout):
             Qt.TextInteractionFlag.LinksAccessibleByMouse
             | Qt.TextInteractionFlag.LinksAccessibleByKeyboard
         )
-        help_label.linkActivated.connect(parent.help_link_activated)
+        help_label.linkActivated.connect(
+            lambda _url: utils.show_help(load_resources, help_anchor)
+        )
         help_layout.addWidget(help_label)
 
         help_layout.setAlignment(Qt.AlignmentFlag.AlignRight)
@@ -119,37 +122,10 @@ class ImageTitleLayout(QHBoxLayout):
         self.title_image_label.setScaledContents(True)
 
 
-class SizePersistedDialog(QDialog):
-    """
-    This dialog is a base class for any dialogs that want their size/position
-    restored when they are next opened.
-    """
-
-    def __init__(
-        self, parent: QWidget, unique_pref_name: str, load_resources: LoadResources
-    ):
-        super().__init__(parent)
-        self.unique_pref_name = unique_pref_name
-        self.load_resources = load_resources
-        self.geom: QByteArray | None = gprefs.get(unique_pref_name, None)
-        self.finished.connect(self.dialog_closing)
-        self.help_anchor = None
+class PluginDialog(SizePersistedDialog):
+    def __init__(self, parent: QWidget, unique_pref_name: str):
+        super().__init__(parent, unique_pref_name)
         self.setWindowIcon(utils.get_icon("images/icon.png"))
-
-    def resize_dialog(self):
-        if self.geom is None:
-            self.resize(self.sizeHint())
-        else:
-            self.restoreGeometry(self.geom)
-
-    def dialog_closing(self, result: Any):
-        del result
-        geom = self.saveGeometry()
-        gprefs[self.unique_pref_name] = geom
-
-    def help_link_activated(self, url: str):
-        del url
-        utils.show_help(self.load_resources, anchor=self.help_anchor)
 
 
 class ReadOnlyTableWidgetItem(QTableWidgetItem):

@@ -9,7 +9,7 @@ from qt.core import QDialogButtonBox, QGridLayout, QGroupBox, QRadioButton, QVBo
 
 from .. import utils
 from ..constants import GUI_NAME
-from ..dialogs import ImageTitleLayout, SizePersistedDialog
+from ..dialogs import ImageTitleLayout, PluginDialog
 from ..utils import Dispatcher, LoadResources, debug
 
 if TYPE_CHECKING:
@@ -83,27 +83,30 @@ def _block_analytics(device: KoboDevice, create_trigger: bool):
     return block_result
 
 
-class BlockAnalyticsOptionsDialog(SizePersistedDialog):
+class BlockAnalyticsOptionsDialog(PluginDialog):
     def __init__(self, parent: QWidget, load_resources: LoadResources):
-        SizePersistedDialog.__init__(
-            self,
+        super().__init__(
             parent,
             "kobo utilities plugin:block analytics settings dialog",
-            load_resources,
         )
-        self.help_anchor = "BlockAnalyticsEvents"
         self.createAnalyticsEventsTrigger = True
 
-        self.initialize_controls()
+        self.initialize_controls(load_resources)
 
         # Cause our dialog size to be restored from prefs or created on first usage
         self.resize_dialog()
 
-    def initialize_controls(self):
+    def initialize_controls(self, load_resources: LoadResources):
         self.setWindowTitle(GUI_NAME)
         layout = QVBoxLayout(self)
         self.setLayout(layout)
-        title_layout = ImageTitleLayout(self, "images/icon.png", _("Block analytics"))
+        title_layout = ImageTitleLayout(
+            self,
+            "images/icon.png",
+            _("Block analytics"),
+            load_resources,
+            "BlockAnalyticsEvents",
+        )
         layout.addLayout(title_layout)
 
         options_group = QGroupBox(_("AnalyticsEvents database trigger"), self)

@@ -25,7 +25,7 @@ from qt.core import (
 from .. import config as cfg
 from .. import utils
 from ..constants import BOOK_CONTENTTYPE, GUI_NAME
-from ..dialogs import ImageTitleLayout, SizePersistedDialog
+from ..dialogs import ImageTitleLayout, PluginDialog
 from ..utils import Dispatcher, LoadResources, debug
 
 if TYPE_CHECKING:
@@ -220,7 +220,7 @@ def remove_reader_fonts(
     )
 
 
-class ReaderOptionsDialog(SizePersistedDialog):
+class ReaderOptionsDialog(PluginDialog):
     def __init__(
         self,
         parent: QWidget,
@@ -228,14 +228,11 @@ class ReaderOptionsDialog(SizePersistedDialog):
         load_resources: LoadResources,
         contentID: str | None,
     ):
-        SizePersistedDialog.__init__(
-            self,
+        super().__init__(
             parent,
             "kobo utilities plugin:reader font settings dialog",
-            load_resources,
         )
         self.device = device
-        self.help_anchor = "SetReaderFonts"
 
         fwversion = cast("tuple[int, int, int]", device.driver.fwversion)
         debug("fwversion=", fwversion)
@@ -246,7 +243,7 @@ class ReaderOptionsDialog(SizePersistedDialog):
             self.line_spacings = LINE_SPACINGS_020901
 
         self.font_list = self.get_font_list()
-        self.initialize_controls(contentID)
+        self.initialize_controls(load_resources, contentID)
 
         # Set some default values from last time dialog was used.
         options = cfg.plugin_prefs.ReadingOptions
@@ -263,12 +260,16 @@ class ReaderOptionsDialog(SizePersistedDialog):
         # Cause our dialog size to be restored from prefs or created on first usage
         self.resize_dialog()
 
-    def initialize_controls(self, contentID: str | None):
+    def initialize_controls(self, load_resources: LoadResources, contentID: str | None):
         self.setWindowTitle(GUI_NAME)
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/icon.png", _("Kobo eReader font settings")
+            self,
+            "images/icon.png",
+            _("Kobo eReader font settings"),
+            load_resources,
+            "SetReaderFonts",
         )
         layout.addLayout(title_layout)
 

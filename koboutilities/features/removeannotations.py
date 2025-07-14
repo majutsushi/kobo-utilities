@@ -24,7 +24,7 @@ from qt.core import (
 from .. import config as cfg
 from .. import utils
 from ..constants import BOOK_CONTENTTYPE, GUI_NAME
-from ..dialogs import ImageTitleLayout, SizePersistedDialog
+from ..dialogs import ImageTitleLayout, PluginDialog
 from ..utils import debug
 
 if TYPE_CHECKING:
@@ -392,17 +392,14 @@ class RemoveAnnotationsProgressDialog(QProgressDialog):
         )
 
 
-class RemoveAnnotationsOptionsDialog(SizePersistedDialog):
+class RemoveAnnotationsOptionsDialog(PluginDialog):
     def __init__(self, parent: QWidget, load_resources: LoadResources):
-        SizePersistedDialog.__init__(
-            self,
+        super().__init__(
             parent,
             "kobo utilities plugin:remove annotation files settings dialog",
-            load_resources,
         )
-        self.help_anchor = "RemoveAnnotations"
 
-        self.initialize_controls()
+        self.initialize_controls(load_resources)
         self.annotation_clean_option_idx = (
             cfg.plugin_prefs.removeAnnotations.removeAnnotAction.value
         )
@@ -414,12 +411,16 @@ class RemoveAnnotationsOptionsDialog(SizePersistedDialog):
         # Cause our dialog size to be restored from prefs or created on first usage
         self.resize_dialog()
 
-    def initialize_controls(self):
+    def initialize_controls(self, load_resources: LoadResources):
         self.setWindowTitle(GUI_NAME)
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/icon.png", _("Remove annotations files")
+            self,
+            "images/icon.png",
+            _("Remove annotations files"),
+            load_resources,
+            "RemoveAnnotations",
         )
         layout.addLayout(title_layout)
         options_layout = QGridLayout()

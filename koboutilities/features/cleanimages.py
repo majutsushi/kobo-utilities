@@ -21,7 +21,7 @@ from qt.core import (
 from .. import config as cfg
 from .. import utils
 from ..constants import GUI_NAME
-from ..dialogs import ImageTitleLayout, SizePersistedDialog
+from ..dialogs import ImageTitleLayout, PluginDialog
 from ..utils import DeviceDatabaseConnection, debug
 
 if TYPE_CHECKING:
@@ -249,17 +249,13 @@ def _get_imageId_set(
     return {row["ImageId"] for row in cursor}
 
 
-class CleanImagesDirOptionsDialog(SizePersistedDialog):
+class CleanImagesDirOptionsDialog(PluginDialog):
     def __init__(self, parent: QWidget, load_resources: LoadResources):
-        SizePersistedDialog.__init__(
-            self,
+        super().__init__(
             parent,
             "kobo utilities plugin:clean images dir settings dialog",
-            load_resources,
         )
-        self.help_anchor = "CleanImagesDir"
-
-        self.initialize_controls()
+        self.initialize_controls(load_resources)
 
         self.delete_extra_covers_checkbox.setChecked(
             cfg.plugin_prefs.cleanImagesDir.delete_extra_covers
@@ -268,12 +264,16 @@ class CleanImagesDirOptionsDialog(SizePersistedDialog):
         # Cause our dialog size to be restored from prefs or created on first usage
         self.resize_dialog()
 
-    def initialize_controls(self):
+    def initialize_controls(self, load_resources: LoadResources):
         self.setWindowTitle(GUI_NAME)
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/icon.png", _("Clean images directory")
+            self,
+            "images/icon.png",
+            _("Clean images directory"),
+            load_resources,
+            "CleanImagesDir",
         )
         layout.addLayout(title_layout)
 

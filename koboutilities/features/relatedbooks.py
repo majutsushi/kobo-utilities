@@ -23,9 +23,9 @@ from .. import utils
 from ..constants import GUI_NAME
 from ..dialogs import (
     ImageTitleLayout,
+    PluginDialog,
     ProgressBar,
     RatingTableWidgetItem,
-    SizePersistedDialog,
 )
 from ..utils import debug
 
@@ -222,7 +222,7 @@ def _delete_related_books(device: KoboDevice, gui: ui.Main) -> None:
     debug("end")
 
 
-class SetRelatedBooksDialog(SizePersistedDialog):
+class SetRelatedBooksDialog(PluginDialog):
     def __init__(
         self,
         parent: ui.Main,
@@ -230,19 +230,16 @@ class SetRelatedBooksDialog(SizePersistedDialog):
         load_resources: LoadResources,
         related_types: list[dict[str, Any]],
     ):
-        SizePersistedDialog.__init__(
-            self,
+        super().__init__(
             parent,
             "kobo utilities plugin:set related books dialog",
-            load_resources,
         )
         self.device = device
         self.related_types = related_types
         self.blockSignals(True)
-        self.help_anchor = "SetRelatedBooks"
         self.dialog_title = _("Set related books")
 
-        self.initialize_controls()
+        self.initialize_controls(load_resources)
 
         self.related_category = (
             cfg.plugin_prefs.setRelatedBooksOptionsStore.relatedBooksType
@@ -261,12 +258,16 @@ class SetRelatedBooksDialog(SizePersistedDialog):
         # Cause our dialog size to be restored from prefs or created on first usage
         self.resize_dialog()
 
-    def initialize_controls(self):
+    def initialize_controls(self, load_resources: LoadResources):
         self.setWindowTitle(GUI_NAME)
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/manage_series.png", self.dialog_title
+            self,
+            "images/manage_series.png",
+            self.dialog_title,
+            load_resources,
+            "SetRelatedBooks",
         )
         layout.addLayout(title_layout)
 

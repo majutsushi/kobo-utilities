@@ -38,9 +38,9 @@ from ..dialogs import (
     CheckableTableWidgetItem,
     DateTableWidgetItem,
     ImageTitleLayout,
+    PluginDialog,
     ProgressBar,
     RatingTableWidgetItem,
-    SizePersistedDialog,
 )
 from ..utils import (
     DeviceDatabaseConnection,
@@ -1632,26 +1632,23 @@ def _get_fetch_query_for_firmware_version(
     return fetch_queries
 
 
-class BookmarkOptionsDialog(SizePersistedDialog):
+class BookmarkOptionsDialog(PluginDialog):
     def __init__(
         self, parent: ui.Main, device: KoboDevice, load_resources: LoadResources
     ):
-        SizePersistedDialog.__init__(
-            self,
+        super().__init__(
             parent,
             "kobo utilities plugin:bookmark options dialog",
-            load_resources,
         )
         self.gui = parent
         self.device = device
-        self.help_anchor = "StoreCurrentBookmark"
 
         library_config = cfg.get_library_config(parent.current_db)
         self.profiles = library_config.profiles
         self.profile_name = (
             device.profile.profileName if device and device.profile else None
         )
-        self.initialize_controls()
+        self.initialize_controls(load_resources)
 
         options = cfg.plugin_prefs.BookmarkOptions
         if options.storeBookmarks:
@@ -1671,12 +1668,16 @@ class BookmarkOptionsDialog(SizePersistedDialog):
         # Cause our dialog size to be restored from prefs or created on first usage
         self.resize_dialog()
 
-    def initialize_controls(self):
+    def initialize_controls(self, load_resources: LoadResources):
         self.setWindowTitle(GUI_NAME)
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/icon.png", _("Store or restore reading positions")
+            self,
+            "images/icon.png",
+            _("Store or restore reading positions"),
+            load_resources,
+            "StoreCurrentBookmark",
         )
         layout.addLayout(title_layout)
 
@@ -1971,7 +1972,7 @@ class ReadLocationsProgressDialog(QProgressDialog):
         )
 
 
-class ShowReadingPositionChangesDialog(SizePersistedDialog):
+class ShowReadingPositionChangesDialog(PluginDialog):
     def __init__(
         self,
         parent: ui.Main,
@@ -1982,17 +1983,14 @@ class ShowReadingPositionChangesDialog(SizePersistedDialog):
         profileName: str | None,
         goodreads_sync_installed: bool = False,
     ):
-        SizePersistedDialog.__init__(
-            self,
+        super().__init__(
             parent,
             "kobo utilities plugin:show reading position changes dialog",
-            load_resources,
         )
         self.gui = parent
         self.reading_locations = reading_locations
         self.device = device
         self.blockSignals(True)
-        self.help_anchor = "ShowReadingPositionChanges"
         self.db = db
 
         self.profileName = (
@@ -2003,7 +2001,7 @@ class ShowReadingPositionChangesDialog(SizePersistedDialog):
         self.deviceName = cfg.get_device_name(device.uuid)
         options = cfg.get_library_config(parent.current_db).readingPositionChangesStore
 
-        self.initialize_controls()
+        self.initialize_controls(load_resources)
 
         # Display the books in the table
         self.blockSignals(False)
@@ -2020,12 +2018,16 @@ class ShowReadingPositionChangesDialog(SizePersistedDialog):
         # Cause our dialog size to be restored from prefs or created on first usage
         self.resize_dialog()
 
-    def initialize_controls(self):
+    def initialize_controls(self, load_resources: LoadResources):
         self.setWindowTitle(_("Show reading position changes"))
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         title_layout = ImageTitleLayout(
-            self, "images/manage_series.png", _("Show reading position changes")
+            self,
+            "images/manage_series.png",
+            _("Show reading position changes"),
+            load_resources,
+            "ShowReadingPositionChanges",
         )
         layout.addLayout(title_layout)
 

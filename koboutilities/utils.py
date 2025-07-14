@@ -11,21 +11,18 @@ import os
 import re
 from collections import defaultdict
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, Literal, cast
+from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, cast
 
 import apsw
 from calibre.constants import DEBUG, iswindows
 from calibre.devices.kobo.books import Book
 from calibre.gui2 import error_dialog, info_dialog, open_url, ui
-from calibre.gui2.actions import menu_action_unique_name
 from calibre.gui2.device import DeviceJob
 from calibre.gui2.library.views import BooksView, DeviceBooksView
 from calibre.utils.config import config_dir
 from qt.core import (
-    QAction,
     QDialogButtonBox,
     QIcon,
-    QMenu,
     QModelIndex,
     QPixmap,
     QPushButton,
@@ -48,7 +45,7 @@ if TYPE_CHECKING:
     from calibre.gui2.dialogs.message_box import MessageBox
     from calibre.gui2.library.models import DeviceBooksModel
 
-    from .action import KoboDevice, KoboUtilitiesAction
+    from .action import KoboDevice
 
 # Global definition of our plugin name. Used for common functions that require this.
 plugin_name = None
@@ -151,63 +148,6 @@ def get_local_images_dir(subfolder: str | None = None):
 def get_serial_no(device: KoboDevice | None) -> str:
     version_info = device.version_info if device is not None else None
     return version_info.serial_no if version_info else "Unknown"
-
-
-def create_menu_action_unique(
-    ia: KoboUtilitiesAction,
-    parent_menu: QMenu,
-    menu_text: str,
-    triggered: Callable[[], None] | Callable[[QAction], None],
-    image: str | None = None,
-    tooltip: str | None = None,
-    shortcut: str | list[str] | None | Literal[False] = None,
-    is_checked: bool | None = None,
-    shortcut_name: str | None = None,
-    unique_name: str | None = None,
-) -> QAction:
-    """
-    Create a menu action with the specified criteria and action, using the new
-    InterfaceAction.create_menu_action() function which ensures that regardless of
-    whether a shortcut is specified it will appear in Preferences->Keyboard
-    """
-    orig_shortcut = shortcut
-    kb = ia.gui.keyboard
-    if unique_name is None:
-        unique_name = menu_text
-    if shortcut is not False:
-        full_unique_name = menu_action_unique_name(ia, unique_name)
-        if full_unique_name in kb.shortcuts:
-            shortcut = False
-        else:
-            if shortcut is not None and isinstance(shortcut, str):
-                shortcut = None if len(shortcut) == 0 else _(shortcut)
-
-    if shortcut_name is None:
-        shortcut_name = menu_text.replace("&", "")
-
-    ac = ia.create_menu_action(
-        parent_menu,
-        unique_name,
-        menu_text,
-        icon=None,
-        shortcut=shortcut,
-        description=tooltip,
-        triggered=triggered,
-        shortcut_name=shortcut_name,
-    )
-    if (
-        shortcut is False
-        and orig_shortcut is not False
-        and ac.calibre_shortcut_unique_name in ia.gui.keyboard.shortcuts
-    ):
-        kb.replace_action(ac.calibre_shortcut_unique_name, ac)
-    if image:
-        ac.setIcon(get_icon(image))
-    if is_checked is not None:
-        ac.setCheckable(True)
-        if is_checked:
-            ac.setChecked(True)
-    return ac
 
 
 def row_factory(cursor: apsw.Cursor, row: apsw.SQLiteValues):

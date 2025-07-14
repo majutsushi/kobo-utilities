@@ -27,7 +27,7 @@ from calibre.gui2 import (
     info_dialog,
     ui,
 )
-from calibre.gui2.actions import InterfaceAction
+from calibre.gui2.actions import InterfaceAction, menu_action_unique_name
 from calibre.gui2.device import device_signals
 from qt.core import (
     QAction,
@@ -63,7 +63,6 @@ from .features import (
 from .utils import (
     Dispatcher,
     LoadResources,
-    create_menu_action_unique,
     debug,
     get_icon,
     is_device_view,
@@ -673,18 +672,43 @@ class KoboUtilitiesAction(InterfaceAction):
             tooltip = tooltip
             enabled = True
 
-        ac = create_menu_action_unique(
-            self,
+        orig_shortcut = shortcut
+        kb = self.gui.keyboard
+        if unique_name is None:
+            unique_name = menu_text
+        if shortcut is not False:
+            full_unique_name = menu_action_unique_name(self, unique_name)
+            if full_unique_name in kb.shortcuts:
+                shortcut = False
+            else:
+                if shortcut is not None and isinstance(shortcut, str):
+                    shortcut = None if len(shortcut) == 0 else _(shortcut)
+
+        if shortcut_name is None:
+            shortcut_name = menu_text.replace("&", "")
+
+        ac = self.create_menu_action(
             parent_menu,
-            menu_text,
-            triggered,
-            image,
-            tooltip,
-            shortcut,
-            is_checked,
-            shortcut_name,
             unique_name,
+            menu_text,
+            icon=None,
+            shortcut=shortcut,
+            description=tooltip,
+            triggered=triggered,
+            shortcut_name=shortcut_name,
         )
+        if (
+            shortcut is False
+            and orig_shortcut is not False
+            and ac.calibre_shortcut_unique_name in self.gui.keyboard.shortcuts
+        ):
+            kb.replace_action(ac.calibre_shortcut_unique_name, ac)
+        if image:
+            ac.setIcon(get_icon(image))
+        if is_checked is not None:
+            ac.setCheckable(True)
+            if is_checked:
+                ac.setChecked(True)
         ac.setEnabled(enabled)
         self.menu_actions[shortcut_name] = ac
 

@@ -32,7 +32,7 @@ from ..utils import debug
 if TYPE_CHECKING:
     from calibre.gui2 import ui
 
-    from ..action import KoboDevice
+    from ..config import KoboDevice
     from ..utils import Dispatcher, LoadResources
 
 

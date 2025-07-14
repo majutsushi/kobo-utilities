@@ -8,7 +8,6 @@ __copyright__ = "2012-2017, David Forrester <davidfor@internode.on.net>"
 __docformat__ = "restructuredtext en"
 
 import calendar
-import dataclasses
 import os
 import threading
 import time
@@ -38,6 +37,7 @@ from qt.core import (
 
 from . import ActionKoboUtilities
 from . import config as cfg
+from .config import KoboDevice, KoboVersionInfo
 from .dialogs import (
     AboutDialog,
 )
@@ -1046,32 +1046,3 @@ class KoboUtilitiesAction(InterfaceAction):
         )
         debug("kobo_device:", kobo_device)
         return kobo_device
-
-
-@dataclasses.dataclass
-class KoboVersionInfo:
-    serial_no: str
-    fw_version: str
-    model_id: str
-
-
-@dataclasses.dataclass
-class KoboDevice:
-    driver: KOBO
-    is_kobotouch: bool
-    profile: cfg.ProfileConfig | None
-    backup_config: cfg.BackupOptionsStoreConfig
-    device_type: str
-    drive_info: dict[str, dict[str, str]]
-    uuid: str
-    version_info: KoboVersionInfo | None
-    supports_series: bool
-    supports_series_list: bool
-    supports_ratings: bool
-    epub_location_like_kepub: bool
-    name: str
-    path: str
-    db_path: str
-    device_db_path: str
-    is_db_copied: bool
-    timestamp_string: str

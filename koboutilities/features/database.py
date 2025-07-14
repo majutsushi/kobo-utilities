@@ -10,7 +10,7 @@ from .. import utils
 from ..utils import Dispatcher, LoadResources, debug
 
 if TYPE_CHECKING:
-    from ..action import KoboDevice
+    from ..config import KoboDevice
 
 
 def check_device_database(

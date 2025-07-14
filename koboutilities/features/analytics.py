@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from calibre.gui2 import ui
     from qt.core import QWidget
 
-    from ..action import KoboDevice
+    from ..config import KoboDevice
 
 
 def block_analytics(

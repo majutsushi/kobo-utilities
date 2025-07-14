@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from calibre.devices.kobo.books import Book
     from calibre.gui2 import ui
 
-    from ..action import KoboDevice
+    from ..config import KoboDevice
     from ..utils import Dispatcher, LoadResources
 
 

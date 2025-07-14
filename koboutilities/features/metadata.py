@@ -38,7 +38,7 @@ if TYPE_CHECKING:
     from calibre.ebooks.metadata.book.base import Metadata
     from calibre.gui2 import ui
 
-    from ..action import KoboDevice
+    from ..config import KoboDevice
 
 DATE_COLUMNS = [
     "timestamp",

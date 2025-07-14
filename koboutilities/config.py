@@ -63,8 +63,9 @@ if TYPE_CHECKING:
     from types import TracebackType
 
     from calibre.db.legacy import LibraryDatabase
+    from calibre.devices.kobo.driver import KOBO
 
-    from .action import KoboDevice, KoboUtilitiesAction
+    from .action import KoboUtilitiesAction
 
 # Support for CreateNewCustomColumn was added in 5.35.0
 try:
@@ -527,6 +528,35 @@ class DatabaseBackupJobOptions:
     backup_file_template: str
     database_file: str
     device_path: str
+
+
+@dataclass
+class KoboVersionInfo:
+    serial_no: str
+    fw_version: str
+    model_id: str
+
+
+@dataclass
+class KoboDevice:
+    driver: KOBO
+    is_kobotouch: bool
+    profile: ProfileConfig | None
+    backup_config: BackupOptionsStoreConfig
+    device_type: str
+    drive_info: dict[str, dict[str, str]]
+    uuid: str
+    version_info: KoboVersionInfo | None
+    supports_series: bool
+    supports_series_list: bool
+    supports_ratings: bool
+    epub_location_like_kepub: bool
+    name: str
+    path: str
+    db_path: str
+    device_db_path: str
+    is_db_copied: bool
+    timestamp_string: str
 
 
 def migrate_gui_settings(plugin_prefs: PluginConfig) -> None:

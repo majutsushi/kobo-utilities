@@ -34,7 +34,7 @@ from ..dialogs import (
 from ..utils import Dispatcher, LoadResources, debug
 
 if TYPE_CHECKING:
-    from ..action import KoboDevice
+    from ..config import KoboDevice
 
 
 def fix_duplicate_shelves(

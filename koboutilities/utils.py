@@ -45,7 +45,7 @@ if TYPE_CHECKING:
     from calibre.gui2.dialogs.message_box import MessageBox
     from calibre.gui2.library.models import DeviceBooksModel
 
-    from .action import KoboDevice
+    from .config import KoboDevice
 
 # Global definition of our plugin name. Used for common functions that require this.
 plugin_name = None

@@ -31,7 +31,7 @@ from ..utils import Dispatcher, LoadResources, debug
 if TYPE_CHECKING:
     from calibre.gui2 import ui
 
-    from ..action import KoboDevice
+    from ..config import KoboDevice
 
 LINE_SPACINGS = [1.3, 1.35, 1.4, 1.6, 1.775, 1.9, 2, 2.2, 3]
 LINE_SPACINGS_020901 = [

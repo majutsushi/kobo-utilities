@@ -56,7 +56,7 @@ if TYPE_CHECKING:
     from calibre.gui2 import ui
     from calibre.gui2.device import DeviceJob
 
-    from ..action import KoboDevice
+    from ..config import KoboDevice
 
 
 BOOKMARK_SEPARATOR = (

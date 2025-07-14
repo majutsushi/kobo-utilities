@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from calibre.db.legacy import LibraryDatabase
     from calibre.ebooks.oeb.polish.toc import TOC
 
-    from ..action import KoboDevice
+    from ..config import KoboDevice
 
 
 def update_book_toc_on_device(

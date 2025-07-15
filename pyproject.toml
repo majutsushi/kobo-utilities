@@ -142,7 +142,6 @@ extraPaths = ["../calibre/src", "calibre-repo/src"]
 ignore = ["../calibre/src", "calibre-repo/src"]
 pythonVersion = "3.8"
 # reportImportCycles = "warning"
-reportUndefinedVariable = "none"               # Already checked by ruff
 reportUnnecessaryTypeIgnoreComment = "warning"
 
 # Individual strict checks

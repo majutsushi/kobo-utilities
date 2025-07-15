@@ -2,13 +2,12 @@
 from __future__ import annotations
 
 import dataclasses
+import datetime as dt
 import os
 import sys
 import unittest
 import uuid
 from contextlib import ExitStack
-from datetime import datetime as dt
-from datetime import timedelta, timezone
 from enum import Enum
 from pathlib import Path
 from pprint import pprint
@@ -53,7 +52,7 @@ class TestBook:
     chapter_id: str | None
     read_status: ReadStatus
     percent_read: int | None
-    last_read: dt | None
+    last_read: dt.datetime | None
     time_spent_reading: int | None
     rest_of_book_estimate: int | None
     is_kepub: bool
@@ -103,8 +102,8 @@ class DeviceDb:
         self.cursor = self.db_conn.cursor()
         self.cursor.execute(schema)
 
-        self.sync_time = dt(
-            2002, 9, 9, 12, 0, 0, tzinfo=timezone(timedelta(hours=0))
+        self.sync_time = dt.datetime(
+            2002, 9, 9, 12, 0, 0, tzinfo=dt.timezone(dt.timedelta(hours=0))
         ).strftime(TIMESTAMP_STRING)
 
     def insert_books(self, *books: TestBook) -> None:
@@ -155,8 +154,8 @@ class DeviceDb:
                 (
                     book.contentID,
                     book.rating,
-                    dt(
-                        2002, 1, 1, 12, 0, 0, tzinfo=timezone(timedelta(hours=0))
+                    dt.datetime(
+                        2002, 1, 1, 12, 0, 0, tzinfo=dt.timezone(dt.timedelta(hours=0))
                     ).strftime(TIMESTAMP_STRING),
                 ),
             )
@@ -212,7 +211,9 @@ class TestLocations(unittest.TestCase):
             chapter_id="chapter1",
             read_status=ReadStatus.READING,
             percent_read=50,
-            last_read=dt(2000, 1, 2, 12, 34, 56, tzinfo=timezone(timedelta(hours=0))),
+            last_read=dt.datetime(
+                2000, 1, 2, 12, 34, 56, tzinfo=dt.timezone(dt.timedelta(hours=0))
+            ),
             time_spent_reading=100,
             rest_of_book_estimate=200,
             is_kepub=True,
@@ -224,7 +225,9 @@ class TestLocations(unittest.TestCase):
             chapter_id="chapter2",
             read_status=ReadStatus.READING,
             percent_read=25,
-            last_read=dt(2000, 1, 2, 12, 34, 56, tzinfo=timezone(timedelta(hours=0))),
+            last_read=dt.datetime(
+                2000, 1, 2, 12, 34, 56, tzinfo=dt.timezone(dt.timedelta(hours=0))
+            ),
             time_spent_reading=300,
             rest_of_book_estimate=400,
             is_kepub=False,
@@ -279,8 +282,8 @@ class TestLocations(unittest.TestCase):
                 WHERE ContentID = ?
             """,
             (
-                dt(
-                    2001, 1, 2, 12, 34, 56, tzinfo=timezone(timedelta(hours=0))
+                dt.datetime(
+                    2001, 1, 2, 12, 34, 56, tzinfo=dt.timezone(dt.timedelta(hours=0))
                 ).strftime(TIMESTAMP_STRING),
                 book2.contentID,
             ),
@@ -348,7 +351,9 @@ class TestLocations(unittest.TestCase):
             chapter_id="chapter3",
             read_status=ReadStatus.READING,
             percent_read=10,
-            last_read=dt(2001, 1, 1, 12, 0, 0, tzinfo=timezone(timedelta(hours=0))),
+            last_read=dt.datetime(
+                2001, 1, 1, 12, 0, 0, tzinfo=dt.timezone(dt.timedelta(hours=0))
+            ),
             time_spent_reading=100,
             rest_of_book_estimate=200,
             is_kepub=True,
@@ -385,14 +390,18 @@ class TestLocations(unittest.TestCase):
         book1.chapter_id = "chapter2"
         book1.read_status = ReadStatus.READING
         book1.percent_read = 20
-        book1.last_read = dt(2001, 1, 15, 12, 0, 0, tzinfo=timezone(timedelta(hours=0)))
+        book1.last_read = dt.datetime(
+            2001, 1, 15, 12, 0, 0, tzinfo=dt.timezone(dt.timedelta(hours=0))
+        )
         book1.time_spent_reading = 111
         book1.rest_of_book_estimate = 333
         book2.rating = 2
         book2.chapter_id = "chapter5"
         book2.read_status = ReadStatus.FINISHED
         book2.percent_read = 100
-        book2.last_read = dt(2001, 2, 27, 12, 0, 0, tzinfo=timezone(timedelta(hours=0)))
+        book2.last_read = dt.datetime(
+            2001, 2, 27, 12, 0, 0, tzinfo=dt.timezone(dt.timedelta(hours=0))
+        )
         book2.time_spent_reading = 555
         book2.rest_of_book_estimate = 0
         book3.time_spent_reading = 0

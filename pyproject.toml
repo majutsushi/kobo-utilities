@@ -185,6 +185,11 @@ reportUntypedClassDecorator = "error"
 reportUntypedFunctionDecorator = "error"
 reportUntypedNamedTuple = "error"
 
+
+[tool.ruff.lint.flake8-import-conventions]
+aliases.datetime = "dt"
+banned-from = ["datetime"]
+
 [tool.ty.environment]
 extra-paths = ["../calibre/src"]
 

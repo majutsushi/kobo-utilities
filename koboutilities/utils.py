@@ -6,11 +6,11 @@ __license__ = "GPL v3"
 __copyright__ = "2011, Grant Drake <grant.drake@gmail.com>, 2012-2022 updates by David Forrester <davidfor@internode.on.net>"
 __docformat__ = "restructuredtext en"
 
+import datetime as dt
 import inspect
 import os
 import re
 from collections import defaultdict
-from datetime import datetime
 from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, cast
 
 import apsw
@@ -236,32 +236,32 @@ def check_device_database(database_path: str):
     return check_result
 
 
-def convert_kobo_date(kobo_date: str | None) -> datetime | None:
+def convert_kobo_date(kobo_date: str | None) -> dt.datetime | None:
     if kobo_date is None:
         return None
 
     from calibre.utils.date import local_tz, utc_tz
 
     try:
-        converted_date = datetime.strptime(kobo_date, "%Y-%m-%dT%H:%M:%S.%f").replace(
-            tzinfo=utc_tz
-        )
-        converted_date = datetime.strptime(
+        converted_date = dt.datetime.strptime(
+            kobo_date, "%Y-%m-%dT%H:%M:%S.%f"
+        ).replace(tzinfo=utc_tz)
+        converted_date = dt.datetime.strptime(
             kobo_date[0:19], "%Y-%m-%dT%H:%M:%S"
         ).replace(tzinfo=utc_tz)
     except ValueError:
         try:
-            converted_date = datetime.strptime(
+            converted_date = dt.datetime.strptime(
                 kobo_date, "%Y-%m-%dT%H:%M:%S%+00:00"
             ).replace(tzinfo=utc_tz)
         except ValueError:
             try:
-                converted_date = datetime.strptime(
+                converted_date = dt.datetime.strptime(
                     kobo_date.split("+")[0], "%Y-%m-%dT%H:%M:%S"
                 ).replace(tzinfo=utc_tz)
             except ValueError:
                 try:
-                    converted_date = datetime.strptime(
+                    converted_date = dt.datetime.strptime(
                         kobo_date.split("+")[0], "%Y-%m-%d"
                     ).replace(tzinfo=utc_tz)
                 except ValueError:
@@ -271,7 +271,7 @@ def convert_kobo_date(kobo_date: str | None) -> datetime | None:
                         converted_date = parse_date(kobo_date, assume_utc=True)
                     except ValueError:
                         # The date is in some unknown format. Return now in the local timezone
-                        converted_date = datetime.now(tz=local_tz)
+                        converted_date = dt.datetime.now(tz=local_tz)
                         debug(f"datetime.now() - kobo_date={kobo_date}'")
     return converted_date
 

@@ -15,6 +15,7 @@ from pprint import pformat
 from typing import TYPE_CHECKING, Any, Dict, TypeVar, cast
 
 from calibre.constants import DEBUG as _DEBUG
+from calibre.db.legacy import LibraryDatabase
 from calibre.gui2 import choose_dir, error_dialog, gprefs, open_url, question_dialog, ui
 from calibre.gui2.dialogs.confirm_delete import confirm
 from calibre.gui2.keyboard import ShortcutConfig
@@ -61,7 +62,6 @@ from .utils import (
 if TYPE_CHECKING:
     from types import TracebackType
 
-    from calibre.db.legacy import LibraryDatabase
     from calibre.devices.kobo.driver import KOBO
 
     from .action import KoboUtilitiesAction
@@ -631,9 +631,14 @@ def get_profile_info(db: LibraryDatabase, profile_name: str):
     return new_profile
 
 
-def get_book_profile_for_device(db: LibraryDatabase, serial_no: str):
-    library_config = get_library_config(db)
-    profiles = library_config.profiles
+def get_book_profile_for_device(
+    source: LibraryDatabase | ConfigDictWrapper[ProfileConfig], serial_no: str
+):
+    if isinstance(source, LibraryDatabase):
+        library_config = get_library_config(source)
+        profiles = library_config.profiles
+    else:
+        profiles = source
     for profile in profiles.values():
         if profile.forDevice == serial_no:
             return profile
@@ -858,11 +863,22 @@ class ProfilesTab(QWidget):
         select_profile_layout.addWidget(self.rename_profile_button)
         select_profile_layout.insertStretch(-1)
 
+        # Signal the devices table that the profile selection has changed,
+        # so that it can update its profile column
+        def signal_devices():
+            profile_name = self.select_profile_combo.currentText()
+            profile_config = self.profiles[profile_name]
+            profile_config.forDevice = self.device_combo.get_selected_device()
+            self.parent_dialog.devices_tab.devices_table.refresh_device_profiles(
+                self.profiles
+            )
+
         device_layout = QHBoxLayout()
         layout.addLayout(device_layout)
         device_label = QLabel(_("&Device this profile is for:"), self)
         device_label.setToolTip(_("Select the device this profile is for."))
         self.device_combo = DeviceColumnComboBox(self)
+        self.device_combo.activated.connect(signal_devices)
         device_label.setBuddy(self.device_combo)
         device_layout.addWidget(device_label)
         device_layout.addWidget(self.device_combo)
@@ -1721,7 +1737,9 @@ class DeviceColumnComboBox(QComboBox):
 class DevicesTableWidget(QTableWidget):
     def __init__(self, parent: DevicesTab):
         QTableWidget.__init__(self, parent)
+        self.parent_dialog = parent
         self.plugin_action: KoboUtilitiesAction = parent.plugin_action
+        self.serial_no_to_row = {}
         self.setSortingEnabled(False)
         self.setAlternatingRowColors(True)
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
@@ -1739,6 +1757,7 @@ class DevicesTableWidget(QTableWidget):
             _("Menu"),
             _("Name"),
             _("Model"),
+            _("Profile"),
             _("Serial number"),
             _("FW version"),
             _("Status"),
@@ -1754,6 +1773,7 @@ class DevicesTableWidget(QTableWidget):
         self.setIconSize(QSize(32, 32))
 
         for row, serial_no in enumerate(devices.keys()):
+            self.serial_no_to_row[serial_no] = row
             self.populate_table_row(row, devices[serial_no], connected_device)
 
         self.resizeColumnsToContents()
@@ -1795,12 +1815,30 @@ class DevicesTableWidget(QTableWidget):
         serial_no = device_config.serial_no
         serial_no_widget = ReadOnlyTableWidgetItem(serial_no)
         version_no_widget = ReadOnlyTableWidgetItem(fw_version)
+
+        profile = get_book_profile_for_device(
+            self.plugin_action.gui.current_db, serial_no
+        )
+        profile_widget = ReadOnlyTableWidgetItem(
+            profile.profileName if profile is not None else "—"
+        )
+
         self.setItem(row, 0, CheckableTableWidgetItem(device_config.active))
         self.setItem(row, 1, name_widget)
         self.setItem(row, 2, type_widget)
-        self.setItem(row, 3, serial_no_widget)
-        self.setItem(row, 4, version_no_widget)
-        self.setItem(row, 5, ReadOnlyTextIconWidgetItem("", get_icon(connected_icon)))
+        self.setItem(row, 3, profile_widget)
+        self.setItem(row, 4, serial_no_widget)
+        self.setItem(row, 5, version_no_widget)
+        self.setItem(row, 6, ReadOnlyTextIconWidgetItem("", get_icon(connected_icon)))
+
+    def refresh_device_profiles(
+        self, profiles: ConfigDictWrapper[ProfileConfig]
+    ) -> None:
+        for row in range(self.rowCount()):
+            serial_no = cast("ReadOnlyTableWidgetItem", self.item(row, 4)).text()
+            profile = get_book_profile_for_device(profiles, serial_no)
+            profile_widget = cast("ReadOnlyTableWidgetItem", self.item(row, 3))
+            profile_widget.setText(profile.profileName if profile is not None else "—")
 
     def get_data(self) -> ConfigDictWrapper[DeviceConfig]:
         debug("start")

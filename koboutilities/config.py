@@ -55,7 +55,6 @@ from .dialogs import (
 from .utils import (
     debug,
     get_icon,
-    get_serial_no,
     prompt_for_restart,
 )
 
@@ -241,6 +240,9 @@ class ConfigWrapper:
     def __str__(self) -> str:
         return pformat(self._wrapped_dict)
 
+    def __repr__(self) -> str:
+        return self.__str__()
+
     def __eq__(self, value: Any):
         if not isinstance(value, ConfigWrapper):
             return NotImplemented
@@ -292,6 +294,10 @@ class ConfigDictWrapper(Dict[str, W]):
     ) -> None:
         self._wrapped_dict = wrapped_dict if wrapped_dict is not None else {}
         self._json_config = json_config
+
+    def clear(self) -> None:
+        super().clear()
+        self._wrapped_dict.clear()
 
     def __setitem__(self, key: str, value: W) -> None:
         self._wrapped_dict[key] = value._wrapped_dict
@@ -546,7 +552,7 @@ class KoboDevice:
     device_type: str
     drive_info: dict[str, dict[str, str]]
     uuid: str
-    version_info: KoboVersionInfo | None
+    version_info: KoboVersionInfo
     supports_series: bool
     supports_series_list: bool
     supports_ratings: bool
@@ -595,6 +601,15 @@ if plugin_prefs._version == 0:
         migrate_gui_settings(plugin_prefs)
         plugin_prefs._version = 1
 
+if plugin_prefs._version == 1:
+    debug("Migrating device config to use serial numbers")
+    with plugin_prefs:
+        devices = list(plugin_prefs.Devices.values())
+        plugin_prefs.Devices.clear()
+        for device in devices:
+            plugin_prefs.Devices[device.serial_no] = device
+        plugin_prefs._version = 2
+
 
 def get_library_config(db: LibraryDatabase) -> LibraryConfig:
     library_config = None
@@ -617,25 +632,25 @@ def get_profile_info(db: LibraryDatabase, profile_name: str):
 
 
 def get_book_profile_for_device(
-    db: LibraryDatabase, device_uuid: str, use_any_device: bool = False
+    db: LibraryDatabase, serial_no: str, use_any_device: bool = False
 ):
     library_config = get_library_config(db)
     profiles = library_config.profiles
     for profile in profiles.values():
-        if profile.forDevice == device_uuid:
+        if profile.forDevice == serial_no:
             return profile
         if use_any_device and profile.forDevice == TOKEN_ANY_DEVICE:
             return profile
     return None
 
 
-def get_device_name(device_uuid: str, default_name: str = _("(Unknown device)")) -> str:
-    device = get_device_config(device_uuid)
+def get_device_name(serial_no: str, default_name: str = _("(Unknown device)")) -> str:
+    device = get_device_config(serial_no)
     return device.name if device else default_name
 
 
-def get_device_config(device_uuid: str) -> DeviceConfig | None:
-    return plugin_prefs.Devices.get(device_uuid)
+def get_device_config(serial_no: str) -> DeviceConfig | None:
+    return plugin_prefs.Devices.get(serial_no)
 
 
 def set_library_config(db: LibraryDatabase, library_config: LibraryConfig):
@@ -1109,7 +1124,7 @@ class ProfilesTab(QWidget):
         self.profile_name = str(self.select_profile_combo.currentText()).strip()
         profile = get_profile_info(self.plugin_action.gui.current_db, self.profile_name)
 
-        device_uuid = profile.forDevice
+        serial_no = profile.forDevice
 
         # Display profile configuration in the controls
         self.current_Location_combo.populate_combo(
@@ -1156,7 +1171,7 @@ class ProfilesTab(QWidget):
         do_not_store_if_reopened = store_prefs.doNotStoreIfReopened
 
         self.device_combo.populate_combo(
-            self.parent_dialog.get_devices_list(), device_uuid
+            self.parent_dialog.get_devices_list(), serial_no
         )
         self.store_on_connect_checkbox.setChecked(store_on_connect)
         self.prompt_to_store_checkbox.setChecked(prompt_to_store)
@@ -1465,8 +1480,8 @@ class DevicesTab(QWidget):
                 new_device.uuid = location_info["device_store_uuid"]
                 new_device.name = location_info["device_name"]
                 new_device.location_code = location_info["location_code"]
-                new_device.serial_no = get_serial_no(self._connected_device)
-                devices[new_device.uuid] = new_device
+                new_device.serial_no = self._connected_device.version_info.serial_no
+                devices[new_device.serial_no] = new_device
 
         self.devices_table.populate_table(devices, self._connected_device)
         self.update_from_connection_status(update_table=False)
@@ -1544,7 +1559,7 @@ class DevicesTab(QWidget):
         #       and put some "self-healing" logic elsewhere to ensure a user loading a
         #       list for a deleted device in another library gets it reset at that point.
         self.parent_dialog.delete_device_from_lists(
-            self.library_config, device_info.uuid
+            self.library_config, device_info.serial_no
         )
         # Ensure the devices combo is refreshed for the current list
         self.parent_dialog.profiles_tab.refresh_current_profile_info()
@@ -1561,9 +1576,9 @@ class DevicesTab(QWidget):
             is_new_device = True
             drive_info = self._connected_device.drive_info
             if drive_info:
-                # This is a non iTunes device that we can check to see if we have the UUID for
-                device_uuid = drive_info["main"]["device_store_uuid"]
-                if device_uuid in devices:
+                # This is a non iTunes device that we can check to see if we have the serial number for
+                serial_no = self._connected_device.version_info.serial_no
+                if serial_no in devices:
                     is_new_device = False
             else:
                 # This is a device without drive info like iTunes
@@ -1685,18 +1700,18 @@ class DeviceColumnComboBox(QComboBox):
         self.device_ids = [None, TOKEN_ANY_DEVICE]
 
     def populate_combo(
-        self, devices: ConfigDictWrapper[DeviceConfig], selected_device_uuid: str | None
+        self, devices: ConfigDictWrapper[DeviceConfig], selected_serial_no: str | None
     ):
         self.clear()
         self.addItem("")
         self.addItem(TOKEN_ANY_DEVICE)
         selected_idx = 0
-        if selected_device_uuid == TOKEN_ANY_DEVICE:
+        if selected_serial_no == TOKEN_ANY_DEVICE:
             selected_idx = 1
         for idx, key in enumerate(devices.keys()):
             self.addItem("%s" % (devices[key].name))
             self.device_ids.append(key)
-            if key == selected_device_uuid:
+            if key == selected_serial_no:
                 selected_idx = idx + 2
         self.setCurrentIndex(selected_idx)
 
@@ -1739,8 +1754,8 @@ class DevicesTableWidget(QTableWidget):
         horiz_header.setStretchLastSection(False)
         self.setIconSize(QSize(32, 32))
 
-        for row, uuid in enumerate(devices.keys()):
-            self.populate_table_row(row, devices[uuid], connected_device)
+        for row, serial_no in enumerate(devices.keys()):
+            self.populate_table_row(row, devices[serial_no], connected_device)
 
         self.resizeColumnsToContents()
         self.setMinimumColumnWidth(1, 100)
@@ -1758,20 +1773,15 @@ class DevicesTableWidget(QTableWidget):
     ):
         debug("device_config:", device_config)
         device_type = device_config.type
-        device_uuid = device_config.uuid
+        serial_no = device_config.serial_no
         device_icon = "reader.png"
         is_connected = False
         if connected_device is not None and self.plugin_action.device is not None:
             debug("connected_device:", connected_device)
-            if device_type == connected_device.device_type:
-                drive_info = connected_device.drive_info
-                if not drive_info:
-                    is_connected = False
-                else:
-                    for connected_info in drive_info.values():
-                        if connected_info["device_store_uuid"] == device_uuid:
-                            is_connected = True
-                            break
+            is_connected = (
+                device_type == connected_device.device_type
+                and serial_no == connected_device.version_info.serial_no
+            )
         device = self.plugin_action.device
         version_info = device.version_info if device is not None else None
         fw_version = version_info.fw_version if is_connected and version_info else ""
@@ -1806,7 +1816,7 @@ class DevicesTableWidget(QTableWidget):
                 f"widget is of type {type(widget)}"
             )
             device_config.active = bool(widget.get_boolean_value())
-            devices[device_config.uuid] = device_config
+            devices[device_config.serial_no] = device_config
         return devices
 
     def get_selected_device_info(self) -> tuple[DeviceConfig | None, bool]:
@@ -1945,8 +1955,8 @@ class ConfigWidget(QWidget):
     def get_devices_list(self):
         return self.devices_tab.devices_table.get_data()
 
-    def delete_device_from_lists(self, library_config: LibraryConfig, device_uuid: str):
-        del device_uuid
+    def delete_device_from_lists(self, library_config: LibraryConfig, serial_no: str):
+        del serial_no
         set_library_config(self.plugin_action.gui.current_db, library_config)
 
     def save_settings(self):

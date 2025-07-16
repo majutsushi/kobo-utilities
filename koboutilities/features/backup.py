@@ -70,7 +70,7 @@ def auto_backup_device_database(
     debug("about to get version info from device...")
     version_info = device.version_info
     debug("version_info=", version_info)
-    serial_number = utils.get_serial_no(device)
+    serial_number = device.version_info.serial_no
     device_name = "".join(device.driver.gui_name.split())
     debug("device_information=", device.driver.get_device_information())
     debug("device_name=", device_name)

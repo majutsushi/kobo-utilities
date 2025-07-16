@@ -10,7 +10,7 @@
         "storeIfMoreRecent": false
     },
     "Devices": {
-        "00000000-0000-0000-0000-000000000000": {
+        "N000000000000": {
             "active": true,
             "location_code": "main",
             "name": "Kobo Test 0",
@@ -25,7 +25,7 @@
                 "doDailyBackp": false
             }
         },
-        "11111111-1111-1111-1111-111111111111": {
+        "N111111111111": {
             "active": true,
             "location_code": "main",
             "name": "Kobo Test 1",

@@ -945,7 +945,6 @@ class KoboUtilitiesAction(InterfaceAction):
             debug("No device connected")
             return None
 
-        version_info = None
         try:
             # This method got added in Calibre 5.41
             device_version_info = device.device_version_info()
@@ -957,9 +956,8 @@ class KoboUtilitiesAction(InterfaceAction):
             device_version_info = version_file.read_text().strip().split(",")
             debug("manually read version:", device_version_info)
 
-        if device_version_info:
-            serial_no, _, fw_version, _, _, model_id = device_version_info
-            version_info = KoboVersionInfo(serial_no, fw_version, model_id)
+        serial_no, _, fw_version, _, _, model_id = device_version_info
+        version_info = KoboVersionInfo(serial_no, fw_version, model_id)
 
         device_path = self.get_device_path()
         debug('device_path="%s"' % device_path)
@@ -977,10 +975,10 @@ class KoboUtilitiesAction(InterfaceAction):
         library_db = self.gui.library_view.model().db
         device_uuid = drive_info["main"]["device_store_uuid"]
         current_device_profile = cfg.get_book_profile_for_device(
-            library_db, device_uuid, use_any_device=True
+            library_db, serial_no, use_any_device=True
         )
-        current_device_config = cfg.get_device_config(device_uuid)
-        device_name = cfg.get_device_name(device_uuid, device.gui_name)
+        current_device_config = cfg.get_device_config(serial_no)
+        device_name = cfg.get_device_name(serial_no, device.gui_name)
         debug("device_name:", device_name)
         individual_device_options = (
             cfg.plugin_prefs.commonOptionsStore.individualDeviceOptions

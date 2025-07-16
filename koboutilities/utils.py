@@ -145,11 +145,6 @@ def get_local_images_dir(subfolder: str | None = None):
     return images_dir
 
 
-def get_serial_no(device: KoboDevice | None) -> str:
-    version_info = device.version_info if device is not None else None
-    return version_info.serial_no if version_info else "Unknown"
-
-
 def row_factory(cursor: apsw.Cursor, row: apsw.SQLiteValues):
     return {k[0]: row[i] for i, k in enumerate(cursor.getdescription())}
 

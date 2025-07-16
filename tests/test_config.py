@@ -76,8 +76,8 @@ class TestConfig(unittest.TestCase):
         with PluginConfigManager() as plugin_config:
             config = plugin_config.config
             self.assertEqual(len(config.Devices), 2)
-            self.assertIn("00000000-0000-0000-0000-000000000000", config.Devices)
-            device = config.Devices["00000000-0000-0000-0000-000000000000"]
+            self.assertIn("N000000000000", config.Devices)
+            device = config.Devices["N000000000000"]
             self.assertTrue(device.active)
             self.assertEqual(device.location_code, "main")
 
@@ -137,49 +137,49 @@ class TestConfig(unittest.TestCase):
             )
 
     def test_set_dict_item(self) -> None:
-        uuid = "22222222-2222-2222-2222-222222222222"
+        serial_no = "N222222222222"
         with PluginConfigManager() as plugin_config:
             config = plugin_config.config
 
             device = DeviceConfig()
             device.location_code = "test"
-            config.Devices[uuid] = device
+            config.Devices[serial_no] = device
 
             self.assertEqual(len(config.Devices), 3)
-            self.assertIn(uuid, config.Devices)
-            device = config.Devices[uuid]
+            self.assertIn(serial_no, config.Devices)
+            device = config.Devices[serial_no]
             self.assertTrue(device.active)
             self.assertEqual(device.location_code, "test")
 
             # Check that the new device has been written out correctly
             output = json.loads(plugin_config.path.read_text())
-            self.assertEqual(output["Devices"][uuid]["location_code"], "test")
+            self.assertEqual(output["Devices"][serial_no]["location_code"], "test")
 
     def test_set_dict(self) -> None:
-        uuid = "22222222-2222-2222-2222-222222222222"
+        serial_no = "N222222222222"
         with PluginConfigManager() as plugin_config:
             config = plugin_config.config
 
             self.assertEqual(len(config.Devices), 2)
-            self.assertNotIn(uuid, config.Devices)
+            self.assertNotIn(serial_no, config.Devices)
 
             new_devices = ConfigDictWrapper()
             self.assertEqual(len(new_devices), 0)
             self.assertNotIn("00000000-0000-0000-0000-000000000000", new_devices)
 
             device = DeviceConfig()
-            device.uuid = uuid
+            device.serial_no = serial_no
             device.location_code = "test"
-            new_devices[uuid] = device
-            self.assertNotIn(uuid, config.Devices)
+            new_devices[serial_no] = device
+            self.assertNotIn(serial_no, config.Devices)
 
             config.Devices = new_devices
             self.assertEqual(len(config.Devices), 1)
-            self.assertIn(uuid, config.Devices)
+            self.assertIn(serial_no, config.Devices)
 
             # Check that the new device dict has been written out correctly
             output = json.loads(plugin_config.path.read_text())
-            self.assertEqual(output["Devices"][uuid]["location_code"], "test")
+            self.assertEqual(output["Devices"][serial_no]["location_code"], "test")
 
     def test_contextmanager(self) -> None:
         template_a = "test-a"
@@ -246,18 +246,20 @@ class TestConfig(unittest.TestCase):
         self.assertFalse(profile.storeOptionsStore.promptToStore)
 
     def test_iter(self) -> None:
-        uuid = "00000000-0000-0000-0000-000000000000"
+        serial_no = "N000000000000"
         with PluginConfigManager() as plugin_config:
             config = plugin_config.config
-            device = config.Devices[uuid]
+            device = config.Devices[serial_no]
             self.assertEqual(len(list(device)), 7)
             device_dict = dict(device)
             self.assertTrue(device_dict.pop("active"))
             self.assertEqual(device_dict.pop("location_code"), "main")
             self.assertEqual(device_dict.pop("name"), "Kobo Test 0")
-            self.assertEqual(device_dict.pop("serial_no"), "N000000000000")
+            self.assertEqual(device_dict.pop("serial_no"), serial_no)
             self.assertEqual(device_dict.pop("type"), "Kobo Test 0")
-            self.assertEqual(device_dict.pop("uuid"), uuid)
+            self.assertEqual(
+                device_dict.pop("uuid"), "00000000-0000-0000-0000-000000000000"
+            )
             backup_store = device_dict.pop("backupOptionsStore")
             self.assertIsInstance(backup_store, BackupOptionsStoreConfig)
             self.assertEqual(len(device_dict), 0)

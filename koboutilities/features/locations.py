@@ -1998,7 +1998,7 @@ class ShowReadingPositionChangesDialog(PluginDialog):
             if not profileName and device.profile is not None
             else profileName
         )
-        self.deviceName = cfg.get_device_name(device.uuid)
+        self.deviceName = cfg.get_device_name(device.version_info.serial_no)
         options = cfg.get_library_config(parent.current_db).readingPositionChangesStore
 
         self.initialize_controls(load_resources)

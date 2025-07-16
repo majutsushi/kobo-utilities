@@ -187,7 +187,7 @@ class TestLocations(unittest.TestCase):
             device_type="",
             drive_info={},
             uuid="1234",
-            version_info=None,
+            version_info=config.KoboVersionInfo("1", "1", "1"),
             supports_series=True,
             supports_series_list=True,
             supports_ratings=True,

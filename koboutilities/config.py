@@ -631,15 +631,14 @@ def get_profile_info(db: LibraryDatabase, profile_name: str):
     return new_profile
 
 
-def get_book_profile_for_device(
-    db: LibraryDatabase, serial_no: str, use_any_device: bool = False
-):
+def get_book_profile_for_device(db: LibraryDatabase, serial_no: str):
     library_config = get_library_config(db)
     profiles = library_config.profiles
     for profile in profiles.values():
         if profile.forDevice == serial_no:
             return profile
-        if use_any_device and profile.forDevice == TOKEN_ANY_DEVICE:
+    for profile in profiles.values():
+        if profile.forDevice == TOKEN_ANY_DEVICE:
             return profile
     return None
 

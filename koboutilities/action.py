@@ -974,9 +974,7 @@ class KoboUtilitiesAction(InterfaceAction):
         drive_info = cast("Dict[str, Dict[str, str]]", connected_device_info[4])
         library_db = self.gui.library_view.model().db
         device_uuid = drive_info["main"]["device_store_uuid"]
-        current_device_profile = cfg.get_book_profile_for_device(
-            library_db, serial_no, use_any_device=True
-        )
+        current_device_profile = cfg.get_book_profile_for_device(library_db, serial_no)
         current_device_config = cfg.get_device_config(serial_no)
         device_name = cfg.get_device_name(serial_no, device.gui_name)
         debug("device_name:", device_name)

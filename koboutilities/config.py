@@ -1832,7 +1832,7 @@ class DevicesTableWidget(QTableWidget):
             widget = self.item(self.currentRow(), 1)
             assert widget is not None
             (device_config, is_connected) = widget.data(Qt.ItemDataRole.UserRole)
-            device_config["name"] = device_name
+            device_config.name = device_name
             widget.setData(Qt.ItemDataRole.UserRole, (device_config, is_connected))
             widget.setText(device_name)
 

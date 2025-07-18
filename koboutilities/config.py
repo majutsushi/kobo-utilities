@@ -7,6 +7,7 @@ __copyright__ = "2012-2022, David Forrester <davidfor@internode.on.net>"
 __docformat__ = "restructuredtext en"
 
 import ast
+import copy
 import enum
 import traceback
 from dataclasses import dataclass
@@ -616,7 +617,9 @@ def get_library_config(db: LibraryDatabase) -> LibraryConfig:
 
     if library_config is None:
         library_config = LibraryConfig(
-            db.prefs.get_namespaced(PREFS_NAMESPACE, PREFS_KEY_SETTINGS, {})
+            copy.deepcopy(
+                db.prefs.get_namespaced(PREFS_NAMESPACE, PREFS_KEY_SETTINGS, {})
+            )
         )
     debug("library_config:", library_config)
     return library_config

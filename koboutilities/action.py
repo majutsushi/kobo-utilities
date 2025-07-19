@@ -81,6 +81,7 @@ PLUGIN_ICONS = [
     "images/lock32.png",
     "images/lock_delete.png",
     "images/lock_open.png",
+    "images/pencil.png",
     "images/sort.png",
     "images/ms_ff.png",
     "images/device_connected.png",

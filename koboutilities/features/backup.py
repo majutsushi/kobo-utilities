@@ -4,6 +4,7 @@ import datetime as dt
 import os
 import pickle
 import shutil
+from dataclasses import dataclass
 from functools import partial
 from typing import TYPE_CHECKING
 from zipfile import ZipFile
@@ -21,6 +22,16 @@ if TYPE_CHECKING:
 
     from ..config import KoboDevice
     from ..utils import Dispatcher, LoadResources
+
+
+@dataclass
+class DatabaseBackupJobOptions:
+    backup_store_config: cfg.BackupOptionsStoreConfig
+    device_name: str
+    serial_number: str
+    backup_file_template: str
+    database_file: str
+    device_path: str
 
 
 def backup_device_database(
@@ -79,7 +90,7 @@ def auto_backup_device_database(
         backup_file_template.format(device_name, serial_number, ""),
     )
 
-    job_options = cfg.DatabaseBackupJobOptions(
+    job_options = DatabaseBackupJobOptions(
         backup_config,
         device_name,
         serial_number,
@@ -94,7 +105,7 @@ def auto_backup_device_database(
 
 
 def _device_database_backup(
-    gui: ui.Main, dispatcher: Dispatcher, backup_options: cfg.DatabaseBackupJobOptions
+    gui: ui.Main, dispatcher: Dispatcher, backup_options: DatabaseBackupJobOptions
 ):
     debug("Start")
 
@@ -117,7 +128,7 @@ def _device_database_backup_completed(job: DeviceJob, gui: ui.Main):
 
 def device_database_backup_job(backup_options_raw: bytes):
     debug("start")
-    backup_options: cfg.DatabaseBackupJobOptions = pickle.loads(backup_options_raw)  # noqa: S301
+    backup_options: DatabaseBackupJobOptions = pickle.loads(backup_options_raw)  # noqa: S301
 
     def backup_file(backup_zip: ZipFile, file_to_add: str, basename: str | None = None):
         debug("file_to_add=%s" % file_to_add)

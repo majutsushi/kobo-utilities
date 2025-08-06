@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import pickle
+from dataclasses import dataclass
 from functools import partial
 from typing import TYPE_CHECKING, Any, Callable
 
@@ -30,6 +31,17 @@ if TYPE_CHECKING:
 
     from ..config import KoboDevice
     from ..utils import Dispatcher, LoadResources
+
+
+@dataclass
+class CleanImagesDirJobOptions:
+    main_image_path: str
+    sd_image_path: str
+    database_path: str
+    device_database_path: str
+    is_db_copied: bool
+    delete_extra_covers: bool
+    images_tree: bool
 
 
 def clean_images_dir(
@@ -68,7 +80,7 @@ def clean_images_dir(
         )
         images_tree = False
 
-    options = cfg.CleanImagesDirJobOptions(
+    options = CleanImagesDirJobOptions(
         str(device.driver.normalize_path(main_image_path)),
         str(device.driver.normalize_path(sd_image_path)),
         device.db_path,
@@ -82,7 +94,7 @@ def clean_images_dir(
 
 
 def _clean_images_dir_job(
-    gui: ui.Main, options: cfg.CleanImagesDirJobOptions, dispatcher: Dispatcher
+    gui: ui.Main, options: CleanImagesDirJobOptions, dispatcher: Dispatcher
 ):
     debug("Start")
 
@@ -104,7 +116,7 @@ def _clean_images_dir_job(
 
 
 def _clean_images_dir_completed(
-    gui: ui.Main, options: cfg.CleanImagesDirJobOptions, job: DeviceJob
+    gui: ui.Main, options: CleanImagesDirJobOptions, job: DeviceJob
 ) -> None:
     if job.failed:
         gui.job_exception(
@@ -154,7 +166,7 @@ def do_clean_images_dir(
     notification: Callable[[float, str], Any] = lambda _x, y: y,
 ):
     del cpus
-    options: cfg.CleanImagesDirJobOptions = pickle.loads(options_raw)  # noqa: S301
+    options: CleanImagesDirJobOptions = pickle.loads(options_raw)  # noqa: S301
     main_image_path = options.main_image_path
     sd_image_path = options.sd_image_path
     database_path = options.database_path
@@ -312,7 +324,7 @@ class CleanImagesDirProgressDialog(QProgressDialog):
     def __init__(
         self,
         gui: ui.Main | None,  # TODO Can this actually be None?
-        options: cfg.CleanImagesDirJobOptions,
+        options: CleanImagesDirJobOptions,
         dispatcher: Dispatcher,
     ):
         QProgressDialog.__init__(self, "", "", 0, 0, gui)

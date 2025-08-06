@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import pickle
 import shutil
+from dataclasses import dataclass
 from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, cast
 
@@ -36,6 +37,14 @@ if TYPE_CHECKING:
     from ..utils import Dispatcher, LoadResources
 
 
+@dataclass
+class RemoveAnnotationsJobOptions:
+    annotations_dir: str
+    annotations_ext: str
+    device_path: str
+    remove_annot_action: cfg.RemoveAnnotationsAction
+
+
 def remove_annotations_files(
     device: KoboDevice,
     gui: ui.Main,
@@ -53,7 +62,7 @@ def remove_annotations_files(
 
     debug("device.path='%s'" % (device.path))
 
-    options = cfg.RemoveAnnotationsJobOptions(
+    options = RemoveAnnotationsJobOptions(
         str(
             device.driver.normalize_path(device.path + "Digital Editions/Annotations/")
         ),
@@ -77,7 +86,7 @@ def remove_annotations_files(
 def _remove_annotations_job(
     gui: ui.Main,
     dispatcher: Dispatcher,
-    options: cfg.RemoveAnnotationsJobOptions,
+    options: RemoveAnnotationsJobOptions,
     books: list[tuple[Any]],
 ):
     debug("Start")
@@ -132,7 +141,7 @@ def remove_annotations_job(
     notification: Callable[[float, str], Any] = lambda _x, y: y,
 ):
     del cpus
-    options: cfg.RemoveAnnotationsJobOptions = pickle.loads(options_raw)  # noqa: S301
+    options: RemoveAnnotationsJobOptions = pickle.loads(options_raw)  # noqa: S301
     annotations_dir = options.annotations_dir
     annotations_ext = options.annotations_ext
     device_path = options.device_path
@@ -322,7 +331,7 @@ class RemoveAnnotationsProgressDialog(QProgressDialog):
         device: KoboDevice,
         gui: ui.Main | None,  # TODO Can this actually be None?
         dispatcher: Dispatcher,
-        options: cfg.RemoveAnnotationsJobOptions,
+        options: RemoveAnnotationsJobOptions,
         db: LibraryDatabase | None,
     ):
         QProgressDialog.__init__(self, "", "", 0, 0, gui)

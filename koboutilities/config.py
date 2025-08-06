@@ -510,35 +510,6 @@ class CustomColumns:
 
 
 @dataclass
-class RemoveAnnotationsJobOptions:
-    annotations_dir: str
-    annotations_ext: str
-    device_path: str
-    remove_annot_action: RemoveAnnotationsAction
-
-
-@dataclass
-class CleanImagesDirJobOptions:
-    main_image_path: str
-    sd_image_path: str
-    database_path: str
-    device_database_path: str
-    is_db_copied: bool
-    delete_extra_covers: bool
-    images_tree: bool
-
-
-@dataclass
-class DatabaseBackupJobOptions:
-    backup_store_config: BackupOptionsStoreConfig
-    device_name: str
-    serial_number: str
-    backup_file_template: str
-    database_file: str
-    device_path: str
-
-
-@dataclass
 class KoboVersionInfo:
     serial_no: str
     fw_version: str

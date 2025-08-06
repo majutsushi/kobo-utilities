@@ -39,6 +39,7 @@ from qt.core import (
     QSpinBox,
     Qt,
     QTableWidget,
+    QTableWidgetItem,
     QTabWidget,
     QTextEdit,
     QToolButton,
@@ -1529,8 +1530,6 @@ class DevicesTab(QWidget):
             return
         try:
             self.devices_table.set_current_row_device_name(new_device_name)
-            # Ensure the devices combo is refreshed for the current list
-            self.parent_dialog.profiles_tab.refresh_current_profile_info()
         except Exception:
             error_dialog(
                 self,
@@ -1772,6 +1771,7 @@ class DevicesTableWidget(QTableWidget):
             self.serial_no_to_row[serial_no] = row
             self.populate_table_row(row, devices[serial_no], connected_device)
 
+        self.cellChanged.connect(self.update_device_name)
         self.resizeColumnsToContents()
         self.setMinimumColumnWidth(1, 100)
         self.selectRow(0)
@@ -1803,10 +1803,15 @@ class DevicesTableWidget(QTableWidget):
         connected_icon = "images/device_connected.png" if is_connected else None
         debug("connected_icon=%s" % connected_icon)
 
-        name_widget = ReadOnlyTextIconWidgetItem(
-            device_config.name, get_icon(device_icon)
+        name_widget = QTableWidgetItem(device_config.name)
+        name_widget.setIcon(get_icon(device_icon))
+        name_widget.setFlags(
+            Qt.ItemFlag.ItemIsSelectable
+            | Qt.ItemFlag.ItemIsEnabled
+            | Qt.ItemFlag.ItemIsEditable
         )
         name_widget.setData(Qt.ItemDataRole.UserRole, (device_config, is_connected))
+
         type_widget = ReadOnlyTableWidgetItem(device_config.type)
         serial_no = device_config.serial_no
         serial_no_widget = ReadOnlyTableWidgetItem(serial_no)
@@ -1860,14 +1865,28 @@ class DevicesTableWidget(QTableWidget):
             return (device_config, is_connected)
         return None, False
 
+    def update_device_name(
+        self, row: int, column: int, new_name: str | None = None
+    ) -> None:
+        # We only care about the name column
+        if column != 1:
+            return
+        widget = self.item(row, column)
+        assert widget is not None
+        if new_name is None:
+            new_name = widget.text()
+        device_config, is_connected = widget.data(Qt.ItemDataRole.UserRole)
+        assert device_config is not None
+        if device_config.name == new_name:
+            return
+        device_config.name = new_name
+        widget.setData(Qt.ItemDataRole.UserRole, (device_config, is_connected))
+        widget.setText(new_name)
+        self.parent_dialog.parent_dialog.profiles_tab.refresh_current_profile_info()
+
     def set_current_row_device_name(self, device_name: str):
         if self.currentRow() >= 0:
-            widget = self.item(self.currentRow(), 1)
-            assert widget is not None
-            (device_config, is_connected) = widget.data(Qt.ItemDataRole.UserRole)
-            device_config.name = device_name
-            widget.setData(Qt.ItemDataRole.UserRole, (device_config, is_connected))
-            widget.setText(device_name)
+            self.update_device_name(self.currentRow(), 1, device_name)
 
     def delete_selected_row(self):
         if self.currentRow() >= 0:

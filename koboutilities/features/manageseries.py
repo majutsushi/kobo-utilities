@@ -1062,7 +1062,7 @@ class TitleWidgetItem(QTableWidgetItem):
     def __lt__(self, other: Any) -> bool:
         if isinstance(other, TitleWidgetItem):
             return self.title_sort < other.title_sort
-        return super().__lt__(other)
+        return NotImplemented
 
 
 def get_indent_for_index(series_index: float | None) -> int:

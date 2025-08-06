@@ -347,7 +347,7 @@ class TitleWidgetItem(QTableWidgetItem):
     def __lt__(self, other: Any) -> bool:
         if isinstance(other, TitleWidgetItem):
             return self.title_sort < other.title_sort
-        return super().__lt__(other)
+        return NotImplemented
 
 
 class AuthorsTableWidgetItem(ReadOnlyTableWidgetItem):
@@ -364,7 +364,7 @@ class AuthorsTableWidgetItem(ReadOnlyTableWidgetItem):
             and other.author_sort is not None
         ):
             return self.author_sort < other.author_sort
-        return super().__lt__(other)
+        return NotImplemented
 
 
 class ReadingStatusGroupBox(QGroupBox):

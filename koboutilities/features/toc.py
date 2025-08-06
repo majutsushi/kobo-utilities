@@ -1421,7 +1421,7 @@ class IconWidgetItem(ReadOnlyTextIconWidgetItem):
     def __lt__(self, other: Any):
         if isinstance(other, IconWidgetItem):
             return self.sort_key < other.sort_key
-        return super().__lt__(other)
+        return NotImplemented
 
 
 class AuthorTableWidgetItem(ReadOnlyTableWidgetItem):
@@ -1433,4 +1433,4 @@ class AuthorTableWidgetItem(ReadOnlyTableWidgetItem):
     def __lt__(self, other: Any):
         if isinstance(other, AuthorTableWidgetItem):
             return self.sort_key < other.sort_key
-        return super().__lt__(other)
+        return NotImplemented

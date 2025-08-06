@@ -1577,7 +1577,11 @@ class DevicesTab(QWidget):
     def update_from_connection_status(
         self, first_time: bool = False, update_table: bool = True
     ):
-        devices = plugin_prefs.Devices if first_time else self.devices_table.get_data()
+        devices = (
+            copy.deepcopy(plugin_prefs.Devices)
+            if first_time
+            else self.devices_table.get_data()
+        )
 
         if self._connected_device is None or self.plugin_action.device is None:
             self.add_device_btn.setEnabled(False)

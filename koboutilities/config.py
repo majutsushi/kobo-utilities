@@ -1355,7 +1355,6 @@ class DevicesTab(QWidget):
         self.rename_device_btn.setIcon(get_icon("images/pencil.png"))
         self.rename_device_btn.setToolTip(_("Rename the currently connected device"))
         self.rename_device_btn.clicked.connect(self._rename_device_clicked)
-        self.rename_device_btn.setEnabled(False)
         buttons_layout.addWidget(self.rename_device_btn)
 
         self.delete_device_btn = QToolButton(self)
@@ -1476,9 +1475,6 @@ class DevicesTab(QWidget):
         else:
             self.delete_device_btn.setEnabled(False)
 
-        (device_info, is_connected) = self.devices_table.get_selected_device_info()
-        self.rename_device_btn.setEnabled(device_info is not None and is_connected)
-
         if self.individual_device_options:
             self.persist_devices_config()
             self.refresh_current_device_options()
@@ -1532,9 +1528,6 @@ class DevicesTab(QWidget):
         if new_device_name == old_name:
             return
         try:
-            self.gui.device_manager.set_driveinfo_name(
-                device_info.location_code, new_device_name
-            )
             self.devices_table.set_current_row_device_name(new_device_name)
             # Ensure the devices combo is refreshed for the current list
             self.parent_dialog.profiles_tab.refresh_current_profile_info()

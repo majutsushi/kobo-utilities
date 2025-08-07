@@ -425,7 +425,7 @@ class ReadingStatusGroupBox(QGroupBox):
 class AboutDialog(QDialog):
     def __init__(self, parent: ui.Main, icon: QIcon, text: str):
         QDialog.__init__(self, parent)
-        self.resize(500, 300)
+        self.resize(500, 350)
         self.l = QGridLayout()
         self.setLayout(self.l)
         self.logo = QLabel()

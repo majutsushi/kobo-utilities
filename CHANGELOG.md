@@ -1,5 +1,22 @@
 # Changelog
 
+## Version 2.24.0 - 2025-08-10
+
+- Devices are now identified by their serial number instead of the
+  Calibre-assigned UUID. This means that they will be recognized even after
+  a reset. Existing configurations will be updated.
+- Fixed multiple issues where settings weren't being saved properly
+- Fixed issue where the configured collection of the "Get collections from
+  device" feature was saved globally instead of per library
+- Fixed an issue where sometimes the wrong profile got associated with a device
+- Replaced some icons in the config dialog with more intuitive ones
+- Show the associated profile in the device list
+- Don't change the name returned by the `connected_device_name()` template
+  function when renaming devices
+- Allow renaming non-connected devices
+- Allow renaming a device by double-clicking the name in the device list
+- Added tooltips in "Update metadata" dialog for disabled options
+
 ## Version 2.23.0 - 2025-05-05
 
 - Remove obsolete "Order series collections" feature
@@ -270,7 +287,7 @@
 ## Version 2.7.0 - 28 March 2019
 
 - New: Option to open cover image directory.
-- Fix: Set the ___SyncTime when setting the LastDateRead if the___SyncTime is later.
+- Fix: Set the `___SyncTime` when setting the LastDateRead if the `___SyncTime` is later.
 - Fix: Change annotation builder to handle recent change in BeautifulSoup.
 
 ## Version 2.6.0 - 6 September 2017
@@ -360,7 +377,7 @@
 
 ## Version 2.0.3 - 20 January 2015
 
-- Fix:  Error if iOS device plugged in and iOS reader applications and Marvin plugins are active.
+- Fix: Error if iOS device plugged in and iOS reader applications and Marvin plugins are active.
 - Change: Updated way backup files were deleted to handle when setting for putting database in the zip file is changed.
 - Change: Turn on debug logging for backup job.
 

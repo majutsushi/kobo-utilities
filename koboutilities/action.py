@@ -11,7 +11,6 @@ import calendar
 import os
 import threading
 import time
-from functools import partial
 from typing import (
     TYPE_CHECKING,
     Callable,
@@ -158,19 +157,20 @@ class KoboUtilitiesAction(InterfaceAction):
         self.device = self.get_device()
 
         self.rebuild_menus()
+        device = self.device
         if (
-            self.device is not None
-            and self.device.profile
-            and self.device.profile.storeOptionsStore.storeOnConnect
+            device is not None
+            and device.profile
+            and device.profile.storeOptionsStore.storeOnConnect
         ):
             debug("About to do auto store")
             QTimer.singleShot(
                 1000,
-                partial(
-                    locations.auto_store_current_bookmark,
-                    self.device,
+                lambda: locations.auto_store_current_bookmark(
+                    device,
                     self.gui,
                     cast("Dispatcher", self.Dispatcher),
+                    cast("LoadResources", self.load_resources),
                 ),
             )
 

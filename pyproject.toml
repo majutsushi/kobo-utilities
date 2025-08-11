@@ -187,8 +187,9 @@ reportUntypedNamedTuple = "error"
 
 
 [tool.ruff.lint.flake8-import-conventions]
-aliases.datetime = "dt"
 banned-from = ["datetime"]
+[tool.ruff.lint.flake8-import-conventions.extend-aliases]
+datetime = "dt"
 
 [tool.ty.environment]
 extra-paths = ["../calibre/src"]

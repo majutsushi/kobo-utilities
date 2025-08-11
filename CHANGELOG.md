@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 2.24.1 - 2025-08-11
+
+- Fixed error when trying to automatically store locations after switching libraries
+
 ## Version 2.24.0 - 2025-08-10
 
 - Devices are now identified by their serial number instead of the

@@ -319,6 +319,9 @@ def update_version(version: Version) -> None:
     )
     init_py_path.write_text(init_py)
 
+    # Update the version number in the lockfile
+    subprocess.check_call(["uv", "lock"])
+
 
 def download(url: str, pkg_suffix: str, bin_path: Path) -> None:
     log.info("Downloading %s", url)

@@ -194,5 +194,15 @@ datetime = "dt"
 [tool.ty.environment]
 extra-paths = ["../calibre/src"]
 
+[tool.pyrefly]
+python-version = "3.8.5"
+project-includes = [
+    "koboutilities/**/*.py",
+    "tests/*.py",
+    # "scripts/run",
+]
+project-excludes = ["**/__pycache__", "koboutilities/whitelist.py"]
+search-path = ["../calibre/src", "calibre-repo/src"]
+
 [tool.vulture]
 paths = ["koboutilities", "tests", "scripts/run"]

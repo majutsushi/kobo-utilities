@@ -909,32 +909,6 @@ class KoboUtilitiesAction(InterfaceAction):
         )
         debug("end")
 
-    def get_device_path(self) -> str:
-        debug("BEGIN Get Device Path")
-
-        device_path = ""
-        try:
-            device_connected = self.gui.library_view.model().device_connected
-        except Exception:
-            debug("No device connected")
-            device_connected = None
-
-        # If there is a device connected, test if we can retrieve the mount point from Calibre
-        if device_connected is not None:
-            try:
-                connected_device = self.gui.device_manager.connected_device
-                assert connected_device is not None
-                # _main_prefix is not reset when device is ejected so must be sure device_connected above
-                device_path = connected_device._main_prefix
-                debug("Root path of device: %s" % device_path)
-            except Exception:
-                debug("A device appears to be connected, but device path not defined")
-        else:
-            debug("No device appears to be connected")
-
-        debug("END Get Device Path")
-        return device_path
-
     def get_device(self):
         try:
             device = self.gui.device_manager.connected_device
@@ -960,12 +934,12 @@ class KoboUtilitiesAction(InterfaceAction):
         serial_no, _, fw_version, _, _, model_id = device_version_info
         version_info = KoboVersionInfo(serial_no, fw_version, model_id)
 
-        device_path = self.get_device_path()
+        device_path = device._main_prefix
         debug('device_path="%s"' % device_path)
         current_device_information = (
             self.gui.device_manager.get_current_device_information()
         )
-        if device_path == "" or not current_device_information:
+        if not device_path or not current_device_information:
             # No device actually connected or it isn't ready
             return None
         connected_device_info = current_device_information.get("info", None)

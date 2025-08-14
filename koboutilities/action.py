@@ -11,35 +11,19 @@ import calendar
 import os
 import threading
 import time
-from typing import (
-    TYPE_CHECKING,
-    Callable,
-    Dict,
-    Literal,
-    cast,
-)
+from typing import TYPE_CHECKING, Callable, Literal, cast
 
 from calibre.constants import numeric_version as calibre_version
 from calibre.devices.kobo.driver import KOBO, KOBOTOUCH
-from calibre.gui2 import (
-    info_dialog,
-    ui,
-)
+from calibre.gui2 import info_dialog, ui
 from calibre.gui2.actions import InterfaceAction, menu_action_unique_name
 from calibre.gui2.device import device_signals
-from qt.core import (
-    QAction,
-    QMenu,
-    QTimer,
-    pyqtSignal,
-)
+from qt.core import QAction, QMenu, QTimer, pyqtSignal
 
 from . import ActionKoboUtilities
 from . import config as cfg
 from .config import KoboDevice, KoboVersionInfo
-from .dialogs import (
-    AboutDialog,
-)
+from .dialogs import AboutDialog
 from .features import (
     analytics,
     annotations,  # pyright: ignore[reportDuplicateImport]
@@ -210,13 +194,13 @@ class KoboUtilitiesAction(InterfaceAction):
             self.device = None
             self.rebuild_menus()
         else:
-            self.device = self.get_device()
+            self.device = get_device(self.gui)
 
         self.set_toolbar_button_tooltip()
 
     def _on_device_metadata_available(self):
         debug("Start")
-        self.device = self.get_device()
+        self.device = get_device(self.gui)
         self.plugin_device_metadata_available.emit()
         self.set_toolbar_button_tooltip()
 
@@ -538,7 +522,7 @@ class KoboUtilitiesAction(InterfaceAction):
                 tooltip=_(
                     "Creates a file on the device which will be used to set the time when the device is disconnected."
                 ),
-                triggered=self.set_time_on_device,
+                triggered=menu_wrapper(set_time_on_device),
                 is_library_action=True,
                 is_device_action=True,
             )
@@ -890,126 +874,131 @@ class KoboUtilitiesAction(InterfaceAction):
                 return True
         return False
 
-    def set_time_on_device(self):
-        debug("start")
-        now = calendar.timegm(time.gmtime())
-        debug("time=%s" % now)
-        assert self.device is not None
-        epoch_conf_path = os.path.join(
-            self.device.path, KOBO_ROOT_DIR_NAME, KOBO_EPOCH_CONF_NAME
-        )
-        with open(epoch_conf_path, "w") as epoch_conf:
-            epoch_conf.write("%s" % now)
-        self.gui.status_bar.show_message(
-            _("Kobo Utilities") + " - " + _("Time file created on device."), 3000
-        )
-        debug("end")
 
-    def get_device(self):
-        try:
-            device = self.gui.device_manager.connected_device
-            debug(f"Connected device: {device}")
-            if device is None or not isinstance(device, KOBO):
-                debug("No supported Kobo device appears to be connected")
-                return None
-        except Exception:
-            debug("No device connected")
+def set_time_on_device(
+    device: KoboDevice,
+    gui: ui.Main,
+    dispatcher: Dispatcher,
+    load_resources: LoadResources,
+):
+    del dispatcher, load_resources
+    debug("start")
+    now = calendar.timegm(time.gmtime())
+    debug("time=%s" % now)
+    epoch_conf_path = os.path.join(
+        device.path, KOBO_ROOT_DIR_NAME, KOBO_EPOCH_CONF_NAME
+    )
+    with open(epoch_conf_path, "w") as epoch_conf:
+        epoch_conf.write("%s" % now)
+    gui.status_bar.show_message(
+        _("Kobo Utilities") + " - " + _("Time file created on device."), 3000
+    )
+    debug("end")
+
+
+def get_device(gui: ui.Main):
+    try:
+        device = gui.device_manager.connected_device
+        debug(f"Connected device: {device}")
+        if device is None or not isinstance(device, KOBO):
+            debug("No supported Kobo device appears to be connected")
             return None
+    except Exception:
+        debug("No device connected")
+        return None
 
-        try:
-            # This method got added in Calibre 5.41
-            device_version_info = device.device_version_info()
-        except AttributeError:
-            debug(
-                "no KOBO.device_version_info() method found; assuming old Calibre version"
-            )
-            version_file = Path(str(device._main_prefix), ".kobo/version")
-            device_version_info = version_file.read_text().strip().split(",")
-            debug("manually read version:", device_version_info)
-
-        serial_no, _, fw_version, _, _, model_id = device_version_info
-        version_info = KoboVersionInfo(serial_no, fw_version, model_id)
-
-        device_path = device._main_prefix
-        debug('device_path="%s"' % device_path)
-        current_device_information = (
-            self.gui.device_manager.get_current_device_information()
+    try:
+        # This method got added in Calibre 5.41
+        device_version_info = device.device_version_info()
+    except AttributeError:
+        debug(
+            "no KOBO.device_version_info() method found; assuming old Calibre version"
         )
-        if not device_path or not current_device_information:
-            # No device actually connected or it isn't ready
-            return None
-        connected_device_info = current_device_information.get("info", None)
-        assert connected_device_info is not None
-        debug("device_info:", connected_device_info)
-        device_type = connected_device_info[0]
-        drive_info = cast("Dict[str, Dict[str, str]]", connected_device_info[4])
-        library_db = self.gui.library_view.model().db
-        device_uuid = drive_info["main"]["device_store_uuid"]
-        current_device_profile = cfg.get_book_profile_for_device(library_db, serial_no)
-        current_device_config = cfg.get_device_config(serial_no)
-        device_name = cfg.get_device_name(serial_no, device.gui_name)
-        debug("device_name:", device_name)
-        individual_device_options = (
-            cfg.plugin_prefs.commonOptionsStore.individualDeviceOptions
-        )
-        if individual_device_options and current_device_config is not None:
-            current_backup_config = current_device_config.backupOptionsStore
-        else:
-            current_backup_config = cfg.plugin_prefs.backupOptionsStore
+        version_file = Path(str(device._main_prefix), ".kobo/version")
+        device_version_info = version_file.read_text().strip().split(",")
+        debug("manually read version:", device_version_info)
 
-        supports_series = (
+    serial_no, _, fw_version, _, _, model_id = device_version_info
+    version_info = KoboVersionInfo(serial_no, fw_version, model_id)
+
+    device_path = device._main_prefix
+    debug('device_path="%s"' % device_path)
+    current_device_information = gui.device_manager.get_current_device_information()
+    if not device_path or not current_device_information:
+        # No device actually connected or it isn't ready
+        return None
+    connected_device_info = current_device_information.get("info", None)
+    assert connected_device_info is not None
+    debug("device_info:", connected_device_info)
+    device_type = connected_device_info[0]
+    drive_info = cast("dict[str, dict[str, str]]", connected_device_info[4])
+    library_db = gui.library_view.model().db
+    device_uuid = drive_info["main"]["device_store_uuid"]
+    current_device_profile = cfg.get_book_profile_for_device(library_db, serial_no)
+    current_device_config = cfg.get_device_config(serial_no)
+    device_name = cfg.get_device_name(serial_no, device.gui_name)
+    debug("device_name:", device_name)
+    individual_device_options = (
+        cfg.plugin_prefs.commonOptionsStore.individualDeviceOptions
+    )
+    if individual_device_options and current_device_config is not None:
+        current_backup_config = current_device_config.backupOptionsStore
+    else:
+        current_backup_config = cfg.plugin_prefs.backupOptionsStore
+
+    supports_series = (
+        isinstance(device, KOBOTOUCH)
+        and "supports_series" in dir(device)
+        and device.supports_series()
+    )
+    supports_series_list = (
+        isinstance(device, KOBOTOUCH)
+        and "supports_series_list" in dir(device)
+        and device.supports_series_list
+    ) or device.dbversion > 136
+    supports_ratings = isinstance(device, KOBOTOUCH) and device.dbversion > 36
+    try:
+        epub_location_like_kepub = (
             isinstance(device, KOBOTOUCH)
-            and "supports_series" in dir(device)
-            and device.supports_series()
+            and device.fwversion >= device.min_fwversion_epub_location  # type: ignore[reportOperatorIssue]
         )
-        supports_series_list = (
-            isinstance(device, KOBOTOUCH)
-            and "supports_series_list" in dir(device)
-            and device.supports_series_list
-        ) or device.dbversion > 136
-        supports_ratings = isinstance(device, KOBOTOUCH) and device.dbversion > 36
-        try:
-            epub_location_like_kepub = (
-                isinstance(device, KOBOTOUCH)
-                and device.fwversion >= device.min_fwversion_epub_location  # type: ignore[reportOperatorIssue]
-            )
-        except Exception:
-            epub_location_like_kepub = isinstance(
-                device, KOBOTOUCH
-            ) and device.fwversion >= (4, 17, 13651)  # type: ignore[reportOperatorIssue]
+    except Exception:
+        epub_location_like_kepub = isinstance(
+            device, KOBOTOUCH
+        ) and device.fwversion >= (4, 17, 13651)  # type: ignore[reportOperatorIssue]
 
-        device_db_path = cast(
-            "str", device.normalize_path(device_path + ".kobo/KoboReader.sqlite")
-        )
-        if isinstance(device, KOBOTOUCH) and hasattr(device, "db_manager"):
-            db_path = device.db_manager.dbpath
-            is_db_copied = device.db_manager.needs_copy
-        else:
-            db_path = device_db_path
-            is_db_copied = False
-        debug("db_path:", db_path)
+    device_db_path = cast(
+        "str", device.normalize_path(device_path + ".kobo/KoboReader.sqlite")
+    )
+    if isinstance(device, KOBOTOUCH) and hasattr(device, "db_manager"):
+        db_path = device.db_manager.dbpath
+        is_db_copied = device.db_manager.needs_copy
+    else:
+        db_path = device_db_path
+        is_db_copied = False
+    debug("db_path:", db_path)
 
-        timestamp_string = getattr(device, "TIMESTAMP_STRING", "%Y-%m-%dT%H:%M:%SZ")
+    timestamp_string = getattr(device, "TIMESTAMP_STRING", "%Y-%m-%dT%H:%M:%SZ")
 
-        kobo_device = KoboDevice(
-            device,
-            isinstance(device, KOBOTOUCH),
-            current_device_profile,
-            current_backup_config,
-            device_type,
-            drive_info,
-            device_uuid,
-            version_info,
-            supports_series,
-            supports_series_list,
-            supports_ratings,
-            epub_location_like_kepub,
-            device_name,
-            device_path,
-            db_path,
-            device_db_path,
-            is_db_copied,
-            timestamp_string,
-        )
-        debug("kobo_device:", kobo_device)
-        return kobo_device
+    kobo_device = KoboDevice(
+        device,
+        isinstance(device, KOBOTOUCH),
+        current_device_profile,
+        current_backup_config,
+        device_type,
+        drive_info,
+        device_uuid,
+        version_info,
+        supports_series,
+        supports_series_list,
+        supports_ratings,
+        epub_location_like_kepub,
+        device_name,
+        device_path,
+        db_path,
+        device_db_path,
+        is_db_copied,
+        timestamp_string,
+    )
+    debug("kobo_device:", kobo_device)
+    return kobo_device

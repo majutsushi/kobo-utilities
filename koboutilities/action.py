@@ -154,8 +154,6 @@ class KoboUtilitiesAction(InterfaceAction):
     def library_changed(self, db: LibraryDatabase):
         del db
         # We need to reset our menus after switching libraries
-        self.device = self.get_device()
-
         self.rebuild_menus()
         device = self.device
         if (
@@ -724,8 +722,6 @@ class KoboUtilitiesAction(InterfaceAction):
 
     def toolbar_button_clicked(self):
         self.rebuild_menus()
-
-        self.device = self.get_device()
 
         if is_device_view(self.gui):
             assert self.device is not None

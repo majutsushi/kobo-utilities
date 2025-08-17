@@ -7,7 +7,7 @@ import shutil
 from dataclasses import dataclass
 from functools import partial
 from typing import TYPE_CHECKING
-from zipfile import ZipFile
+from zipfile import ZIP_DEFLATED, ZipFile
 
 from calibre.gui2 import FileDialog
 from qt.core import QFileDialog
@@ -228,7 +228,9 @@ def device_database_backup_job(backup_options_raw: bytes):
     # Create the zip file archive
     config_backup_path = os.path.join(dest_dir, backup_file_name + ".zip")
     debug("config_backup_path=%s" % config_backup_path)
-    with ZipFile(config_backup_path, "w") as config_backup_zip:
+    with ZipFile(
+        config_backup_path, "w", compression=ZIP_DEFLATED
+    ) as config_backup_zip:
         config_file = os.path.join(device_path, ".kobo", "Kobo", "Kobo eReader.conf")
         backup_file(config_backup_zip, config_file)
 

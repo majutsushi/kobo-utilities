@@ -122,6 +122,7 @@ class KoboUtilitiesAction(InterfaceAction):
 
     def initialization_complete(self):
         cfg.do_config_migrations()
+        cfg.do_library_migrations(self.gui.current_db)
 
         # otherwise configured hot keys won't work until the menu's
         # been displayed once.
@@ -138,7 +139,8 @@ class KoboUtilitiesAction(InterfaceAction):
         self.rebuild_menus()
 
     def library_changed(self, db: LibraryDatabase):
-        del db
+        cfg.do_library_migrations(db)
+
         # We need to reset our menus after switching libraries
         self.rebuild_menus()
         device = self.device

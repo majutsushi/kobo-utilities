@@ -610,6 +610,25 @@ def do_config_migrations() -> None:
             plugin_prefs._version = 2
 
 
+def do_library_migrations(db: LibraryDatabase) -> None:
+    library_config = get_library_config(db)
+
+    if library_config.SchemaVersion == 0.1:
+        # Update device references in profiles to use the serial number
+        for profile in library_config.profiles.values():
+            if (
+                profile.forDevice != TOKEN_ANY_DEVICE
+                and profile.forDevice not in plugin_prefs.Devices
+            ):
+                for device in plugin_prefs.Devices.values():
+                    if profile.forDevice == device.uuid:
+                        profile.forDevice = device.serial_no
+                        break
+
+        library_config.SchemaVersion = 1
+        set_library_config(db, library_config)
+
+
 def get_library_config(db: LibraryDatabase) -> LibraryConfig:
     library_config = None
 

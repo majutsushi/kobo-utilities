@@ -255,6 +255,21 @@ class ConfigWrapper:
             k: v for k, v in self.__dict__.items() if k in self.__annotations__
         }.items().__iter__()
 
+    def __deepcopy__(self: Self, memo: Any) -> Self:
+        """
+        Deep copy everything except the _json_config reference,
+        so that changing the copy doesn't update the original file
+        """
+        new = self.__class__()
+        new._wrapped_dict = {
+            k: copy.deepcopy(v, memo) for k, v in self._wrapped_dict.items()
+        }
+        for k, v in self.__dict__.items():
+            if k.startswith("_"):
+                continue
+            new.__dict__[k] = copy.deepcopy(v, memo)
+        return new
+
     def __enter__(self: Self) -> Self:
         if self._json_config is not None:
             self._json_config.__enter__()
@@ -312,6 +327,16 @@ class ConfigDictWrapper(Dict[str, W]):
     def __delitem__(self, key: str):
         del self._wrapped_dict[key]
         return super().__delitem__(key)
+
+    def __deepcopy__(self, memo: Any) -> ConfigDictWrapper[W]:
+        """
+        Deep copy everything except the _json_config reference,
+        so that changing the copy doesn't update the original file
+        """
+        new: ConfigDictWrapper[W] = ConfigDictWrapper()
+        for k, v in self.items():
+            new[k] = copy.deepcopy(v, memo)
+        return new
 
 
 class BookmarkOptionsConfig(ConfigWrapper):

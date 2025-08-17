@@ -1,5 +1,12 @@
 # Changelog
 
+## Version 2.24.2 - 2025-08-17
+
+- Fixed profiles losing their device associations after updating the devices
+  to use serial numbers
+- Make sure to compress the backup ZIP file
+- Added changelog link to About dialog
+
 ## Version 2.24.1 - 2025-08-11
 
 - Fixed error when trying to automatically store locations after switching libraries

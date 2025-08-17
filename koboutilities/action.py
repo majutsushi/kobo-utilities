@@ -121,6 +121,8 @@ class KoboUtilitiesAction(InterfaceAction):
         debug(f"Running in {'normal' if __debug__ else 'optimized'} mode")
 
     def initialization_complete(self):
+        cfg.do_config_migrations()
+
         # otherwise configured hot keys won't work until the menu's
         # been displayed once.
         self.rebuild_menus()

@@ -594,19 +594,20 @@ def migrate_gui_settings(plugin_prefs: PluginConfig) -> None:
                 setattr(obj, key, val)
 
 
-if plugin_prefs._version == 0:
-    with plugin_prefs:
-        migrate_gui_settings(plugin_prefs)
-        plugin_prefs._version = 1
+def do_config_migrations() -> None:
+    if plugin_prefs._version == 0:
+        with plugin_prefs:
+            migrate_gui_settings(plugin_prefs)
+            plugin_prefs._version = 1
 
-if plugin_prefs._version == 1:
-    debug("Migrating device config to use serial numbers")
-    with plugin_prefs:
-        devices = list(plugin_prefs.Devices.values())
-        plugin_prefs.Devices.clear()
-        for device in devices:
-            plugin_prefs.Devices[device.serial_no] = device
-        plugin_prefs._version = 2
+    if plugin_prefs._version == 1:
+        debug("Migrating device config to use serial numbers")
+        with plugin_prefs:
+            devices = list(plugin_prefs.Devices.values())
+            plugin_prefs.Devices.clear()
+            for device in devices:
+                plugin_prefs.Devices[device.serial_no] = device
+            plugin_prefs._version = 2
 
 
 def get_library_config(db: LibraryDatabase) -> LibraryConfig:

@@ -1680,6 +1680,8 @@ class DevicesTab(QWidget):
         debug("Start")
 
         with plugin_prefs:
+            plugin_prefs.Devices = self.devices_table.get_data()
+
             backup_prefs = plugin_prefs.backupOptionsStore
             if self.individual_device_options and self.current_device_info:
                 backup_prefs = self.current_device_info.backupOptionsStore

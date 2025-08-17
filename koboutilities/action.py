@@ -179,18 +179,9 @@ class KoboUtilitiesAction(InterfaceAction):
         a.setToolTip(text)
 
     def _on_device_connection_changed(self, is_connected: bool):
-        debug(
-            "self.plugin_device_connection_changed.__class__: ",
-            self.plugin_device_connection_changed.__class__,
-        )
-        debug(
-            "Methods for self.plugin_device_connection_changed: ",
-            dir(self.plugin_device_connection_changed),
-        )
-
+        debug(f"Connection changed; is_connected: {is_connected}")
         self.plugin_device_connection_changed.emit(is_connected)
         if not is_connected:
-            debug("Device disconnected")
             self.device = None
             self.rebuild_menus()
         else:

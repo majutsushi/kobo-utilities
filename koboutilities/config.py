@@ -1323,6 +1323,7 @@ class ProfilesTab(QWidget):
 
 class DevicesTab(QWidget):
     def __init__(self, parent_dialog: ConfigWidget, plugin_action: KoboUtilitiesAction):
+        self.devices = copy.deepcopy(plugin_prefs.Devices)
         self.current_device_info = None
 
         self.parent_dialog = parent_dialog
@@ -1489,12 +1490,20 @@ class DevicesTab(QWidget):
         else:
             self.delete_device_btn.setEnabled(False)
 
-        if self.individual_device_options:
-            self.persist_devices_config()
-            self.refresh_current_device_options()
+        self.refresh_current_device_options()
+
+    def _devices_table_current_item_changed(
+        self, current: QTableWidgetItem | None, previous: QTableWidgetItem | None
+    ) -> None:
+        del current
+        if (
+            previous is not None
+            and self.individual_device_options
+            and self.current_device_info
+        ):
+            self.persist_backup_config(self.current_device_info.backupOptionsStore)
 
     def _add_device_clicked(self):
-        devices = self.devices_table.get_data()
         if self._connected_device is None:
             debug("self._connected_device is None")
             return
@@ -1509,15 +1518,15 @@ class DevicesTab(QWidget):
                 new_device.name = location_info["device_name"]
                 new_device.location_code = location_info["location_code"]
                 new_device.serial_no = self._connected_device.version_info.serial_no
-                devices[new_device.serial_no] = new_device
+                self.devices[new_device.serial_no] = new_device
 
-        self.devices_table.populate_table(devices, self._connected_device)
+        self.devices_table.populate_table(self.devices, self._connected_device)
         self.update_from_connection_status(update_table=False)
         # Ensure the devices combo is refreshed for the current list
         self.parent_dialog.profiles_tab.refresh_current_profile_info()
 
     def _rename_device_clicked(self) -> None:
-        (device_info, _is_connected) = self.devices_table.get_selected_device_info()
+        device_info = self.devices_table.get_device_info()
         if not device_info:
             error_dialog(
                 self,
@@ -1553,7 +1562,7 @@ class DevicesTab(QWidget):
             )
 
     def _delete_device_clicked(self) -> None:
-        (device_info, _is_connected) = self.devices_table.get_selected_device_info()
+        device_info = self.devices_table.get_device_info()
         if not device_info:
             error_dialog(
                 self,
@@ -1574,28 +1583,15 @@ class DevicesTab(QWidget):
             return
         self.parent_dialog.profiles_tab.persist_profile_config()
         self.devices_table.delete_selected_row()
+        del self.devices[device_info.serial_no]
         self.update_from_connection_status(update_table=False)
 
-        # Ensure any lists are no longer associated with this device
-        # NOTE: As of version 1.5 we can no longer do this since we only know the lists
-        #       for the current library, not all libraries. So just reset this library
-        #       and put some "self-healing" logic elsewhere to ensure a user loading a
-        #       list for a deleted device in another library gets it reset at that point.
-        self.parent_dialog.delete_device_from_lists(
-            self.library_config, device_info.serial_no
-        )
         # Ensure the devices combo is refreshed for the current list
         self.parent_dialog.profiles_tab.refresh_current_profile_info()
 
     def update_from_connection_status(
         self, first_time: bool = False, update_table: bool = True
     ):
-        devices = (
-            copy.deepcopy(plugin_prefs.Devices)
-            if first_time
-            else self.devices_table.get_data()
-        )
-
         if self._connected_device is None or self.plugin_action.device is None:
             self.add_device_btn.setEnabled(False)
         else:
@@ -1605,20 +1601,23 @@ class DevicesTab(QWidget):
             if drive_info:
                 # This is a non iTunes device that we can check to see if we have the serial number for
                 serial_no = self._connected_device.version_info.serial_no
-                if serial_no in devices:
+                if serial_no in self.devices:
                     is_new_device = False
             else:
                 # This is a device without drive info like iTunes
                 device_type = self._connected_device.device_type
-                if device_type in devices:
+                if device_type in self.devices:
                     is_new_device = False
             self.add_device_btn.setEnabled(is_new_device)
         if update_table:
-            self.devices_table.populate_table(devices, self._connected_device)
+            self.devices_table.populate_table(self.devices, self._connected_device)
             self.refresh_current_device_options()
         if first_time:
             self.devices_table.itemSelectionChanged.connect(
                 self._devices_table_item_selection_changed
+            )
+            self.devices_table.currentItemChanged.connect(
+                self._devices_table_current_item_changed
             )
             self._devices_table_item_selection_changed()
 
@@ -1667,9 +1666,7 @@ class DevicesTab(QWidget):
     def refresh_current_device_options(self):
         backup_prefs = plugin_prefs.backupOptionsStore
         if self.individual_device_options:
-            (self.current_device_info, _is_connected) = (
-                self.devices_table.get_selected_device_info()
-            )
+            self.current_device_info = self.devices_table.get_device_info()
             if self.current_device_info is not None:
                 backup_prefs = self.current_device_info.backupOptionsStore
             else:
@@ -1693,29 +1690,30 @@ class DevicesTab(QWidget):
         if backup_each_connection:
             self.backup_each_connection_checkbox_clicked(backup_each_connection)
 
+    def persist_backup_config(self, backup_prefs: BackupOptionsStoreConfig) -> None:
+        backup_prefs.doDailyBackp = self.do_daily_backp_checkbox.isChecked()
+        backup_prefs.backupEachCOnnection = (
+            self.backup_each_connection_checkbox.isChecked()
+        )
+        backup_prefs.backupZipDatabase = self.zip_database_checkbox.isChecked()
+        backup_prefs.backupDestDirectory = self.dest_directory_edit.text()
+        backup_prefs.backupCopiesToKeepSpin = (
+            self.copies_to_keep_spin.value()
+            if self.copies_to_keep_checkbox.isChecked()
+            else -1
+        )
+        debug("backup_prefs:", backup_prefs)
+
     def persist_devices_config(self):
         debug("Start")
 
         with plugin_prefs:
-            plugin_prefs.Devices = self.devices_table.get_data()
-
-            backup_prefs = plugin_prefs.backupOptionsStore
             if self.individual_device_options and self.current_device_info:
-                backup_prefs = self.current_device_info.backupOptionsStore
+                self.persist_backup_config(self.current_device_info.backupOptionsStore)
+            else:
+                self.persist_backup_config(plugin_prefs.backupOptionsStore)
 
-            backup_prefs.doDailyBackp = self.do_daily_backp_checkbox.isChecked()
-            backup_prefs.backupEachCOnnection = (
-                self.backup_each_connection_checkbox.isChecked()
-            )
-            backup_prefs.backupZipDatabase = self.zip_database_checkbox.isChecked()
-            backup_prefs.backupDestDirectory = self.dest_directory_edit.text()
-            backup_prefs.backupCopiesToKeepSpin = (
-                self.copies_to_keep_spin.value()
-                if self.copies_to_keep_checkbox.isChecked()
-                else -1
-            )
-            debug("backup_prefs:", backup_prefs)
-
+            plugin_prefs.Devices = self.devices
             plugin_prefs.commonOptionsStore.individualDeviceOptions = (
                 self.individual_device_options
             )
@@ -1860,29 +1858,16 @@ class DevicesTableWidget(QTableWidget):
             profile_widget = cast("ReadOnlyTableWidgetItem", self.item(row, 3))
             profile_widget.setText(profile.profileName if profile is not None else "—")
 
-    def get_data(self) -> ConfigDictWrapper[DeviceConfig]:
-        debug("start")
-        devices = ConfigDictWrapper()
-        for row in range(self.rowCount()):
-            widget = self.item(row, 1)
-            assert widget is not None
-            (device_config, _is_connected) = widget.data(Qt.ItemDataRole.UserRole)
-            assert isinstance(device_config, DeviceConfig)
-            widget = self.item(row, 0)
-            assert isinstance(widget, CheckableTableWidgetItem), (
-                f"widget is of type {type(widget)}"
-            )
-            device_config.active = bool(widget.get_boolean_value())
-            devices[device_config.serial_no] = device_config
-        return devices
-
-    def get_selected_device_info(self) -> tuple[DeviceConfig | None, bool]:
-        if self.currentRow() >= 0:
-            widget = self.item(self.currentRow(), 1)
-            assert widget is not None
-            (device_config, is_connected) = widget.data(Qt.ItemDataRole.UserRole)
-            return (device_config, is_connected)
-        return None, False
+    def get_device_info(self, row: int | None = None) -> DeviceConfig | None:
+        if row is None and self.currentRow() >= 0:
+            row = self.currentRow()
+        if row is not None:
+            widget = self.item(row, 4)
+            if widget is None:
+                return None
+            serial_no = widget.text()
+            return self.parent_dialog.devices[serial_no]
+        return None
 
     def update_device_name(
         self, row: int, column: int, new_name: str | None = None
@@ -1894,12 +1879,10 @@ class DevicesTableWidget(QTableWidget):
         assert widget is not None
         if new_name is None:
             new_name = widget.text()
-        device_config, is_connected = widget.data(Qt.ItemDataRole.UserRole)
-        assert device_config is not None
-        if device_config.name == new_name:
+        device_config = self.get_device_info(row)
+        if device_config is None or device_config.name == new_name:
             return
         device_config.name = new_name
-        widget.setData(Qt.ItemDataRole.UserRole, (device_config, is_connected))
         widget.setText(new_name)
         self.parent_dialog.parent_dialog.profiles_tab.refresh_current_profile_info()
 
@@ -2024,11 +2007,7 @@ class ConfigWidget(QWidget):
         )
 
     def get_devices_list(self):
-        return self.devices_tab.devices_table.get_data()
-
-    def delete_device_from_lists(self, library_config: LibraryConfig, serial_no: str):
-        del serial_no
-        set_library_config(self.plugin_action.gui.current_db, library_config)
+        return self.devices_tab.devices
 
     def save_settings(self):
         device_prefs = self.get_devices_list()

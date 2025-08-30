@@ -136,6 +136,15 @@ class TestConfig(unittest.TestCase):
                 output["backupOptionsStore"]["backupDestDirectory"], dest_dir
             )
 
+    def test_deepcopy(self) -> None:
+        with PluginConfigManager() as plugin_config:
+            devices = copy.deepcopy(plugin_config.config.Devices)
+            device = devices["N000000000000"]
+            self.assertFalse(device.backupOptionsStore.doDailyBackp)
+            device.backupOptionsStore.doDailyBackp = True
+            self.assertTrue(device.backupOptionsStore.doDailyBackp)
+            self.assertTrue(device._wrapped_dict["backupOptionsStore"]["doDailyBackp"])
+
     def test_set_dict_item(self) -> None:
         serial_no = "N222222222222"
         with PluginConfigManager() as plugin_config:

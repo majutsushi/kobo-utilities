@@ -261,13 +261,10 @@ class ConfigWrapper:
         so that changing the copy doesn't update the original file
         """
         new = self.__class__()
-        new._wrapped_dict = {
-            k: copy.deepcopy(v, memo) for k, v in self._wrapped_dict.items()
-        }
         for k, v in self.__dict__.items():
             if k.startswith("_"):
                 continue
-            new.__dict__[k] = copy.deepcopy(v, memo)
+            setattr(new, k, copy.deepcopy(v, memo))
         return new
 
     def __enter__(self: Self) -> Self:

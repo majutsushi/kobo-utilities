@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 2.24.3 - 2025-09-09
+
+- Fixed the config dialog not saving individual device backup options correctly
+
 ## Version 2.24.2 - 2025-08-17
 
 - Fixed profiles losing their device associations after updating the devices

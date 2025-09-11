@@ -478,12 +478,12 @@ def _get_database_chapters(
     connection: DeviceDatabaseConnection,
     koboContentId: str,
     book_format: str = "EPUB",
-    contentId: int = 9,
+    contentType: int = 9,
 ) -> list[dict[str, Any]]:
     chapters = []
     debug(
         "koboContentId='%s', book_format='%s', contentId='%s'"
-        % (koboContentId, book_format, contentId)
+        % (koboContentId, book_format, contentType)
     )
     chapterQuery = (
         "SELECT ContentID, Title, adobe_location, VolumeIndex, Depth, ChapterIDBookmarked "
@@ -492,7 +492,7 @@ def _get_database_chapters(
         "AND ContentType = ?"
     )
     cursor = connection.cursor()
-    t = (koboContentId, contentId)
+    t = (koboContentId, contentType)
     cursor.execute(chapterQuery, t)
     for row in cursor:
         chapter = {}

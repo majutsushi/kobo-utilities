@@ -23,10 +23,8 @@ from qt.core import (
     QComboBox,
     QDialogButtonBox,
     QDoubleSpinBox,
-    QDropEvent,
     QHBoxLayout,
     QLabel,
-    QMouseEvent,
     QSizePolicy,
     QSpacerItem,
     QSpinBox,
@@ -36,7 +34,6 @@ from qt.core import (
     QToolButton,
     QUrl,
     QVBoxLayout,
-    QWidget,
 )
 
 from .. import config as cfg
@@ -50,15 +47,17 @@ from ..dialogs import (
     ReadOnlyTableWidgetItem,
 )
 from ..features import metadata
-from ..utils import Dispatcher, LoadResources, debug
+from ..utils import debug
 
 if TYPE_CHECKING:
     import datetime as dt
 
     from calibre.devices.kobo.books import Book
     from calibre.gui2 import ui
+    from qt.core import QDropEvent, QMouseEvent, QWidget
 
     from ..config import KoboDevice
+    from ..utils import Dispatcher, LoadResources
 
 
 def manage_series_on_device(

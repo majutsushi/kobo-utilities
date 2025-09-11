@@ -6,14 +6,7 @@ from typing import TYPE_CHECKING, cast
 from calibre.devices.kobo.driver import KOBOTOUCH
 from calibre.gui2 import info_dialog, open_local_file
 from calibre.gui2.widgets2 import ColorButton
-from qt.core import (
-    QCheckBox,
-    QDialogButtonBox,
-    QGridLayout,
-    QGroupBox,
-    QVBoxLayout,
-    QWidget,
-)
+from qt.core import QCheckBox, QDialogButtonBox, QGridLayout, QGroupBox, QVBoxLayout
 
 from .. import config as cfg
 from .. import utils
@@ -24,6 +17,7 @@ from ..utils import debug
 if TYPE_CHECKING:
     from calibre.devices.kobo.books import Book
     from calibre.gui2 import ui
+    from qt.core import QWidget
 
     from ..config import KoboDevice
     from ..utils import Dispatcher, LoadResources

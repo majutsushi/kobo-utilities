@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Any, Dict, TypeVar, cast
 
 from calibre.constants import DEBUG as _DEBUG
 from calibre.db.legacy import LibraryDatabase
-from calibre.gui2 import choose_dir, error_dialog, gprefs, open_url, question_dialog, ui
+from calibre.gui2 import choose_dir, error_dialog, gprefs, open_url, question_dialog
 from calibre.gui2.dialogs.confirm_delete import confirm
 from calibre.gui2.keyboard import ShortcutConfig
 from calibre.utils.config import JSONConfig
@@ -65,6 +65,7 @@ if TYPE_CHECKING:
     from types import TracebackType
 
     from calibre.devices.kobo.driver import KOBO
+    from calibre.gui2 import ui
 
     from .action import KoboUtilitiesAction
 

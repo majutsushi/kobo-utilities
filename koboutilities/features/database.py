@@ -3,14 +3,17 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING
 
-from calibre.gui2 import info_dialog, ui
+from calibre.gui2 import info_dialog
 from calibre.gui2.dialogs.message_box import ViewLog
 
 from .. import utils
-from ..utils import Dispatcher, LoadResources, debug
+from ..utils import debug
 
 if TYPE_CHECKING:
+    from calibre.gui2 import ui
+
     from ..config import KoboDevice
+    from ..utils import Dispatcher, LoadResources
 
 
 def check_device_database(

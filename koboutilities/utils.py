@@ -16,19 +16,11 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, cast
 import apsw
 from calibre.constants import DEBUG, iswindows
 from calibre.devices.kobo.books import Book
-from calibre.gui2 import error_dialog, info_dialog, open_url, ui
+from calibre.gui2 import error_dialog, info_dialog, open_url
 from calibre.gui2.device import DeviceJob
-from calibre.gui2.library.views import BooksView, DeviceBooksView
+from calibre.gui2.library.views import DeviceBooksView
 from calibre.utils.config import config_dir
-from qt.core import (
-    QDialogButtonBox,
-    QIcon,
-    QModelIndex,
-    QPixmap,
-    QPushButton,
-    QUrl,
-    QWidget,
-)
+from qt.core import QIcon, QPixmap, QUrl
 
 from .constants import GUI_NAME
 
@@ -42,8 +34,11 @@ if TYPE_CHECKING:
     from types import TracebackType
 
     from calibre.db.legacy import LibraryDatabase
+    from calibre.gui2 import ui
     from calibre.gui2.dialogs.message_box import MessageBox
     from calibre.gui2.library.models import DeviceBooksModel
+    from calibre.gui2.library.views import BooksView
+    from qt.core import QDialogButtonBox, QModelIndex, QPushButton, QWidget
 
     from .config import KoboDevice
 

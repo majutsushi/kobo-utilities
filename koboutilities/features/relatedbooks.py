@@ -15,22 +15,17 @@ from qt.core import (
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
-    QWidget,
 )
 
 from .. import config as cfg
 from .. import utils
 from ..constants import GUI_NAME
-from ..dialogs import (
-    ImageTitleLayout,
-    PluginDialog,
-    ProgressBar,
-    RatingTableWidgetItem,
-)
+from ..dialogs import ImageTitleLayout, PluginDialog, ProgressBar, RatingTableWidgetItem
 from ..utils import debug
 
 if TYPE_CHECKING:
     from calibre.gui2 import ui
+    from qt.core import QWidget
 
     from ..config import KoboDevice
     from ..utils import Dispatcher, LoadResources

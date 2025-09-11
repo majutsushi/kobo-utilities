@@ -15,10 +15,10 @@ from typing import TYPE_CHECKING, Callable, Literal, cast
 
 from calibre.constants import numeric_version as calibre_version
 from calibre.devices.kobo.driver import KOBO, KOBOTOUCH
-from calibre.gui2 import info_dialog, ui
+from calibre.gui2 import info_dialog
 from calibre.gui2.actions import InterfaceAction, menu_action_unique_name
 from calibre.gui2.device import device_signals
-from qt.core import QAction, QMenu, QTimer, pyqtSignal
+from qt.core import QMenu, QTimer, pyqtSignal
 
 from . import ActionKoboUtilities
 from . import config as cfg
@@ -43,18 +43,14 @@ from .features import (
     removeannotations,
     toc,
 )
-from .utils import (
-    Dispatcher,
-    LoadResources,
-    debug,
-    get_icon,
-    is_device_view,
-    set_plugin_icon_resources,
-    show_help,
-)
+from .utils import debug, get_icon, is_device_view, set_plugin_icon_resources, show_help
 
 if TYPE_CHECKING:
     from calibre.db.legacy import LibraryDatabase
+    from calibre.gui2 import ui
+    from qt.core import QAction
+
+    from .utils import Dispatcher, LoadResources
 
 PLUGIN_ICONS = [
     "images/icon.png",

@@ -19,7 +19,6 @@ from qt.core import (
     QRadioButton,
     QTimer,
     QVBoxLayout,
-    QWidget,
 )
 
 from .. import config as cfg
@@ -32,6 +31,7 @@ if TYPE_CHECKING:
     from calibre.db.legacy import LibraryDatabase
     from calibre.gui2 import ui
     from calibre.gui2.device import DeviceJob
+    from qt.core import QWidget
 
     from ..config import KoboDevice
     from ..utils import Dispatcher, LoadResources

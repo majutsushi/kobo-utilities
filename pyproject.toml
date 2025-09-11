@@ -51,6 +51,8 @@ select = [
     "DTZ",
     # flake8-executable
     "EXE",
+    # flake8-future-annotations
+    "FA",
     # flake8-implicit-str-concat
     "ISC",
     # flake8-import-conventions
@@ -128,6 +130,9 @@ unfixable = [
     # uses a variable.
     "F841",
 ]
+
+# Enable `from __future__ import annotations` imports
+future-annotations = true
 
 [tool.ruff.lint.isort]
 required-imports = ["from __future__ import annotations"]

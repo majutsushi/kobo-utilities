@@ -15,12 +15,13 @@ from ..dialogs import (
     ReadingStatusGroupBox,
 )
 from ..features import metadata
-from ..utils import Dispatcher, LoadResources, debug
+from ..utils import debug
 
 if TYPE_CHECKING:
     from calibre.gui2 import ui
 
     from ..config import KoboDevice
+    from ..utils import Dispatcher, LoadResources
 
 
 def change_reading_status(

@@ -14,7 +14,6 @@ from qt.core import (
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
-    QWidget,
 )
 
 from .. import utils
@@ -31,6 +30,7 @@ from ..utils import debug
 if TYPE_CHECKING:
     from calibre.devices.kobo.books import Book
     from calibre.gui2 import ui
+    from qt.core import QWidget
 
     from ..config import KoboDevice
     from ..utils import Dispatcher, LoadResources

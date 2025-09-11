@@ -12,7 +12,6 @@ from zipfile import ZIP_DEFLATED, ZipFile
 from calibre.gui2 import FileDialog
 from qt.core import QFileDialog
 
-from .. import config as cfg
 from .. import utils
 from ..utils import debug
 
@@ -20,6 +19,7 @@ if TYPE_CHECKING:
     from calibre.gui2 import ui
     from calibre.gui2.device import DeviceJob
 
+    from .. import config as cfg
     from ..config import KoboDevice
     from ..utils import Dispatcher, LoadResources
 

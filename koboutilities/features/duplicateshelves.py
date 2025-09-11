@@ -4,7 +4,7 @@ import time
 from typing import TYPE_CHECKING, Any
 
 from calibre import strftime
-from calibre.gui2 import error_dialog, info_dialog, ui
+from calibre.gui2 import error_dialog, info_dialog
 from calibre.gui2.library.delegates import DateDelegate
 from qt.core import (
     QAbstractItemView,
@@ -19,7 +19,6 @@ from qt.core import (
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
-    QWidget,
 )
 
 from .. import config as cfg
@@ -31,10 +30,14 @@ from ..dialogs import (
     ProgressBar,
     RatingTableWidgetItem,
 )
-from ..utils import Dispatcher, LoadResources, debug
+from ..utils import debug
 
 if TYPE_CHECKING:
+    from calibre.gui2 import ui
+    from qt.core import QWidget
+
     from ..config import KoboDevice
+    from ..utils import Dispatcher, LoadResources
 
 
 def fix_duplicate_shelves(

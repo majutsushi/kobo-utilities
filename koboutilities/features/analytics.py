@@ -10,13 +10,14 @@ from qt.core import QDialogButtonBox, QGridLayout, QGroupBox, QRadioButton, QVBo
 from .. import utils
 from ..constants import GUI_NAME
 from ..dialogs import ImageTitleLayout, PluginDialog
-from ..utils import Dispatcher, LoadResources, debug
+from ..utils import debug
 
 if TYPE_CHECKING:
     from calibre.gui2 import ui
     from qt.core import QWidget
 
     from ..config import KoboDevice
+    from ..utils import Dispatcher, LoadResources
 
 
 def block_analytics(

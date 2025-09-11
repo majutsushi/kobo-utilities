@@ -25,7 +25,6 @@ from qt.core import (
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
-    QIcon,
     QLabel,
     QPixmap,
     QProgressBar,
@@ -45,6 +44,7 @@ if TYPE_CHECKING:
 
     from calibre.devices.kobo.books import Book
     from calibre.gui2 import ui
+    from qt.core import QIcon
 
     from .utils import LoadResources
 

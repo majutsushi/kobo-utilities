@@ -19,19 +19,20 @@ from qt.core import (
     QPushButton,
     QSpinBox,
     QVBoxLayout,
-    QWidget,
 )
 
 from .. import config as cfg
 from .. import utils
 from ..constants import BOOK_CONTENTTYPE, GUI_NAME
 from ..dialogs import ImageTitleLayout, PluginDialog
-from ..utils import Dispatcher, LoadResources, debug
+from ..utils import debug
 
 if TYPE_CHECKING:
     from calibre.gui2 import ui
+    from qt.core import QWidget
 
     from ..config import KoboDevice
+    from ..utils import Dispatcher, LoadResources
 
 LINE_SPACINGS = [1.3, 1.35, 1.4, 1.6, 1.775, 1.9, 2, 2.2, 3]
 LINE_SPACINGS_020901 = [

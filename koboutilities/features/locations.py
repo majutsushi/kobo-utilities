@@ -42,12 +42,7 @@ from ..dialogs import (
     ProgressBar,
     RatingTableWidgetItem,
 )
-from ..utils import (
-    DeviceDatabaseConnection,
-    Dispatcher,
-    LoadResources,
-    debug,
-)
+from ..utils import DeviceDatabaseConnection, debug
 
 if TYPE_CHECKING:
     import datetime as dt
@@ -57,6 +52,7 @@ if TYPE_CHECKING:
     from calibre.gui2.device import DeviceJob
 
     from ..config import KoboDevice
+    from ..utils import Dispatcher, LoadResources
 
 
 BOOKMARK_SEPARATOR = (

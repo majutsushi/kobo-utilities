@@ -31,7 +31,7 @@ from ..dialogs import (
     ProgressBar,
     ReadingStatusGroupBox,
 )
-from ..utils import Dispatcher, LoadResources, debug
+from ..utils import debug
 
 if TYPE_CHECKING:
     from calibre.devices.kobo.books import Book
@@ -39,6 +39,7 @@ if TYPE_CHECKING:
     from calibre.gui2 import ui
 
     from ..config import KoboDevice
+    from ..utils import Dispatcher, LoadResources
 
 DATE_COLUMNS = [
     "timestamp",

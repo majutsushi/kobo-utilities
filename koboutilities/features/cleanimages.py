@@ -16,7 +16,6 @@ from qt.core import (
     QProgressDialog,
     QTimer,
     QVBoxLayout,
-    QWidget,
 )
 
 from .. import config as cfg
@@ -28,6 +27,7 @@ from ..utils import DeviceDatabaseConnection, debug
 if TYPE_CHECKING:
     from calibre.gui2 import ui
     from calibre.gui2.device import DeviceJob
+    from qt.core import QWidget
 
     from ..config import KoboDevice
     from ..utils import Dispatcher, LoadResources

@@ -16,11 +16,9 @@ from qt.core import (
     QAbstractItemView,
     QDialogButtonBox,
     QHBoxLayout,
-    QIcon,
     Qt,
     QTableWidget,
     QVBoxLayout,
-    QWidget,
 )
 
 from .. import utils
@@ -33,13 +31,15 @@ from ..dialogs import (
     ReadOnlyTableWidgetItem,
     ReadOnlyTextIconWidgetItem,
 )
-from ..utils import DeviceDatabaseConnection, Dispatcher, LoadResources, debug
+from ..utils import debug
 
 if TYPE_CHECKING:
     from calibre.db.legacy import LibraryDatabase
     from calibre.ebooks.oeb.polish.toc import TOC
+    from qt.core import QIcon, QWidget
 
     from ..config import KoboDevice
+    from ..utils import DeviceDatabaseConnection, Dispatcher, LoadResources
 
 
 def update_book_toc_on_device(

@@ -201,9 +201,20 @@ def _get_chapter_list(
     toc = get_toc(container)
     debug("toc=", toc)
 
-    book[book_location + "_chapters"] = _read_toc(
-        toc, format_on_device=format_on_device, container=container
-    )
+    chapters = _read_toc(toc, format_on_device=format_on_device, container=container)
+
+    # Remove duplicate content paths while preserving order.
+    # This is necessary to avoid DB errors about unique primary keys,
+    # and there is no point in having two ToC entries point to the same location anyway.
+    # See https://github.com/majutsushi/kobo-utilities/issues/8
+    # This also prevents the dialog from showing the need to update the ToC
+    # when it is in fact up to date, but the number of chapters found here
+    # is different from the chapters in the DB because the former contains duplicate paths.
+    # This method keeps the last one of the duplicate entries,
+    # which is what the Kobo firmware seems to be doing as well.
+    chapters = list({chapter["path"]: chapter for chapter in chapters}.values())
+
+    book[book_location + "_chapters"] = chapters
     debug("chapters=", book[book_location + "_chapters"])
     book[book_location + "_manifest"] = _get_manifest_entries(container)
     book[book_location + "_container"] = container

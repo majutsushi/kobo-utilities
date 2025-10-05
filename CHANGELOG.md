@@ -1,5 +1,13 @@
 # Changelog
 
+## Version 2.24.4 - 2025-10-05
+
+- Fixed the Table of Contents update sometimes failing with a
+  "UNIQUE constraint failed" error and messing up the ToC on the device.
+  This also fixes an issue in the same dialog where it sometimes said that
+  the ToC needs to be updated even though it was up to date.
+- Support showing the changelog in the About dialog
+
 ## Version 2.24.3 - 2025-09-09
 
 - Fixed the config dialog not saving individual device backup options correctly

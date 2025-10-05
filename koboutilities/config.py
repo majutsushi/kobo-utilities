@@ -55,11 +55,7 @@ from .dialogs import (
     ReadOnlyTableWidgetItem,
     ReadOnlyTextIconWidgetItem,
 )
-from .utils import (
-    debug,
-    get_icon,
-    prompt_for_restart,
-)
+from .utils import debug, get_icon, prompt_for_restart
 
 if TYPE_CHECKING:
     from types import TracebackType

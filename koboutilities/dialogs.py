@@ -6,11 +6,7 @@ __license__ = "GPL v3"
 __copyright__ = "2012-2020, David Forrester <davidfor@internode.on.net>"
 __docformat__ = "restructuredtext en"
 
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-)
+from typing import TYPE_CHECKING, Any, Callable
 
 from calibre.gui2 import Application, error_dialog
 from calibre.gui2.dialogs.plugin_updater import SizePersistedDialog

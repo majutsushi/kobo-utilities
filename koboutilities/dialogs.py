@@ -20,13 +20,11 @@ from qt.core import (
     QComboBox,
     QDateTime,
     QDialog,
-    QDialogButtonBox,
     QFont,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
-    QPixmap,
     QProgressBar,
     QRadioButton,
     Qt,
@@ -36,14 +34,12 @@ from qt.core import (
 )
 
 from . import utils
-from .constants import GUI_NAME
 from .utils import debug
 
 if TYPE_CHECKING:
     import datetime as dt
 
     from calibre.devices.kobo.books import Book
-    from calibre.gui2 import ui
     from qt.core import QIcon
 
     from .utils import LoadResources
@@ -420,28 +416,3 @@ class ReadingStatusGroupBox(QGroupBox):
             readingStatus = 2
 
         return readingStatus
-
-
-class AboutDialog(QDialog):
-    def __init__(self, parent: ui.Main, icon: QIcon, text: str):
-        QDialog.__init__(self, parent)
-        self.resize(500, 400)
-        self.l = QGridLayout()
-        self.setLayout(self.l)
-        self.logo = QLabel()
-        self.logo.setMaximumWidth(110)
-        self.logo.setPixmap(QPixmap(icon.pixmap(100, 100)))
-        self.label = QLabel(text)
-        self.label.setOpenExternalLinks(True)
-        self.label.setWordWrap(True)
-        self.label.setTextFormat(Qt.TextFormat.MarkdownText)
-        self.setWindowTitle(_("About {}").format(GUI_NAME))
-        self.setWindowIcon(icon)
-        self.l.addWidget(self.logo, 0, 0)
-        self.l.addWidget(self.label, 0, 1)
-        self.bb = QDialogButtonBox(self)
-        b = self.bb.addButton(_(_("OK")), self.bb.ButtonRole.AcceptRole)
-        assert b is not None
-        b.setDefault(True)
-        self.l.addWidget(self.bb, 2, 0, 1, -1)
-        self.bb.accepted.connect(self.accept)

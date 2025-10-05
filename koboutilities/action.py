@@ -1,8 +1,6 @@
 # vim:fileencoding=UTF-8:ts=4:sw=4:sta:et:sts=4:ai
 from __future__ import annotations
 
-from pathlib import Path
-
 __license__ = "GPL v3"
 __copyright__ = "2012-2017, David Forrester <davidfor@internode.on.net>"
 __docformat__ = "restructuredtext en"
@@ -11,6 +9,7 @@ import calendar
 import os
 import threading
 import time
+from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Literal, cast
 
 from calibre.constants import numeric_version as calibre_version
@@ -18,12 +17,13 @@ from calibre.devices.kobo.driver import KOBO, KOBOTOUCH
 from calibre.gui2 import info_dialog
 from calibre.gui2.actions import InterfaceAction, menu_action_unique_name
 from calibre.gui2.device import device_signals
-from qt.core import QMenu, QTimer, pyqtSignal
+from calibre.gui2.dialogs.message_box import MessageBox
+from qt.core import QMenu, Qt, QTimer, pyqtSignal
 
 from . import ActionKoboUtilities
 from . import config as cfg
 from .config import KoboDevice, KoboVersionInfo
-from .dialogs import AboutDialog
+from .constants import GUI_NAME
 from .features import (
     analytics,
     annotations,  # pyright: ignore[reportDuplicateImport]
@@ -611,7 +611,23 @@ class KoboUtilitiesAction(InterfaceAction):
         )
         debug("self.version=", self.version)
         debug("about_text=", about_text)
-        AboutDialog(self.gui, self.qaction.icon(), about_text).exec()
+        changelog = get_resources("CHANGELOG.md")
+        changelog = changelog.decode("utf-8")
+        dialog = MessageBox(
+            MessageBox.INFO,
+            GUI_NAME,
+            about_text,
+            changelog,
+            q_icon=self.qaction.icon(),
+            show_copy_button=False,
+            parent=self.gui,
+        )
+        dialog.msg.setOpenExternalLinks(True)
+        dialog.msg.setWordWrap(True)
+        dialog.msg.setTextFormat(Qt.TextFormat.MarkdownText)
+        dialog.det_msg.setMarkdown(changelog)
+        dialog.do_resize()
+        dialog.exec()
 
     def create_menu_item_ex(
         self,

@@ -410,7 +410,7 @@ class RemoveAnnotationsOptionsDialog(PluginDialog):
 
         self.initialize_controls(load_resources)
         self.annotation_clean_option_idx = (
-            cfg.plugin_prefs.removeAnnotations.removeAnnotAction.value
+            cfg.plugin_prefs.removeAnnotations.removeAnnotAction
         )
         button = self.annotation_clean_option_button_group.button(
             self.annotation_clean_option_idx

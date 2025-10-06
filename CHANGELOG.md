@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 2.24.5 - 2025-10-06
+
+- Fixed an error that prevented the "Remove annotation files" feature from working
+
 ## Version 2.24.4 - 2025-10-05
 
 - Fixed the Table of Contents update sometimes failing with a

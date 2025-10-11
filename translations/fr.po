@@ -1674,7 +1674,7 @@ msgstr "Ceci est la liste de toutes les tuiles supplémentaires"
 msgid "Store"
 msgstr "Stockage"
 
-# « Enregistre » instead of « Stocke » 
+# « Enregistre » instead of « Stocke »
 #: dialogs.py:1234 dialogs.py:1304 dialogs.py:1303 dialogs.py:1313
 msgid "Store the current reading position in the calibre library."
 msgstr ""
@@ -1874,7 +1874,7 @@ msgstr "Couvertures noir et blanc"
 msgid "Keep cover aspect ratio"
 msgstr "Conserver les proportions visuelles des images de couverture"
 
-# do you mean kepub files ? If so this isn’t the good translation. 
+# do you mean kepub files ? If so this isn’t the good translation.
 #: dialogs.py:1539 dialogs.py:1609
 msgid "Upload covers for Kobo epubs"
 msgstr "Ajouter des couvertures pour epubs Kobo"

@@ -2481,4 +2481,3 @@ msgstr ""
 #, python-brace-format
 msgid "{0} annotations files removed."
 msgstr ""
-

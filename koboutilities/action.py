@@ -534,8 +534,9 @@ class KoboUtilitiesAction(InterfaceAction):
                 )
 
             # Calibre 8 integrates the functionality of the KoboTouchExtended driver
-            # and disables the plugin, so there is no need to switch between drivers
-            if calibre_version >= (8, 0, 0):
+            # and disables the plugin, so there is no need to switch between drivers.
+            # Cast the version literal because of https://github.com/microsoft/pyright/issues/7733
+            if calibre_version >= cast("tuple[int, int, int]", (8, 0, 0)):
                 create_configure_driver_item(self.menu, _("&Configure driver..."))
             else:
                 driver_menu = self.menu.addMenu(_("Driver"))

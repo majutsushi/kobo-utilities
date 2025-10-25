@@ -10,6 +10,8 @@ name: CI
       - "*"
   pull_request:
 
+permissions: {}
+
 # A workflow run is made up of one or more jobs that can run sequentially or
 # in parallel
 jobs:
@@ -21,15 +23,17 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
+          persist-credentials: false
 
       - uses: actions/checkout@v4
         with:
           repository: kovidgoyal/calibre
           path: "calibre-repo"
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@2ddd2b9cb38ad8efd50337e8ab201519a34c9f24 # v7.1.1
 
       - name: Install Python
         # Install both the project version and >=3.11 for prek envs
@@ -51,4 +55,4 @@ jobs:
           key: calibre-v5.13.0
           path: calibre-v5.13.0
 
-      - uses: j178/prek-action@v1
+      - uses: j178/prek-action@91fd7d7cf70ae1dee9f4f44e7dfa5d1073fe6623 # v1.0.11

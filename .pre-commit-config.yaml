@@ -15,6 +15,10 @@ repos:
     rev: 1.31.7
     hooks:
       - id: basedpyright
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.16.0
+    hooks:
+      - id: zizmor
   - repo: local
     hooks:
       - id: test

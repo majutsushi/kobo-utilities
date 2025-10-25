@@ -7,21 +7,29 @@ name: Create release
     tags:
       - 'v*'
 
+permissions: {}
+
 jobs:
   create-release:
     runs-on: 'ubuntu-latest'
+    permissions:
+      contents: write
 
     steps:
       - name: Check out release tag
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@2ddd2b9cb38ad8efd50337e8ab201519a34c9f24 # v7.1.1
+        with:
+          enable-cache: false
 
       - name: Build ZIP file
         run: ./scripts/run build
 
       - name: Create release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@6da8fa9354ddfdc4aeace5fc48d7f679b5214090 # v2.4.1
         with:
           files: 'KoboUtilities-*.zip'

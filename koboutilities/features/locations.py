@@ -577,7 +577,7 @@ def _store_current_bookmark(
                     current_rating = book.rating
                     debug("rating - in book=", current_rating)
                     if current_rating != kobo_rating:
-                        library_db.set_rating(
+                        library_db.set_rating(  # pyright: ignore[reportAttributeAccessIssue]
                             book.calibre_id, kobo_rating, commit=False
                         )
                 else:
@@ -1148,7 +1148,7 @@ def auto_store_current_bookmark(
     search_condition = f"ondevice:True {search_condition}"
     debug("search_condition=", search_condition)
     onDeviceIds = set(
-        library_db.search_getting_ids(
+        library_db.search_getting_ids(  # pyright: ignore[reportAttributeAccessIssue]
             search_condition, None, sort_results=False, use_virtual_library=False
         )
     )

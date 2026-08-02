@@ -15,8 +15,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, cast
 
 import apsw
+import calibre.constants as calibre_constants
 from calibre import ptempfile
-from calibre.constants import DEBUG, iswindows
 from calibre.devices.kobo.books import Book
 from calibre.gui2 import error_dialog, info_dialog, open_url
 from calibre.gui2.device import DeviceJob
@@ -61,7 +61,7 @@ load_translations()
 
 
 def debug(*args: Any):
-    if DEBUG:
+    if calibre_constants.DEBUG:
         frame = inspect.currentframe()
         assert frame is not None
         frame = frame.f_back
@@ -165,7 +165,7 @@ def get_local_images_dir(subfolder: str | None = None):
     images_dir = os.path.join(config_dir, "resources/images")
     if subfolder:
         images_dir = os.path.join(images_dir, subfolder)
-    if iswindows:
+    if calibre_constants.iswindows:
         images_dir = os.path.normpath(images_dir)
     return images_dir
 

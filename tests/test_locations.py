@@ -323,7 +323,9 @@ class TestLocations(unittest.TestCase):
             "DeviceDatabaseConnection",
             return_value=device_db.db_conn,
         ):
-            stored_locations = locations._read_locations(books_in_calibre, options)
+            stored_locations = locations._read_locations(
+                books_in_calibre, options, True
+            )
 
         pprint(stored_locations)
         self.assertNotIn(book1.calibre_id, stored_locations)

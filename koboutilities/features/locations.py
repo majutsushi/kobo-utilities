@@ -7,6 +7,7 @@ from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, cast
 
 import apsw
+import calibre.constants as calibre_constants
 from calibre import strftime
 from calibre.devices.kobo.books import Book
 from calibre.ebooks.metadata import authors_to_string
@@ -2273,7 +2274,7 @@ def do_read_locations(
     args = [
         do_read_locations_all.__module__,
         do_read_locations_all.__name__,
-        (books_to_scan, pickle.dumps(options)),
+        (books_to_scan, pickle.dumps(options), calibre_constants.DEBUG),
     ]
     debug("len(books_to_scan)=%d" % (len(books_to_scan)))
     job: ParallelJob = ParallelJob("arbitrary", "Read locations", done=None, args=args)
@@ -2328,11 +2329,12 @@ def do_read_locations_all(
         ]
     ],
     options: bytes,
+    is_debugging: bool,
 ) -> dict[int, dict[str, Any]]:
     """
     Child job, to read location for all the books
     """
-    return _read_locations(books, pickle.loads(options))  # noqa: S301
+    return _read_locations(books, pickle.loads(options), is_debugging)  # noqa: S301
 
 
 def _read_locations(
@@ -2351,7 +2353,12 @@ def _read_locations(
         ]
     ],
     options: ReadLocationsJobOptions,
+    is_debugging: bool,
 ) -> dict[int, dict[str, Any]]:
+    if is_debugging:
+        # Set this manually since the CALIBRE_DEBUG env var doesn't seem to
+        # get passed to the job process
+        calibre_constants.DEBUG = True
     debug("start")
     count_books = 0
     new_locations = {}

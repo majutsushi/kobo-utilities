@@ -7,9 +7,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: kobo-utilities v2.28.0-2-g663c1ad-dirty\n"
+"Project-Id-Version: kobo-utilities v2.28.1-3-gd2aef69-dirty\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-06 17:56+1200\n"
+"POT-Creation-Date: 2026-08-02 15:15+1200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -291,11 +291,11 @@ msgstr ""
 #: koboutilities/features/database.py:64
 #: koboutilities/features/duplicateshelves.py:74
 #: koboutilities/features/getshelves.py:135
-#: koboutilities/features/locations.py:305
-#: koboutilities/features/locations.py:690
-#: koboutilities/features/locations.py:741
-#: koboutilities/features/locations.py:1272
-#: koboutilities/features/locations.py:1617
+#: koboutilities/features/locations.py:306
+#: koboutilities/features/locations.py:691
+#: koboutilities/features/locations.py:742
+#: koboutilities/features/locations.py:1273
+#: koboutilities/features/locations.py:1618
 #: koboutilities/features/manageseries.py:157
 #: koboutilities/features/metadata.py:115 koboutilities/features/reader.py:199
 #: koboutilities/features/reader.py:241
@@ -546,21 +546,21 @@ msgid ""
 " automatic store is done."
 msgstr ""
 
-#: koboutilities/config.py:1006 koboutilities/features/locations.py:1693
+#: koboutilities/config.py:1006 koboutilities/features/locations.py:1694
 msgid "Only if more recent"
 msgstr ""
 
-#: koboutilities/config.py:1009 koboutilities/features/locations.py:1696
+#: koboutilities/config.py:1009 koboutilities/features/locations.py:1697
 msgid ""
 "Only store the reading position if the last read timestamp on the device "
 "is more recent than in the library."
 msgstr ""
 
-#: koboutilities/config.py:1015 koboutilities/features/locations.py:1702
+#: koboutilities/config.py:1015 koboutilities/features/locations.py:1703
 msgid "Not if finished in library"
 msgstr ""
 
-#: koboutilities/config.py:1019 koboutilities/features/locations.py:1706
+#: koboutilities/config.py:1019 koboutilities/features/locations.py:1707
 msgid ""
 "Do not store the reading position if the library has the book as "
 "finished. This is if the percent read is 100%."
@@ -726,7 +726,7 @@ msgstr ""
 msgid "Model"
 msgstr ""
 
-#: koboutilities/config.py:1798 koboutilities/features/locations.py:1757
+#: koboutilities/config.py:1798 koboutilities/features/locations.py:1758
 msgid "Profile"
 msgstr ""
 
@@ -1047,7 +1047,7 @@ msgid ""
 msgstr ""
 
 #: koboutilities/features/backup.py:385
-#: koboutilities/features/locations.py:1726
+#: koboutilities/features/locations.py:1727
 msgid "Restore"
 msgstr ""
 
@@ -1091,7 +1091,7 @@ msgid "Firmware version"
 msgstr ""
 
 #: koboutilities/features/booksnotindb.py:104
-#: koboutilities/features/locations.py:2128
+#: koboutilities/features/locations.py:2129
 #: koboutilities/features/metadata.py:917 koboutilities/features/toc.py:1164
 msgid "Title"
 msgstr ""
@@ -1283,8 +1283,8 @@ msgstr ""
 
 #: koboutilities/features/duplicateshelves.py:66
 #: koboutilities/features/getshelves.py:127
-#: koboutilities/features/locations.py:293
-#: koboutilities/features/locations.py:733
+#: koboutilities/features/locations.py:294
+#: koboutilities/features/locations.py:734
 #: koboutilities/features/manageseries.py:147
 #: koboutilities/features/metadata.py:107
 #: koboutilities/features/readingstatus.py:69
@@ -1312,7 +1312,7 @@ msgstr ""
 
 #: koboutilities/features/duplicateshelves.py:122
 #: koboutilities/features/getshelves.py:277
-#: koboutilities/features/locations.py:1681
+#: koboutilities/features/locations.py:1682
 msgid "Options"
 msgstr ""
 
@@ -1442,15 +1442,15 @@ msgstr ""
 msgid "You must select a column to populate from the collections on the device"
 msgstr ""
 
-#: koboutilities/features/locations.py:243
+#: koboutilities/features/locations.py:244
 msgid "Cannot update metadata in device library."
 msgstr ""
 
-#: koboutilities/features/locations.py:244
+#: koboutilities/features/locations.py:245
 msgid "No fetch queries found for firmware version."
 msgstr ""
 
-#: koboutilities/features/locations.py:296
+#: koboutilities/features/locations.py:297
 #, python-brace-format
 msgid ""
 "Reading locations updated={0}\n"
@@ -1458,27 +1458,27 @@ msgid ""
 "\tTotal books checked={2}"
 msgstr ""
 
-#: koboutilities/features/locations.py:305
+#: koboutilities/features/locations.py:306
 msgid "Library updated"
 msgstr ""
 
-#: koboutilities/features/locations.py:335
-#: koboutilities/features/locations.py:1336
+#: koboutilities/features/locations.py:336
+#: koboutilities/features/locations.py:1337
 msgid "Storing reading positions"
 msgstr ""
 
-#: koboutilities/features/locations.py:382
+#: koboutilities/features/locations.py:383
 #, python-brace-format
 msgid "Checking {}"
 msgstr ""
 
-#: koboutilities/features/locations.py:692
-#: koboutilities/features/locations.py:1612
+#: koboutilities/features/locations.py:693
+#: koboutilities/features/locations.py:1613
 #, python-brace-format
 msgid "Storing reading positions completed - {0} changed."
 msgstr ""
 
-#: koboutilities/features/locations.py:735
+#: koboutilities/features/locations.py:736
 #, python-brace-format
 msgid ""
 "Books updated={0}\n"
@@ -1486,244 +1486,244 @@ msgid ""
 "\tTotal books={2}"
 msgstr ""
 
-#: koboutilities/features/locations.py:741
+#: koboutilities/features/locations.py:742
 #: koboutilities/features/metadata.py:115 koboutilities/features/reader.py:199
 #: koboutilities/features/reader.py:241
 #: koboutilities/features/readingstatus.py:77
 msgid "Device library updated"
 msgstr ""
 
-#: koboutilities/features/locations.py:1104
+#: koboutilities/features/locations.py:1105
 msgid "No profile found for device"
 msgstr ""
 
-#: koboutilities/features/locations.py:1106
+#: koboutilities/features/locations.py:1107
 #, python-brace-format
 msgid "Using profile '{}'"
 msgstr ""
 
-#: koboutilities/features/locations.py:1143
+#: koboutilities/features/locations.py:1144
 msgid "Queuing books for storing reading position"
 msgstr ""
 
-#: koboutilities/features/locations.py:1145
+#: koboutilities/features/locations.py:1146
 msgid "Getting list of books"
 msgstr ""
 
-#: koboutilities/features/locations.py:1161
+#: koboutilities/features/locations.py:1162
 msgid "Queuing books"
 msgstr ""
 
-#: koboutilities/features/locations.py:1175
-#: koboutilities/features/locations.py:1900
+#: koboutilities/features/locations.py:1176
+#: koboutilities/features/locations.py:1901
 #: koboutilities/features/removeannotations.py:392
 #, python-brace-format
 msgid "Queueing {}"
 msgstr ""
 
-#: koboutilities/features/locations.py:1247
+#: koboutilities/features/locations.py:1248
 #, python-brace-format
 msgid "Storing reading positions for {0} books"
 msgstr ""
 
-#: koboutilities/features/locations.py:1261
+#: koboutilities/features/locations.py:1262
 msgid "Failed to get reading positions"
 msgstr ""
 
-#: koboutilities/features/locations.py:1270
+#: koboutilities/features/locations.py:1271
 msgid "Storing reading positions completed - No changes found"
 msgstr ""
 
-#: koboutilities/features/locations.py:1277
+#: koboutilities/features/locations.py:1278
 #, python-brace-format
 msgid "Found {} books with changes"
 msgstr ""
 
-#: koboutilities/features/locations.py:1297
+#: koboutilities/features/locations.py:1298
 msgid "Cancelled storing of reading positions"
 msgstr ""
 
-#: koboutilities/features/locations.py:1328
+#: koboutilities/features/locations.py:1329
 msgid "Updating reading positions for books:"
 msgstr ""
 
-#: koboutilities/features/locations.py:1394
+#: koboutilities/features/locations.py:1395
 #: koboutilities/features/manageseries.py:1070
 #: koboutilities/features/metadata.py:734
 msgid "Unknown"
 msgstr ""
 
-#: koboutilities/features/locations.py:1397
+#: koboutilities/features/locations.py:1398
 #, python-brace-format
 msgid "Updating {}"
 msgstr ""
 
-#: koboutilities/features/locations.py:1676
+#: koboutilities/features/locations.py:1677
 msgid "Store or restore reading positions"
 msgstr ""
 
-#: koboutilities/features/locations.py:1686
+#: koboutilities/features/locations.py:1687
 msgid "Store"
 msgstr ""
 
-#: koboutilities/features/locations.py:1688
+#: koboutilities/features/locations.py:1689
 msgid "Store the current reading position in the calibre library."
 msgstr ""
 
-#: koboutilities/features/locations.py:1714
+#: koboutilities/features/locations.py:1715
 msgid "Clear if unread"
 msgstr ""
 
-#: koboutilities/features/locations.py:1717
+#: koboutilities/features/locations.py:1718
 msgid ""
 "If the book on the device is shown as unread, clear the reading position "
 "stored in the library."
 msgstr ""
 
-#: koboutilities/features/locations.py:1722
+#: koboutilities/features/locations.py:1723
 msgid "Run in background"
 msgstr ""
 
-#: koboutilities/features/locations.py:1723
+#: koboutilities/features/locations.py:1724
 msgid "Do store or restore as background job."
 msgstr ""
 
-#: koboutilities/features/locations.py:1728
+#: koboutilities/features/locations.py:1729
 msgid "Copy the current reading position back to the device."
 msgstr ""
 
-#: koboutilities/features/locations.py:1733
+#: koboutilities/features/locations.py:1734
 msgid "Set reading status"
 msgstr ""
 
-#: koboutilities/features/locations.py:1736
+#: koboutilities/features/locations.py:1737
 msgid ""
 "If this is not set, when the current reading position is on the device, "
 "the reading status will not be changes. If the percent read is 100%, the "
 "book will be marked as finished. Otherwise, it will be in progress."
 msgstr ""
 
-#: koboutilities/features/locations.py:1741
+#: koboutilities/features/locations.py:1742
 msgid "Set date to now"
 msgstr ""
 
-#: koboutilities/features/locations.py:1744
+#: koboutilities/features/locations.py:1745
 msgid ""
 "Setting the date to now will put the book at the top of the \"Recent "
 "reads\" list."
 msgstr ""
 
-#: koboutilities/features/locations.py:1749
+#: koboutilities/features/locations.py:1750
 msgid "Update rating"
 msgstr ""
 
-#: koboutilities/features/locations.py:1752
+#: koboutilities/features/locations.py:1753
 msgid ""
 "Set the book rating on the device. If the current rating in the library "
 "is zero, the rating on the device will be reset."
 msgstr ""
 
-#: koboutilities/features/locations.py:1846
+#: koboutilities/features/locations.py:1847
 msgid "Queueing books for storing reading position"
 msgstr ""
 
-#: koboutilities/features/locations.py:1866
+#: koboutilities/features/locations.py:1867
 #: koboutilities/features/removeannotations.py:365
 msgid "Preparing the list of books ..."
 msgstr ""
 
-#: koboutilities/features/locations.py:2015
-#: koboutilities/features/locations.py:2021
+#: koboutilities/features/locations.py:2016
+#: koboutilities/features/locations.py:2022
 msgid "Show reading position changes"
 msgstr ""
 
-#: koboutilities/features/locations.py:2031
+#: koboutilities/features/locations.py:2032
 #, python-brace-format
 msgid "Profile: {0}"
 msgstr ""
 
-#: koboutilities/features/locations.py:2034
+#: koboutilities/features/locations.py:2035
 #, python-brace-format
 msgid "Device: {0}"
 msgstr ""
 
-#: koboutilities/features/locations.py:2042
+#: koboutilities/features/locations.py:2043
 msgid "Select updated books in library"
 msgstr ""
 
-#: koboutilities/features/locations.py:2046
+#: koboutilities/features/locations.py:2047
 msgid "Update Goodread reading progress"
 msgstr ""
 
-#: koboutilities/features/locations.py:2060 koboutilities/features/toc.py:1043
+#: koboutilities/features/locations.py:2061 koboutilities/features/toc.py:1043
 msgid "Select all"
 msgstr ""
 
-#: koboutilities/features/locations.py:2065 koboutilities/features/toc.py:1068
+#: koboutilities/features/locations.py:2066 koboutilities/features/toc.py:1068
 msgid "Clear all"
 msgstr ""
 
-#: koboutilities/features/locations.py:2129
+#: koboutilities/features/locations.py:2130
 msgid "Authors(s)"
 msgstr ""
 
-#: koboutilities/features/locations.py:2130
+#: koboutilities/features/locations.py:2131
 msgid "Current %"
 msgstr ""
 
-#: koboutilities/features/locations.py:2131
+#: koboutilities/features/locations.py:2132
 msgid "New %"
 msgstr ""
 
-#: koboutilities/features/locations.py:2132
+#: koboutilities/features/locations.py:2133
 msgid "Current date"
 msgstr ""
 
-#: koboutilities/features/locations.py:2133
+#: koboutilities/features/locations.py:2134
 msgid "New date"
 msgstr ""
 
-#: koboutilities/features/locations.py:2134
+#: koboutilities/features/locations.py:2135
 msgid "Book ID"
 msgstr ""
 
-#: koboutilities/features/locations.py:2512
+#: koboutilities/features/locations.py:2527
 #, python-brace-format
 msgid "{}: Book is unread on device, clearing reading positions"
 msgstr ""
 
-#: koboutilities/features/locations.py:2530
+#: koboutilities/features/locations.py:2545
 #, python-brace-format
 msgid "{}: {} (device) → {} (Calibre)"
 msgstr ""
 
-#: koboutilities/features/locations.py:2546
+#: koboutilities/features/locations.py:2561
 msgid "Last read time"
 msgstr ""
 
-#: koboutilities/features/locations.py:2590
+#: koboutilities/features/locations.py:2605
 msgid "Percent read"
 msgstr ""
 
-#: koboutilities/features/locations.py:2604
+#: koboutilities/features/locations.py:2616
 msgid "Chapter ID"
 msgstr ""
 
-#: koboutilities/features/locations.py:2629
+#: koboutilities/features/locations.py:2643
 #: koboutilities/features/metadata.py:755
 #: koboutilities/features/metadata.py:966
 msgid "Rating"
 msgstr ""
 
-#: koboutilities/features/locations.py:2648
+#: koboutilities/features/locations.py:2666
 msgid "Time spent reading"
 msgstr ""
 
-#: koboutilities/features/locations.py:2665
+#: koboutilities/features/locations.py:2688
 msgid "Rest of book estimate"
 msgstr ""
 
-#: koboutilities/features/locations.py:2673
+#: koboutilities/features/locations.py:2696
 #, python-brace-format
 msgid "{}: Found changes:"
 msgstr ""

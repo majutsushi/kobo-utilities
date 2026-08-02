@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 2.28.2 - 2026-08-02
+
+- Fixed a bug where custom columns that weren't configured for storing changes
+  were still considered for checking whether books needed updating.
+
 ## Version 2.28.1 - 2026-07-06
 
 - Fixed an error on macOS if Calibre's temporary directory got deleted

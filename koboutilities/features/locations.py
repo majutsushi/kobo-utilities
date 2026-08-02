@@ -2371,9 +2371,17 @@ def _read_locations(
 
     kobo_percentRead_column_name = None
     last_read_column_name = None
+    chapterid_column_name = None
+    rating_column_name = None
+    time_spent_reading_column_name = None
+    rest_of_book_estimate_column_name = None
     if options.custom_columns is not None:
         kobo_percentRead_column_name = options.custom_columns.percent_read
         last_read_column_name = options.custom_columns.last_read
+        chapterid_column_name = options.custom_columns.current_location
+        rating_column_name = options.custom_columns.rating
+        time_spent_reading_column_name = options.custom_columns.time_spent_reading
+        rest_of_book_estimate_column_name = options.custom_columns.rest_of_book_estimate
 
     connection = DeviceDatabaseConnection(
         options.database_path,
@@ -2597,26 +2605,24 @@ def _read_locations(
             log_change(current_percentRead, new_kobo_percentRead, _("Percent read"))
             reading_position_changed |= current_percentRead != new_kobo_percentRead
 
-            try:
-                debug("current_chapterid ='%s'" % current_chapterid)
-                debug("new_chapterid='%s'" % new_chapterid)
-                debug(
-                    "current_chapterid != new_chapterid='%s'"
-                    % (current_chapterid != new_chapterid)
-                )
-            except Exception:
-                debug(
-                    "Exception raised when logging details of percent read. Ignoring."
-                )
-            log_change(current_chapterid, new_chapterid, _("Chapter ID"))
-            reading_position_changed |= utils.value_changed(
-                current_chapterid, new_chapterid
+            debug("chapterid_column_name = '%s'" % chapterid_column_name)
+            debug("current_chapterid ='%s'" % current_chapterid)
+            debug("new_chapterid='%s'" % new_chapterid)
+            debug(
+                "current_chapterid != new_chapterid='%s'"
+                % (current_chapterid != new_chapterid)
             )
+            if chapterid_column_name is not None:
+                log_change(current_chapterid, new_chapterid, _("Chapter ID"))
+                reading_position_changed |= utils.value_changed(
+                    current_chapterid, new_chapterid
+                )
             debug(
                 "After checking location - reading_position_changed=",
                 reading_position_changed,
             )
 
+            debug("rating_column_name = '%s'" % rating_column_name)
             debug(
                 "current_rating=%s, new_kobo_rating=%s"
                 % (current_rating, new_kobo_rating)
@@ -2633,14 +2639,18 @@ def _read_locations(
                 "current_rating != new_kobo_rating and new_kobo_rating > 0=",
                 current_rating != new_kobo_rating and new_kobo_rating > 0,
             )
-            log_change(current_rating or 0, new_kobo_rating or 0, _("Rating"))
-            reading_position_changed |= current_rating != new_kobo_rating and not (
-                current_rating is None and new_kobo_rating == 0
-            )
+            if rating_column_name is not None:
+                log_change(current_rating or 0, new_kobo_rating or 0, _("Rating"))
+                reading_position_changed |= current_rating != new_kobo_rating and not (
+                    current_rating is None and new_kobo_rating == 0
+                )
             reading_position_changed |= (
                 current_rating != new_kobo_rating and new_kobo_rating > 0
             )
 
+            debug(
+                "time_spent_reading_column_name = '%s'" % time_spent_reading_column_name
+            )
             debug(
                 "current_time_spent_reading=%s, new_time_spent_reading=%s"
                 % (current_time_spent_reading, new_time_spent_reading)
@@ -2649,15 +2659,20 @@ def _read_locations(
                 "current_time_spent_reading != new_time_spent_reading=",
                 current_time_spent_reading != new_time_spent_reading,
             )
-            log_change(
-                current_time_spent_reading,
-                new_time_spent_reading,
-                _("Time spent reading"),
-            )
-            reading_position_changed |= utils.value_changed(
-                current_time_spent_reading, new_time_spent_reading
-            )
+            if time_spent_reading_column_name is not None:
+                log_change(
+                    current_time_spent_reading,
+                    new_time_spent_reading,
+                    _("Time spent reading"),
+                )
+                reading_position_changed |= utils.value_changed(
+                    current_time_spent_reading, new_time_spent_reading
+                )
 
+            debug(
+                "rest_of_book_estimate_column_name = '%s'"
+                % rest_of_book_estimate_column_name
+            )
             debug(
                 "current_rest_of_book_estimate=%s, new_rest_of_book_estimate=%s"
                 % (current_rest_of_book_estimate, new_rest_of_book_estimate)
@@ -2666,14 +2681,15 @@ def _read_locations(
                 "current_rest_of_book_estimate != new_rest_of_book_estimate=",
                 current_rest_of_book_estimate != new_rest_of_book_estimate,
             )
-            log_change(
-                current_rest_of_book_estimate,
-                new_rest_of_book_estimate,
-                _("Rest of book estimate"),
-            )
-            reading_position_changed |= utils.value_changed(
-                current_rest_of_book_estimate, new_rest_of_book_estimate
-            )
+            if rest_of_book_estimate_column_name is not None:
+                log_change(
+                    current_rest_of_book_estimate,
+                    new_rest_of_book_estimate,
+                    _("Rest of book estimate"),
+                )
+                reading_position_changed |= utils.value_changed(
+                    current_rest_of_book_estimate, new_rest_of_book_estimate
+                )
 
             if log_changes:
                 log_store(
